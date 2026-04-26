@@ -4,20 +4,30 @@
 <meta charset="UTF-8" />
 <title>Setup — Bravo Aviation</title>
 <style>
-  body { background:#080A12; color:#F0EDE6; font-family:monospace; padding:40px; }
-  .log { margin:6px 0; font-size:14px; }
-  .ok { color:#3db07a; }
-  .err { color:#e05555; }
-  .info { color:#C8961C; }
-  button { margin-top:24px; background:#C8961C; color:#000; border:none; padding:14px 32px; font-size:14px; font-weight:700; cursor:pointer; border-radius:4px; }
-  button:disabled { opacity:0.5; cursor:not-allowed; }
+  body { background:#080612; color:#F0EAF8; font-family:monospace; padding:40px; max-width:700px; }
+  h2 { color:#00EEFF; margin-bottom:8px; }
+  p { color:#9A8FB8; margin-bottom:24px; }
+  .log { margin:5px 0; font-size:13px; line-height:1.5; }
+  .ok   { color:#3db07a; }
+  .err  { color:#e05555; }
+  .info { color:#00EEFF; }
+  .warn { color:#f0a500; }
+  button {
+    margin-top:24px; background:#00EEFF; color:#000;
+    border:none; padding:14px 36px; font-size:14px;
+    font-weight:700; cursor:pointer; border-radius:4px;
+    letter-spacing:0.05em;
+  }
+  button:disabled { opacity:0.4; cursor:not-allowed; }
+  #log { margin-top:28px; border-top:1px solid #1E1840; padding-top:20px; }
 </style>
 </head>
 <body>
-<h2 style="color:#C8961C;">Bravo Aviation — Setup inicial</h2>
-<p style="color:#8A8FA8;margin-bottom:24px;">Clique no botão para criar os documentos dos usuários no Firestore.</p>
-<button id="btn" onclick="runSetup()">Executar setup</button>
-<div id="log" style="margin-top:24px;"></div>
+<h2>Bravo Aviation — Setup do Admin</h2>
+<p>Cria a conta <strong>admin@bravo.aero</strong> no Firebase Auth e o documento no Firestore.<br/>
+Se a conta já existir, apenas atualiza o documento.</p>
+<button id="btn" onclick="runSetup()">▶ Executar setup</button>
+<div id="log"></div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
@@ -33,70 +43,84 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
-const db = firebase.firestore();
+const db   = firebase.firestore();
 
 function log(msg, type = 'info') {
-  const d = document.getElementById('log');
-  d.innerHTML += `<div class="log ${type}">${msg}</div>`;
+  document.getElementById('log').innerHTML +=
+    `<div class="log ${type}">${msg}</div>`;
 }
 
-const USERS_DATA = [
-  {
-    email: 'piloto@bravo.aero',
-    password: 'brv2024',
-    uid: 'koW0iERbEVQUvuN2WoqEEMzbaNX2',
-    doc: {
-      name: 'João Silva',
-      vid: '487231',
-      hours: 623.5,
-      flights: 87,
-      joinDate: '2024-03-15',
-      aircraft: 'Boeing 737-800',
-      email: 'piloto@bravo.aero'
-    }
-  },
-  {
-    email: 'admin@bravo.aero',
-    password: 'admin2024',
-    uid: 'x70Fn6d74TNpxULpElmyi2GujhD3',
-    doc: {
-      name: 'Willian Mota',
-      vid: '000000',
-      hours: 0,
-      flights: 0,
-      joinDate: '2024-01-01',
-      aircraft: 'Boeing 737-800',
-      email: 'admin@bravo.aero',
-      role: 'admin'
+const ADMIN = {
+  email:    'admin@bravo.aero',
+  password: 'admin2024',
+  doc: {
+    name:     'Willian Mota',
+    email:    'admin@bravo.aero',
+    vid:      '000000',
+    role:     'admin',
+    hours:    0,
+    flights:  0,
+    aircraft: 'Boeing 737-800',
+    joinDate: '2024-01-01',
+    status:   'active',
+    permissions: {
+      pirep: true, flights: true, routes: true,
+      ranking: true, downloads: true, notifications: true
     }
   }
-];
+};
 
 async function runSetup() {
   document.getElementById('btn').disabled = true;
-  log('Iniciando setup...', 'info');
+  log('Iniciando setup do admin...', 'info');
 
-  for (const u of USERS_DATA) {
-    try {
-      log(`Fazendo login como ${u.email}...`, 'info');
-      await auth.signInWithEmailAndPassword(u.email, u.password);
-      log(`Login OK — UID: ${u.uid}`, 'ok');
+  let uid = null;
 
-      log(`Criando documento users/${u.uid}...`, 'info');
-      await db.collection('users').doc(u.uid).set(u.doc);
-      log(`Documento criado para ${u.doc.name}`, 'ok');
-
-      await auth.signOut();
-      log(`Logout OK`, 'ok');
-    } catch (err) {
-      log(`Erro com ${u.email}: ${err.message}`, 'err');
-      await auth.signOut().catch(() => {});
+  // Tenta criar a conta. Se já existir, faz login.
+  log(`Tentando criar conta: ${ADMIN.email}`, 'info');
+  try {
+    const cred = await auth.createUserWithEmailAndPassword(ADMIN.email, ADMIN.password);
+    uid = cred.user.uid;
+    log(`✓ Conta criada — UID: ${uid}`, 'ok');
+  } catch (err) {
+    if (err.code === 'auth/email-already-in-use') {
+      log('Conta já existe. Fazendo login...', 'warn');
+      try {
+        const cred = await auth.signInWithEmailAndPassword(ADMIN.email, ADMIN.password);
+        uid = cred.user.uid;
+        log(`✓ Login OK — UID: ${uid}`, 'ok');
+      } catch (loginErr) {
+        log(`✗ Erro no login: ${loginErr.message}`, 'err');
+        document.getElementById('btn').disabled = false;
+        return;
+      }
+    } else {
+      log(`✗ Erro ao criar conta: ${err.message}`, 'err');
+      document.getElementById('btn').disabled = false;
+      return;
     }
   }
 
+  // Salva documento no Firestore com o UID real
+  log(`Salvando documento users/${uid}...`, 'info');
+  try {
+    await db.collection('users').doc(uid).set({ ...ADMIN.doc, email: ADMIN.email });
+    log(`✓ Documento salvo para Willian Mota (admin)`, 'ok');
+  } catch (err) {
+    log(`✗ Erro no Firestore: ${err.message}`, 'err');
+    await auth.signOut().catch(() => {});
+    document.getElementById('btn').disabled = false;
+    return;
+  }
+
+  await auth.signOut();
   log('', 'info');
-  log('✓ Setup concluído! Você pode fechar esta página.', 'ok');
-  log('Agora acesse: <a href="login.html" style="color:#C8961C">login.html</a>', 'ok');
+  log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'info');
+  log('✓ Setup concluído com sucesso!', 'ok');
+  log(`📧 E-mail: <strong>${ADMIN.email}</strong>`, 'ok');
+  log(`🔑 Senha:  <strong>${ADMIN.password}</strong>`, 'ok');
+  log('', 'info');
+  log('👉 <a href="login.html" style="color:#00EEFF">Ir para o login →</a>', 'ok');
 }
 </script>
 </body>
