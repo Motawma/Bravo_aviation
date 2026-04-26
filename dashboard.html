@@ -558,6 +558,9 @@ auth.onAuthStateChanged(async (fbUser) => {
   currentUser = fbUser;
 
   const snap = await db.collection('users').doc(fbUser.uid).get();
+  if (snap.exists && snap.data().role === 'admin') {
+    window.location.href = 'admin.html'; return;
+  }
   if (snap.exists) {
     user = snap.data();
     user.email = fbUser.email;
@@ -588,10 +591,12 @@ auth.onAuthStateChanged(async (fbUser) => {
 
   try {
     const pSnap = await db.collection('users').get();
-    PILOTS = pSnap.docs.map(d => {
-      const p = d.data();
-      return { uid: d.id, name: p.name || '—', vid: p.vid || '—', rank: getRank(p.hours || 0).name, flights: p.flights || 0, hours: p.hours || 0, aircraft: p.aircraft || '—' };
-    }).sort((a, b) => b.hours - a.hours);
+    PILOTS = pSnap.docs
+      .filter(d => d.data().role !== 'admin')
+      .map(d => {
+        const p = d.data();
+        return { uid: d.id, name: p.name || '—', vid: p.vid || '—', rank: getRank(p.hours || 0).name, flights: p.flights || 0, hours: p.hours || 0, aircraft: p.aircraft || '—' };
+      }).sort((a, b) => b.hours - a.hours);
   } catch {
     PILOTS = [{ uid: fbUser.uid, name: user.name, vid: user.vid, rank: getRank(user.hours).name, flights: user.flights, hours: user.hours, aircraft: user.aircraft }];
   }
