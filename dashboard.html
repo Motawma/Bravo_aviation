@@ -9,11 +9,21 @@
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
 <style>
 :root {
-  --bg: #080A12; --surface: #0F1220; --surface2: #141728; --surface3: #1A1F35;
-  --border: #1E2340; --gold: #C8961C; --gold-light: #E0B050; --gold-dim: #7A5A10;
-  --text: #F0EDE6; --text-sec: #8A8FA8; --text-dim: #4A506A;
-  --radius: 4px; --danger: #e05555; --success: #3db07a; --info: #3a7fd4;
-  --sidebar: 240px;
+  --bg: #080612;
+  --surface: #0E0B1E;
+  --surface2: #130F27;
+  --border: #1E1840;
+  --gold: #00EEFF;
+  --gold-light: #60F5FF;
+  --gold-dim: #007A99;
+    --pink: #FF2080;
+    --pink-light: #FF60A8;
+  --text: #F0EAF8;
+  --text-sec: #9A8FB8;
+  --text-dim: #4A4068;
+  --radius: 4px;
+  --blue: #00EEFF;
+  --purple: #9B30FF;
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; }
@@ -31,7 +41,7 @@ aside {
   border-bottom: 1px solid var(--border);
   display: flex; align-items: center; justify-content: center;
 }
-.sidebar-logo img { height: 68px; }
+.sidebar-logo img { height: 80px; mix-blend-mode: screen; }
 .sidebar-nav { flex: 1; padding: 12px 0; overflow-y: auto; }
 .nav-section-label {
   font-size: 9px; font-weight: 700; letter-spacing: 0.25em; text-transform: uppercase;
@@ -46,7 +56,7 @@ aside {
   text-decoration: none; user-select: none;
 }
 .nav-item:hover { color: var(--text); background: rgba(255,255,255,0.03); }
-.nav-item.active { color: var(--gold); background: rgba(200,150,28,0.07); border-left-color: var(--gold); }
+.nav-item.active { color: var(--gold); background: rgba(0,238,255,0.07); border-left-color: var(--gold); }
 .nav-icon { font-size: 16px; width: 20px; text-align: center; }
 .nav-badge {
   margin-left: auto; background: var(--gold); color: #000;
@@ -60,7 +70,7 @@ aside {
 }
 .user-avatar {
   width: 36px; height: 36px; border-radius: 50%;
-  background: rgba(200,150,28,0.12); border: 1px solid rgba(200,150,28,0.3);
+  background: rgba(0,238,255,0.12); border: 1px solid rgba(0,238,255,0.3);
   display: flex; align-items: center; justify-content: center;
   font-family: 'Barlow Condensed', sans-serif; font-size: 14px; font-weight: 700; color: var(--gold);
   flex-shrink: 0;
@@ -100,7 +110,7 @@ main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 }
 .stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--border); }
 .stat-card.gold::before { background: var(--gold); }
-.stat-card.blue::before { background: var(--info); }
+.stat-card.blue::before { background: #00EEFF; }
 .stat-card.green::before { background: var(--success); }
 .stat-card-label { font-size: 10px; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 10px; }
 .stat-card-value { font-family: 'Barlow Condensed', sans-serif; font-size: 32px; font-weight: 800; color: var(--text); line-height: 1; }
@@ -116,7 +126,7 @@ main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
 table { width: 100%; border-collapse: collapse; }
 th { font-size: 10px; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-dim); padding: 12px 16px; text-align: left; background: var(--surface2); border-bottom: 1px solid var(--border); }
-td { padding: 13px 16px; font-size: 13px; border-bottom: 1px solid rgba(30,35,64,0.5); color: var(--text-sec); }
+td { padding: 13px 16px; font-size: 13px; border-bottom: 1px solid rgba(30,24,64,0.5); color: var(--text-sec); }
 tr:last-child td { border-bottom: none; }
 tr:hover td { background: rgba(255,255,255,0.02); }
 .td-main { color: var(--text); font-weight: 500; }
@@ -126,7 +136,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
   padding: 3px 10px; border-radius: 10px;
 }
 .status-badge.approved { background: rgba(61,176,122,0.12); color: var(--success); border: 1px solid rgba(61,176,122,0.25); }
-.status-badge.pending { background: rgba(200,150,28,0.1); color: var(--gold); border: 1px solid rgba(200,150,28,0.2); }
+.status-badge.pending { background: rgba(0,238,255,0.1); color: var(--gold); border: 1px solid rgba(0,238,255,0.2); }
 .status-badge.rejected { background: rgba(224,85,85,0.1); color: var(--danger); border: 1px solid rgba(224,85,85,0.2); }
 
 /* ── RANK PROGRESS ── */
@@ -134,11 +144,11 @@ tr:hover td { background: rgba(255,255,255,0.02); }
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
   padding: 28px; position: relative; overflow: hidden;
 }
-.rank-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, var(--gold), transparent); }
+.rank-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, var(--gold), #00EEFF, transparent); }
 .rank-header { display: flex; align-items: center; gap: 20px; margin-bottom: 24px; }
-.rank-avatar { width: 72px; height: 72px; border-radius: 50%; background: rgba(200,150,28,0.1); border: 2px solid rgba(200,150,28,0.3); display: flex; align-items: center; justify-content: center; font-family: 'Barlow Condensed', sans-serif; font-size: 24px; font-weight: 700; color: var(--gold); flex-shrink: 0; }
+.rank-avatar { width: 72px; height: 72px; border-radius: 50%; background: rgba(0,238,255,0.1); border: 2px solid rgba(0,238,255,0.3); display: flex; align-items: center; justify-content: center; font-family: 'Barlow Condensed', sans-serif; font-size: 24px; font-weight: 700; color: var(--gold); flex-shrink: 0; }
 .rank-info h2 { font-family: 'Barlow Condensed', sans-serif; font-size: 26px; font-weight: 700; margin-bottom: 4px; }
-.rank-badge-lg { display: inline-block; background: rgba(200,150,28,0.1); border: 1px solid rgba(200,150,28,0.25); color: var(--gold); font-size: 11px; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; padding: 3px 12px; border-radius: 10px; }
+.rank-badge-lg { display: inline-block; background: rgba(0,238,255,0.1); border: 1px solid rgba(0,238,255,0.25); color: var(--gold); font-size: 11px; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; padding: 3px 12px; border-radius: 10px; }
 .rank-tiers { display: flex; gap: 0; margin-bottom: 20px; }
 .rank-tier {
   flex: 1; text-align: center; padding: 10px 4px;
@@ -149,7 +159,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 .rank-tier.done { color: var(--gold); border-color: var(--gold); }
 .rank-tier.current { color: var(--gold-light); border-color: var(--gold-light); }
 .progress-bar { height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
-.progress-fill { height: 100%; background: linear-gradient(90deg, var(--gold-dim), var(--gold)); border-radius: 3px; transition: width 1s ease; }
+.progress-fill { height: 100%; background: linear-gradient(90deg, var(--gold), #00EEFF); border-radius: 3px; transition: width 1s ease; }
 .progress-meta { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-dim); margin-top: 8px; }
 
 /* ── FORM ── */
@@ -167,8 +177,8 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: var(--gold-dim); }
 .form-group input::placeholder, .form-group textarea::placeholder { color: var(--text-dim); }
 .form-group textarea { resize: vertical; min-height: 80px; }
-.btn-gold { background: var(--gold); color: #000; border: none; cursor: pointer; padding: 12px 28px; border-radius: var(--radius); font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; transition: background 0.2s, transform 0.15s; }
-.btn-gold:hover { background: var(--gold-light); transform: translateY(-1px); }
+.btn-gold { background: #00EEFF; color: #000; border: none; cursor: pointer; padding: 12px 28px; border-radius: var(--radius); font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; transition: background 0.2s, transform 0.15s; }
+.btn-gold:hover { background: #60F5FF; transform: translateY(-1px); }
 .btn-ghost { background: transparent; color: var(--text-sec); border: 1px solid var(--border); cursor: pointer; padding: 12px 28px; border-radius: var(--radius); font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; transition: border-color 0.2s, color 0.2s; margin-right: 10px; }
 .btn-ghost:hover { border-color: var(--gold-dim); color: var(--gold); }
 .form-success { display: none; margin-top: 16px; background: rgba(61,176,122,0.1); border: 1px solid rgba(61,176,122,0.25); border-radius: var(--radius); padding: 14px; color: var(--success); font-size: 13px; text-align: center; }
@@ -183,14 +193,14 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 .route-arrow { color: var(--gold); font-size: 14px; flex: 1; text-align: center; }
 .route-meta { font-size: 11px; color: var(--text-dim); display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
 .route-meta span { display: flex; align-items: center; gap: 4px; }
-.route-tag { display: inline-block; background: rgba(200,150,28,0.08); border: 1px solid rgba(200,150,28,0.15); color: var(--gold); font-size: 9px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; padding: 2px 8px; border-radius: 2px; }
+.route-tag { display: inline-block; background: rgba(0,238,255,0.08); border: 1px solid rgba(0,238,255,0.15); color: var(--gold); font-size: 9px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; padding: 2px 8px; border-radius: 2px; }
 
 /* ── RANKING ── */
 .rank-position { font-family: 'Barlow Condensed', sans-serif; font-size: 18px; font-weight: 800; color: var(--text-dim); width: 32px; }
 .rank-position.top1 { color: #FFD700; }
 .rank-position.top2 { color: #C0C0C0; }
 .rank-position.top3 { color: #CD7F32; }
-.rank-me td { background: rgba(200,150,28,0.04) !important; }
+.rank-me td { background: rgba(0,238,255,0.04) !important; }
 
 /* ── DOWNLOADS ── */
 .downloads-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
@@ -201,11 +211,11 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 .dl-desc { font-size: 12px; color: var(--text-sec); line-height: 1.6; margin-bottom: 14px; }
 .dl-meta { display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--text-dim); margin-bottom: 14px; }
 .btn-dl { width: 100%; background: var(--surface2); border: 1px solid var(--border); color: var(--text-sec); cursor: pointer; padding: 9px; border-radius: var(--radius); font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; transition: background 0.2s, border-color 0.2s, color 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px; }
-.btn-dl:hover { background: rgba(200,150,28,0.1); border-color: var(--gold-dim); color: var(--gold); }
+.btn-dl:hover { background: rgba(0,238,255,0.1); border-color: var(--gold-dim); color: var(--gold); }
 
 /* ── NOTIFICATIONS ── */
 .notif-list { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
-.notif-item { padding: 18px 22px; border-bottom: 1px solid rgba(30,35,64,0.5); display: flex; gap: 16px; align-items: flex-start; transition: background 0.2s; }
+.notif-item { padding: 18px 22px; border-bottom: 1px solid rgba(30,24,64,0.5); display: flex; gap: 16px; align-items: flex-start; transition: background 0.2s; }
 .notif-item:last-child { border-bottom: none; }
 .notif-item:hover { background: rgba(255,255,255,0.02); }
 .notif-item.unread { border-left: 3px solid var(--gold); }
@@ -219,9 +229,9 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 /* ── PROFILE EDIT ── */
 .profile-grid { display: grid; grid-template-columns: 260px 1fr; gap: 24px; }
 .profile-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; text-align: center; }
-.profile-avatar-lg { width: 80px; height: 80px; border-radius: 50%; background: rgba(200,150,28,0.1); border: 2px solid rgba(200,150,28,0.3); display: flex; align-items: center; justify-content: center; font-family: 'Barlow Condensed', sans-serif; font-size: 28px; font-weight: 700; color: var(--gold); margin: 0 auto 16px; }
+.profile-avatar-lg { width: 80px; height: 80px; border-radius: 50%; background: rgba(0,238,255,0.1); border: 2px solid rgba(0,238,255,0.3); display: flex; align-items: center; justify-content: center; font-family: 'Barlow Condensed', sans-serif; font-size: 28px; font-weight: 700; color: var(--gold); margin: 0 auto 16px; }
 .profile-name-lg { font-family: 'Barlow Condensed', sans-serif; font-size: 22px; font-weight: 700; margin-bottom: 6px; }
-.profile-rank-badge { display: inline-block; background: rgba(200,150,28,0.1); border: 1px solid rgba(200,150,28,0.25); color: var(--gold); font-size: 10px; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; padding: 3px 12px; border-radius: 10px; margin-bottom: 20px; }
+.profile-rank-badge { display: inline-block; background: rgba(0,238,255,0.1); border: 1px solid rgba(0,238,255,0.25); color: var(--gold); font-size: 10px; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; padding: 3px 12px; border-radius: 10px; margin-bottom: 20px; }
 .profile-stats { display: flex; flex-direction: column; gap: 12px; margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border); }
 .profile-stat-row { display: flex; justify-content: space-between; font-size: 12px; }
 .profile-stat-row .k { color: var(--text-dim); }
@@ -256,7 +266,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 <!-- SIDEBAR -->
 <aside id="sidebar">
   <div class="sidebar-logo">
-    <img src="assets/logo.png" alt="BRV" />
+    <img src="assets/logo.png?v=1777246397516" alt="BRV" />
   </div>
   <nav class="sidebar-nav">
     <div class="nav-section-label">Principal</div>
@@ -266,21 +276,21 @@ tr:hover td { background: rgba(255,255,255,0.02); }
     <a class="nav-item" onclick="goTo('profile',this)">
       <span class="nav-icon">👤</span> Meu Perfil
     </a>
-    <div class="nav-section-label" id="nav-label-ops">Operações</div>
-    <a class="nav-item" id="nav-pirep" onclick="goTo('pirep',this)">
+    <div class="nav-section-label">Operações</div>
+    <a class="nav-item" onclick="goTo('pirep',this)">
       <span class="nav-icon">✈️</span> Registrar Voo
     </a>
-    <a class="nav-item" id="nav-flights" onclick="goTo('flights',this)">
+    <a class="nav-item" onclick="goTo('flights',this)">
       <span class="nav-icon">📋</span> Meus Voos
     </a>
-    <a class="nav-item" id="nav-routes" onclick="goTo('routes',this)">
+    <a class="nav-item" onclick="goTo('routes',this)">
       <span class="nav-icon">🗺️</span> Rotas
     </a>
-    <div class="nav-section-label" id="nav-label-community">Comunidade</div>
-    <a class="nav-item" id="nav-ranking" onclick="goTo('ranking',this)">
+    <div class="nav-section-label">Comunidade</div>
+    <a class="nav-item" onclick="goTo('ranking',this)">
       <span class="nav-icon">🏆</span> Ranking
     </a>
-    <a class="nav-item" id="nav-downloads" onclick="goTo('downloads',this)">
+    <a class="nav-item" onclick="goTo('downloads',this)">
       <span class="nav-icon">📦</span> Downloads
     </a>
     <a class="nav-item" onclick="goTo('notifs',this)" id="nav-notifs">
@@ -341,10 +351,10 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 
       <div class="two-col gap-b">
         <!-- Últimos voos -->
-        <div id="ov-flights-section">
+        <div>
           <div class="sec-header">
             <div class="sec-title">Últimos voos</div>
-            <button class="sec-action" id="ov-flights-btn" onclick="goTo('flights',null)">Ver todos →</button>
+            <button class="sec-action" onclick="goTo('flights',null)">Ver todos →</button>
           </div>
           <div class="table-wrap">
             <table>
@@ -354,10 +364,10 @@ tr:hover td { background: rgba(255,255,255,0.02); }
           </div>
         </div>
         <!-- Notificações recentes -->
-        <div id="ov-notifs-section">
+        <div>
           <div class="sec-header">
             <div class="sec-title">Avisos recentes</div>
-            <button class="sec-action" id="ov-notifs-btn" onclick="goTo('notifs',null)">Ver todos →</button>
+            <button class="sec-action" onclick="goTo('notifs',null)">Ver todos →</button>
           </div>
           <div class="notif-list" id="ov-notifs-list"></div>
         </div>
@@ -517,96 +527,53 @@ tr:hover td { background: rgba(255,255,255,0.02); }
   </div>
 </main>
 
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
-/* ── FIREBASE ── */
-const firebaseConfig = {
-  apiKey: "AIzaSyC2dDGhKjzHSclyFwUFNGA60DtXAjLEJ6I",
-  authDomain: "bravo-aviation.firebaseapp.com",
-  projectId: "bravo-aviation",
-  storageBucket: "bravo-aviation.firebasestorage.app",
-  messagingSenderId: "712016002234",
-  appId: "1:712016002234:web:ce7a8e39c28bc6d8ca5683"
-};
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.firestore();
+/* ── AUTH ── */
+const user = JSON.parse(localStorage.getItem('brv_user') || sessionStorage.getItem('brv_user') || 'null');
+if (!user) { window.location.href = 'login.html'; throw new Error('Not authenticated'); }
 
-let currentUser = null;
-let user = null;
-let flights = [];
-let PILOTS = [];
+function logout() {
+  localStorage.removeItem('brv_user');
+  sessionStorage.removeItem('brv_user');
+  window.location.href = 'login.html';
+}
 
 /* ── RANK SYSTEM ── */
 const RANKS = [
-  { name: 'Cadete',            min: 0,    max: 50    },
-  { name: '2º Oficial',        min: 50,   max: 150   },
-  { name: '1º Oficial',        min: 150,  max: 350   },
-  { name: 'Comandante',        min: 350,  max: 800   },
-  { name: 'Comandante Sênior', min: 800,  max: 99999 }
+  { name: 'Cadete',           min: 0,    max: 50   },
+  { name: '2º Oficial',       min: 50,   max: 150  },
+  { name: '1º Oficial',       min: 150,  max: 350  },
+  { name: 'Comandante',       min: 350,  max: 800  },
+  { name: 'Comandante Sênior',min: 800,  max: 99999}
 ];
 
 function getRank(hours) {
-  return RANKS.find(r => hours >= r.min && hours < r.max) || RANKS[RANKS.length - 1];
+  return RANKS.find(r => hours >= r.min && hours < r.max) || RANKS[RANKS.length-1];
 }
 
-/* ── AUTH STATE ── */
-auth.onAuthStateChanged(async (fbUser) => {
-  if (!fbUser) { window.location.href = 'login.html'; return; }
-  currentUser = fbUser;
-
-  const snap = await db.collection('users').doc(fbUser.uid).get();
-  if (snap.exists && snap.data().role === 'admin') {
-    window.location.href = 'admin.html'; return;
-  }
-  if (snap.exists) {
-    user = snap.data();
-    user.email = fbUser.email;
-  } else {
-    user = {
-      name: fbUser.email.split('@')[0],
-      vid: '000000',
-      hours: 0,
-      flights: 0,
-      joinDate: new Date().toISOString().slice(0, 10),
-      aircraft: 'Boeing 737-800',
-      email: fbUser.email
-    };
-    await db.collection('users').doc(fbUser.uid).set(user);
-  }
-  user.avatar = user.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
-
-  try {
-    const fSnap = await db.collection('pireps').where('userId', '==', fbUser.uid).get();
-    flights = fSnap.docs
-      .map(d => ({ id: d.id, ...d.data() }))
-      .sort((a, b) => {
-        const at = a.createdAt?.toMillis ? a.createdAt.toMillis() : new Date(a.date).getTime();
-        const bt = b.createdAt?.toMillis ? b.createdAt.toMillis() : new Date(b.date).getTime();
-        return bt - at;
-      });
-  } catch { flights = []; }
-
-  try {
-    const pSnap = await db.collection('users').get();
-    PILOTS = pSnap.docs
-      .filter(d => d.data().role !== 'admin')
-      .map(d => {
-        const p = d.data();
-        return { uid: d.id, name: p.name || '—', vid: p.vid || '—', rank: getRank(p.hours || 0).name, flights: p.flights || 0, hours: p.hours || 0, aircraft: p.aircraft || '—' };
-      }).sort((a, b) => b.hours - a.hours);
-  } catch {
-    PILOTS = [{ uid: fbUser.uid, name: user.name, vid: user.vid, rank: getRank(user.hours).name, flights: user.flights, hours: user.hours, aircraft: user.aircraft }];
-  }
-
-  initUserUI();
-});
-
-function logout() {
-  auth.signOut().then(() => { window.location.href = 'login.html'; });
+/* ── SAMPLE DATA ── */
+const FLIGHTS_KEY = 'brv_flights_' + user.vid;
+let flights = JSON.parse(localStorage.getItem(FLIGHTS_KEY) || '[]');
+if (!flights.length) {
+  flights = [
+    { id:1, dep:'SBGR', arr:'SBBR', ac:'Boeing 737-800', dur:'01:45', fl:'330', date:'2025-04-10T08:00', sim:'MSFS 2024', obs:'', status:'approved' },
+    { id:2, dep:'SBBR', arr:'SBGR', ac:'Boeing 737-800', dur:'01:50', fl:'320', date:'2025-04-08T14:30', sim:'MSFS 2024', obs:'Boas condições.', status:'approved' },
+    { id:3, dep:'SBGR', arr:'SBGL', ac:'Airbus A320', dur:'00:55', fl:'280', date:'2025-04-05T10:00', sim:'X-Plane 12', obs:'', status:'approved' },
+    { id:4, dep:'SBGL', arr:'SBSP', ac:'Airbus A320', dur:'00:45', fl:'200', date:'2025-04-02T16:00', sim:'MSFS 2020', obs:'', status:'approved' },
+    { id:5, dep:'SBGR', arr:'SBCF', ac:'Boeing 737-800', dur:'01:10', fl:'310', date:'2025-03-28T09:00', sim:'MSFS 2024', obs:'', status:'pending' },
+  ];
+  localStorage.setItem(FLIGHTS_KEY, JSON.stringify(flights));
 }
+
+const PILOTS = [
+  { name:'Carlos Bravo', vid:'123456', rank:'Comandante Sênior', flights:210, hours:1240, aircraft:'Airbus A320' },
+  { name:'Ana Ferreira', vid:'334421', rank:'Comandante', flights:120, hours:780, aircraft:'Boeing 737-800' },
+  { name: user.name, vid: user.vid, rank: getRank(user.hours).name, flights: user.flights, hours: user.hours, aircraft: user.aircraft },
+  { name:'Rafael Costa', vid:'567890', rank:'1º Oficial', flights:60, hours:310, aircraft:'Airbus A320' },
+  { name:'Mariana Lima', vid:'112233', rank:'1º Oficial', flights:45, hours:260, aircraft:'Boeing 737-800' },
+  { name:'Pedro Souza', vid:'998877', rank:'2º Oficial', flights:22, hours:130, aircraft:'Airbus A320' },
+  { name:'Lucas Alves', vid:'445566', rank:'Cadete', flights:8, hours:38, aircraft:'Boeing 737-800' },
+].sort((a,b) => b.hours - a.hours);
 
 const ROUTES = [
   { dep:'SBGR', arr:'SBBR', city1:'São Paulo', city2:'Brasília', dur:'1h45', dist:'1070km', freq:'Diário', ac:'B737-800' },
@@ -635,18 +602,13 @@ let NOTIFS = [
 ];
 
 /* ── NAV ── */
-
 const PAGE_TITLES = {
   overview:'Visão Geral', profile:'Meu Perfil', pirep:'Registrar Voo (PIREP)',
   flights:'Meus Voos', routes:'Rotas Disponíveis', ranking:'Ranking de Pilotos',
   downloads:'Downloads', notifs:'Notificações'
 };
 
-const PERM_MAP = { pirep:'pirep', flights:'flights', routes:'routes', ranking:'ranking', downloads:'downloads', notifs:'notifications' };
-
 function goTo(id, el) {
-  const permKey = PERM_MAP[id];
-  if (permKey && user?.permissions && user.permissions[permKey] === false) return;
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById('page-' + id).classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -660,31 +622,6 @@ function goTo(id, el) {
   if (id === 'notifs') renderNotifs();
 }
 
-function applyPermissions(perms) {
-  if (!perms) return;
-  const NAV_IDS = { pirep:'nav-pirep', flights:'nav-flights', routes:'nav-routes', ranking:'nav-ranking', downloads:'nav-downloads', notifications:'nav-notifs' };
-  Object.entries(NAV_IDS).forEach(([key, id]) => {
-    const el = document.getElementById(id);
-    if (el) el.style.display = perms[key] === false ? 'none' : '';
-  });
-  // Hide section labels if all their children are hidden
-  const opsHidden = ['pirep','flights','routes'].every(k => perms[k] === false);
-  const comHidden = ['ranking','downloads','notifications'].every(k => perms[k] === false);
-  document.getElementById('nav-label-ops').style.display = opsHidden ? 'none' : '';
-  document.getElementById('nav-label-community').style.display = comHidden ? 'none' : '';
-  // Overview: hide sub-sections the user can't access
-  const oFlight = document.getElementById('ov-flights-section');
-  if (oFlight) oFlight.style.display = perms.flights === false ? 'none' : '';
-  const oNotifs = document.getElementById('ov-notifs-section');
-  if (oNotifs) oNotifs.style.display = perms.notifications === false ? 'none' : '';
-  // Topbar notification bell
-  const notifBtn = document.querySelector('.notif-btn');
-  if (notifBtn) notifBtn.style.display = perms.notifications === false ? 'none' : '';
-  // Flights page: hide "registrar voo" shortcut if pirep is blocked
-  const pirepShortcut = document.querySelector('#page-flights .sec-action');
-  if (pirepShortcut) pirepShortcut.style.display = perms.pirep === false ? 'none' : '';
-}
-
 /* ── INIT USER UI ── */
 function initUserUI() {
   if (!user) return;
@@ -694,10 +631,10 @@ function initUserUI() {
   document.getElementById('sidebar-rank').textContent = rank.name;
 
   // Overview stats
-  document.getElementById('ov-hours').textContent = (user.hours || 0).toFixed(1) + 'h';
+  document.getElementById('ov-hours').textContent = user.hours.toFixed(1) + 'h';
   document.getElementById('ov-flights').textContent = flights.filter(f=>f.status==='approved').length;
-  const pos = PILOTS.findIndex(p => p.uid === currentUser.uid) + 1;
-  document.getElementById('ov-rank-pos').textContent = '#' + (pos || 1);
+  const pos = PILOTS.findIndex(p => p.vid === user.vid) + 1;
+  document.getElementById('ov-rank-pos').textContent = '#' + pos;
   document.getElementById('ov-rank-name').textContent = rank.name;
   const nextRank = RANKS[RANKS.indexOf(rank) + 1];
   document.getElementById('ov-rank-next').textContent = nextRank ? 'Próxima: ' + nextRank.name + ' (' + nextRank.min + 'h)' : 'Patente máxima atingida!';
@@ -724,7 +661,7 @@ function initUserUI() {
 
   const pct = rank.max === 99999 ? 100 : ((user.hours - rank.min) / (rank.max - rank.min)) * 100;
   setTimeout(() => { document.getElementById('ov-progress-fill').style.width = Math.min(pct, 100) + '%'; }, 200);
-  document.getElementById('ov-prog-cur').textContent = rank.name + ' · ' + (user.hours || 0).toFixed(1) + 'h';
+  document.getElementById('ov-prog-cur').textContent = rank.name + ' · ' + user.hours.toFixed(1) + 'h';
   document.getElementById('ov-prog-next').textContent = nextRank ? 'Próximo: ' + nextRank.name + ' · ' + nextRank.min + 'h' : '🏆 Patente máxima';
 
   // Recent notifs
@@ -746,8 +683,8 @@ function initUserUI() {
   document.getElementById('pf-email').textContent = user.email;
   document.getElementById('pf-aircraft').textContent = user.aircraft;
   document.getElementById('pf-join').textContent = new Date(user.joinDate).toLocaleDateString('pt-BR');
-  document.getElementById('pf-hours').textContent = (user.hours || 0).toFixed(1) + 'h';
-  document.getElementById('pf-flights').textContent = user.flights || 0;
+  document.getElementById('pf-hours').textContent = user.hours.toFixed(1) + 'h';
+  document.getElementById('pf-flights').textContent = user.flights;
   document.getElementById('edit-name').value = user.name;
   document.getElementById('edit-email').value = user.email;
   document.getElementById('edit-vid').value = user.vid;
@@ -791,12 +728,12 @@ function initUserUI() {
   // Ranking
   const rtbody = document.getElementById('ranking-table');
   rtbody.innerHTML = PILOTS.map((p,i) => `
-    <tr class="${p.uid === currentUser.uid ? 'rank-me' : ''}">
+    <tr class="${p.vid === user.vid ? 'rank-me' : ''}">
       <td><span class="rank-position ${i===0?'top1':i===1?'top2':i===2?'top3':''}">${i===0?'🥇':i===1?'🥈':i===2?'🥉':'#'+(i+1)}</span></td>
-      <td class="td-main">${p.name}${p.uid===currentUser.uid?' <span style="font-size:10px;color:var(--gold)">(você)</span>':''}</td>
+      <td class="td-main">${p.name}${p.vid===user.vid?' <span style="font-size:10px;color:var(--gold)">(você)</span>':''}</td>
       <td>${p.rank}</td>
       <td>${p.flights}</td>
-      <td><strong style="color:var(--gold)">${(p.hours||0).toFixed(1)}h</strong></td>
+      <td><strong style="color:var(--gold)">${p.hours.toFixed(1)}h</strong></td>
       <td>${p.aircraft}</td>
     </tr>`).join('');
 
@@ -818,9 +755,6 @@ function initUserUI() {
 
   // Notification badge
   updateNotifBadge();
-
-  // Apply per-user permissions
-  applyPermissions(user.permissions);
 }
 
 function updateNotifBadge() {
@@ -860,12 +794,10 @@ function markAllRead() {
 }
 
 /* ── PIREP SUBMIT ── */
-async function submitPirep(e) {
+function submitPirep(e) {
   e.preventDefault();
-  const submitBtn = document.querySelector('#pirepForm [type=submit]');
-  submitBtn.disabled = true;
   const newFlight = {
-    userId: currentUser.uid,
+    id: flights.length + 1,
     dep: document.getElementById('dep').value.toUpperCase(),
     arr: document.getElementById('arr').value.toUpperCase(),
     ac: document.getElementById('pirep-ac').value,
@@ -874,40 +806,31 @@ async function submitPirep(e) {
     date: document.getElementById('pirep-date').value,
     sim: document.getElementById('pirep-sim').value,
     obs: document.getElementById('pirep-obs').value,
-    status: 'pending',
-    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    status: 'pending'
   };
-  try {
-    const ref = await db.collection('pireps').add(newFlight);
-    flights.unshift({ ...newFlight, id: ref.id, createdAt: new Date() });
-    document.getElementById('pirep-success').classList.add('show');
-    document.getElementById('pirepForm').reset();
-    setTimeout(() => document.getElementById('pirep-success').classList.remove('show'), 5000);
-    NOTIFS.unshift({ id: Date.now(), title: 'PIREP enviado: ' + newFlight.dep + '→' + newFlight.arr, text: 'Seu voo está aguardando aprovação do staff.', date: new Date().toLocaleDateString('pt-BR'), read: false });
-    updateNotifBadge();
-    initUserUI();
-  } catch { alert('Erro ao enviar PIREP. Tente novamente.'); }
-  submitBtn.disabled = false;
+  flights.unshift(newFlight);
+  localStorage.setItem(FLIGHTS_KEY, JSON.stringify(flights));
+  document.getElementById('pirep-success').classList.add('show');
+  document.getElementById('pirepForm').reset();
+  setTimeout(() => document.getElementById('pirep-success').classList.remove('show'), 5000);
+  // Add notif
+  NOTIFS.unshift({ id: Date.now(), title: 'PIREP enviado: ' + newFlight.dep + '→' + newFlight.arr, text: 'Seu voo está aguardando aprovação do staff.', date: new Date().toLocaleDateString('pt-BR'), read: false });
+  updateNotifBadge();
 }
 
 /* ── PROFILE SAVE ── */
-async function saveProfile(e) {
+function saveProfile(e) {
   e.preventDefault();
-  const updates = {
-    name: document.getElementById('edit-name').value,
-    aircraft: document.getElementById('edit-aircraft').value,
-  };
-  try {
-    await db.collection('users').doc(currentUser.uid).update(updates);
-    Object.assign(user, updates);
-    user.avatar = user.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
-    document.getElementById('profile-success').classList.add('show');
-    document.getElementById('pf-name').textContent = user.name;
-    document.getElementById('pf-aircraft').textContent = user.aircraft;
-    document.getElementById('sidebar-name').textContent = user.name;
-    document.getElementById('sidebar-avatar').textContent = user.avatar;
-    setTimeout(() => document.getElementById('profile-success').classList.remove('show'), 4000);
-  } catch { alert('Erro ao salvar perfil.'); }
+  user.name = document.getElementById('edit-name').value;
+  user.email = document.getElementById('edit-email').value;
+  user.aircraft = document.getElementById('edit-aircraft').value;
+  localStorage.setItem('brv_user', JSON.stringify(user));
+  document.getElementById('profile-success').classList.add('show');
+  document.getElementById('pf-name').textContent = user.name;
+  document.getElementById('pf-email').textContent = user.email;
+  document.getElementById('pf-aircraft').textContent = user.aircraft;
+  document.getElementById('sidebar-name').textContent = user.name;
+  setTimeout(() => document.getElementById('profile-success').classList.remove('show'), 4000);
 }
 
 /* ── DOWNLOAD FAKE ── */
@@ -942,6 +865,7 @@ window.addEventListener('click', e => {
   }
 });
 
+initUserUI();
 </script>
 </body>
 </html>

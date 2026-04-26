@@ -10,18 +10,22 @@
 
 <style>
   :root {
-    --bg: #080A12;
-    --surface: #0F1220;
-    --surface2: #141728;
-    --border: #1E2340;
-    --gold: #C8961C;
-    --gold-light: #E0B050;
-    --gold-dim: #7A5A10;
-    --text: #F0EDE6;
-    --text-sec: #8A8FA8;
-    --text-dim: #4A506A;
-    --radius: 4px;
-  }
+  --bg: #080612;
+  --surface: #0E0B1E;
+  --surface2: #130F27;
+  --border: #1E1840;
+  --gold: #00EEFF;
+  --gold-light: #60F5FF;
+  --gold-dim: #007A99;
+    --pink: #FF2080;
+    --pink-light: #FF60A8;
+  --text: #F0EAF8;
+  --text-sec: #9A8FB8;
+  --text-dim: #4A4068;
+  --radius: 4px;
+  --blue: #00EEFF;
+  --purple: #9B30FF;
+}
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   html { scroll-behavior: smooth; }
@@ -44,12 +48,12 @@
     border-bottom: 1px solid transparent;
   }
   nav.scrolled {
-    background: rgba(8,10,18,0.92);
+    background: rgba(8,6,18,0.92);
     backdrop-filter: blur(16px);
     border-bottom: 1px solid var(--border);
   }
   .nav-logo { display: flex; align-items: center; gap: 12px; }
-  .nav-logo img { height: 38px; width: auto; }
+  .nav-logo img { height: 44px; width: auto; mix-blend-mode: screen; }
   .nav-links { display: flex; gap: 36px; list-style: none; }
   .nav-links a {
     color: var(--text-sec);
@@ -88,14 +92,14 @@
 
   .nav-right { display: flex; align-items: center; gap: 16px; }
   .nav-cta {
-    background: var(--gold); color: #000;
+    background: var(--blue, #00EEFF); color: #000;
     padding: 9px 22px;
     font-size: 12px; font-weight: 700;
     letter-spacing: 0.1em; text-transform: uppercase;
     text-decoration: none; border-radius: var(--radius);
     transition: background 0.2s, transform 0.15s;
   }
-  .nav-cta:hover { background: var(--gold-light); transform: translateY(-1px); }
+  .nav-cta:hover { background: #60F5FF; transform: translateY(-1px); }
 
   /* ── HERO ── */
   #hero {
@@ -107,14 +111,15 @@
   .hero-bg {
     position: absolute; inset: 0;
     background:
-      radial-gradient(ellipse 80% 60% at 50% 30%, rgba(200,150,28,0.07) 0%, transparent 70%),
-      radial-gradient(ellipse 60% 40% at 20% 80%, rgba(30,35,64,0.5) 0%, transparent 60%);
+      radial-gradient(ellipse 70% 50% at 50% 30%, rgba(0,238,255,0.14) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 40% at 80% 70%, rgba(0,238,255,0.15) 0%, transparent 60%),
+      radial-gradient(ellipse 40% 40% at 10% 60%, rgba(155,48,255,0.09) 0%, transparent 60%);
   }
   .hero-grid {
     position: absolute; inset: 0;
     background-image:
-      linear-gradient(rgba(200,150,28,0.04) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(200,150,28,0.04) 1px, transparent 1px);
+      linear-gradient(rgba(0,238,255,0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,238,255,0.07) 1px, transparent 1px);
     background-size: 80px 80px;
     mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 80%);
   }
@@ -127,9 +132,10 @@
     opacity: 0; animation: fadeUp 0.8s 0.2s forwards;
   }
   .hero-logo {
-    width: min(480px, 80vw); margin-bottom: 32px;
+    width: min(560px, 88vw); margin-bottom: 24px;
     opacity: 0; animation: fadeUp 0.9s 0.4s forwards;
-    filter: drop-shadow(0 0 40px rgba(200,150,28,0.25));
+    filter: drop-shadow(0 0 48px rgba(0,238,255,0.5)) drop-shadow(0 0 80px rgba(255,32,128,0.4));
+    mix-blend-mode: screen;
   }
   .hero-sub {
     font-family: 'Barlow', sans-serif;
@@ -145,15 +151,15 @@
     opacity: 0; animation: fadeUp 0.9s 0.8s forwards;
   }
   .btn-primary {
-    background: var(--gold); color: #000;
+    background: #00EEFF; color: #000;
     padding: 14px 36px; font-size: 13px; font-weight: 700;
     letter-spacing: 0.1em; text-transform: uppercase;
     text-decoration: none; border-radius: var(--radius);
     transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
   }
   .btn-primary:hover {
-    background: var(--gold-light); transform: translateY(-2px);
-    box-shadow: 0 8px 32px rgba(200,150,28,0.35);
+    background: #60F5FF; transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(0,238,255,0.45), 0 0 60px rgba(0,238,255,0.2);
   }
   .btn-outline {
     background: transparent; color: var(--text);
@@ -219,7 +225,7 @@
     border: 1px solid var(--border); border-radius: 2px; padding: 48px;
     display: flex; flex-direction: column; gap: 24px;
   }
-  .about-visual::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, var(--gold), transparent); }
+  .about-visual::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, var(--gold), #00EEFF, transparent); }
   .info-row { display: flex; justify-content: space-between; align-items: center; padding-bottom: 20px; border-bottom: 1px solid var(--border); }
   .info-row:last-child { border-bottom: none; padding-bottom: 0; }
   .info-key { font-size: 10px; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-dim); }
@@ -239,7 +245,7 @@
     display: flex; align-items: center; justify-content: center;
     position: relative; overflow: hidden;
   }
-  .fleet-visual::after { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at 60% 50%, rgba(200,150,28,0.06) 0%, transparent 70%); }
+  .fleet-visual::after { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at 60% 50%, rgba(0,238,255,0.06) 0%, transparent 70%); }
   .plane-silhouette { font-family: 'Barlow Condensed', sans-serif; font-size: 11px; font-weight: 500; letter-spacing: 0.25em; text-transform: uppercase; color: var(--text-dim); display: flex; flex-direction: column; align-items: center; gap: 12px; }
   .plane-svg { opacity: 0.18; }
   .fleet-info { padding: 28px 32px; }
@@ -261,7 +267,7 @@
   .news-date { font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); font-weight: 600; margin-bottom: 14px; }
   .news-title { font-family: 'Barlow Condensed', sans-serif; font-size: 20px; font-weight: 700; margin-bottom: 12px; line-height: 1.2; }
   .news-body { font-size: 14px; color: var(--text-sec); line-height: 1.7; }
-  .news-tag { display: inline-block; margin-bottom: 14px; background: rgba(200,150,28,0.1); color: var(--gold); border: 1px solid rgba(200,150,28,0.2); font-size: 10px; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; padding: 3px 10px; border-radius: 2px; }
+  .news-tag { display: inline-block; margin-bottom: 14px; background: rgba(0,238,255,0.1); color: var(--gold); border: 1px solid rgba(0,238,255,0.2); font-size: 10px; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; padding: 3px 10px; border-radius: 2px; }
 
   /* ── JOIN ── */
   #join { background: var(--surface); }
@@ -270,7 +276,7 @@
   .join-steps .lead { color: var(--text-sec); font-size: 15px; margin-bottom: 40px; line-height: 1.7; margin-top: 12px; }
   .steps-list { display: flex; flex-direction: column; gap: 28px; }
   .step { display: flex; gap: 20px; align-items: flex-start; }
-  .step-num { font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 700; color: var(--gold); letter-spacing: 0.1em; background: rgba(200,150,28,0.08); border: 1px solid rgba(200,150,28,0.2); width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .step-num { font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 700; color: var(--gold); letter-spacing: 0.1em; background: rgba(0,238,255,0.08); border: 1px solid rgba(0,238,255,0.2); width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
   .step-content h4 { font-family: 'Barlow Condensed', sans-serif; font-size: 17px; font-weight: 700; margin-bottom: 4px; }
   .step-content p { font-size: 13px; color: var(--text-sec); line-height: 1.6; }
   .join-form-side { background: var(--surface2); border-left: 1px solid var(--border); padding: 56px; display: flex; flex-direction: column; justify-content: center; }
@@ -281,8 +287,8 @@
   .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--gold-dim); }
   .form-group input::placeholder { color: var(--text-dim); }
   .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  .btn-submit { width: 100%; background: var(--gold); color: #000; border: none; cursor: pointer; padding: 14px; border-radius: var(--radius); font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; margin-top: 8px; transition: background 0.2s, transform 0.15s; }
-  .btn-submit:hover { background: var(--gold-light); transform: translateY(-1px); }
+  .btn-submit { width: 100%; background: #00EEFF; color: #000; border: none; cursor: pointer; padding: 14px; border-radius: var(--radius); font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; margin-top: 8px; transition: background 0.2s, transform 0.15s; }
+  .btn-submit:hover { background: #60F5FF; transform: translateY(-1px); }
   .form-note { font-size: 11px; color: var(--text-dim); margin-top: 12px; text-align: center; }
 
   /* ── STAFF ── */
@@ -313,7 +319,7 @@
   .contact-info p { color: var(--text-sec); font-size: 15px; line-height: 1.8; margin-bottom: 32px; margin-top: 20px; }
   .contact-items { display: flex; flex-direction: column; gap: 20px; }
   .contact-item { display: flex; gap: 16px; align-items: flex-start; padding: 20px 24px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
-  .contact-icon { width: 36px; height: 36px; border-radius: 50%; background: rgba(200,150,28,0.1); border: 1px solid rgba(200,150,28,0.2); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 15px; }
+  .contact-icon { width: 36px; height: 36px; border-radius: 50%; background: rgba(0,238,255,0.1); border: 1px solid rgba(0,238,255,0.2); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 15px; }
   .contact-item-text .key { font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-dim); font-weight: 600; margin-bottom: 4px; }
   .contact-item-text .val { font-size: 14px; color: var(--text); }
   .contact-form { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 40px; }
@@ -337,12 +343,49 @@
   @keyframes scrollPulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
 
   /* ── SUCCESS ── */
-  .success-msg { display: none; background: rgba(200,150,28,0.1); border: 1px solid rgba(200,150,28,0.3); border-radius: var(--radius); padding: 16px; color: var(--gold-light); font-size: 14px; text-align: center; margin-top: 16px; }
+  .success-msg { display: none; background: rgba(0,238,255,0.1); border: 1px solid rgba(0,238,255,0.3); border-radius: var(--radius); padding: 16px; color: var(--gold-light); font-size: 14px; text-align: center; margin-top: 16px; }
   .success-msg.show { display: block; }
 
   /* ── MOBILE MENU ── */
-  .menu-btn { display: none; background: none; border: none; cursor: pointer; padding: 4px; flex-direction: column; gap: 5px; }
-  .menu-btn span { display: block; width: 24px; height: 1.5px; background: var(--text); }
+  .menu-btn {
+    display: none; background: none; border: none; cursor: pointer;
+    padding: 8px; flex-direction: column; gap: 5px; z-index: 201;
+  }
+  .menu-btn span {
+    display: block; width: 24px; height: 2px;
+    background: var(--text); border-radius: 2px;
+    transition: transform 0.3s, opacity 0.3s, width 0.3s;
+    transform-origin: center;
+  }
+  .menu-btn.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+  .menu-btn.open span:nth-child(2) { opacity: 0; width: 0; }
+  .menu-btn.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+  #mobile-menu {
+    position: fixed; inset: 0; z-index: 199;
+    background: rgba(8,6,18,0.97);
+    backdrop-filter: blur(20px);
+    flex-direction: column; align-items: center; justify-content: center;
+    gap: 8px; display: none;
+    padding: 80px 24px 40px;
+  }
+  #mobile-menu.open { display: flex; animation: fadeIn 0.25s ease; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  #mobile-menu a.mob-link {
+    color: var(--text); text-decoration: none;
+    font-size: 32px; font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 10px 0; width: 100%; text-align: center;
+    border-bottom: 1px solid var(--border);
+    transition: color 0.2s;
+  }
+  #mobile-menu a.mob-link:hover { color: var(--gold); }
+  #mobile-menu .mob-cta {
+    margin-top: 24px; background: var(--gold); color: #000;
+    padding: 14px 48px; font-size: 14px; font-weight: 700;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    text-decoration: none; border-radius: var(--radius);
+  }
 
   /* ── RESPONSIVE ── */
   @media (max-width: 900px) {
@@ -375,7 +418,7 @@
 <!-- NAV -->
 <nav id="navbar">
   <div class="nav-logo">
-    <img src="assets/logo.png" alt="Bravo Virtual Airline" />
+    <img src="assets/logo.png?v=1777246397516" alt="Bravo Virtual Airline" />
   </div>
   <ul class="nav-links">
     <li><a href="#about" data-pt="Sobre" data-en="About">Sobre</a></li>
@@ -406,15 +449,15 @@
 </nav>
 
 <!-- MOBILE MENU -->
-<div id="mobile-menu" style="display:none; position:fixed; inset:0; z-index:99; background:rgba(8,10,18,0.97); flex-direction:column; align-items:center; justify-content:center; gap:32px;">
-  <a href="#about" onclick="closeMobileMenu()" style="color:var(--text);text-decoration:none;font-size:28px;font-family:'Barlow Condensed',sans-serif;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;" data-pt="Sobre" data-en="About">Sobre</a>
-  <a href="#fleet" onclick="closeMobileMenu()" style="color:var(--text);text-decoration:none;font-size:28px;font-family:'Barlow Condensed',sans-serif;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;" data-pt="Frota" data-en="Fleet">Frota</a>
-  <a href="#news" onclick="closeMobileMenu()" style="color:var(--text);text-decoration:none;font-size:28px;font-family:'Barlow Condensed',sans-serif;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;" data-pt="Notícias" data-en="News">Notícias</a>
-  <a href="#staff" onclick="closeMobileMenu()" style="color:var(--text);text-decoration:none;font-size:28px;font-family:'Barlow Condensed',sans-serif;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;" data-pt="Staff" data-en="Staff">Staff</a>
-  <a href="#contact" onclick="closeMobileMenu()" style="color:var(--text);text-decoration:none;font-size:28px;font-family:'Barlow Condensed',sans-serif;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;" data-pt="Contato" data-en="Contact">Contato</a>
-  <a href="#join" class="btn-primary" onclick="closeMobileMenu()" data-pt="Junte-se" data-en="Join Us">Junte-se</a>
-  <div class="lang-switcher" style="margin-top:8px;">
-    <button class="lang-btn active" id="btn-pt-m" onclick="setLang('pt')" aria-label="Português">
+<div id="mobile-menu">
+  <a href="#about" class="mob-link" onclick="closeMobileMenu()" data-pt="Sobre" data-en="About">Sobre</a>
+  <a href="#fleet" class="mob-link" onclick="closeMobileMenu()" data-pt="Frota" data-en="Fleet">Frota</a>
+  <a href="#news" class="mob-link" onclick="closeMobileMenu()" data-pt="Notícias" data-en="News">Notícias</a>
+  <a href="#staff" class="mob-link" onclick="closeMobileMenu()" data-pt="Staff" data-en="Staff">Staff</a>
+  <a href="#contact" class="mob-link" onclick="closeMobileMenu()" data-pt="Contato" data-en="Contact">Contato</a>
+  <a href="#join" class="mob-cta" onclick="closeMobileMenu()" data-pt="Junte-se" data-en="Join Us">Junte-se</a>
+  <div class="lang-switcher" style="margin-top:16px;">
+    <button class="lang-btn" id="btn-pt-m" onclick="setLang('pt')" aria-label="Português">
       <span class="flag">🇧🇷</span><span class="lang-code">PT</span>
     </button>
     <button class="lang-btn" id="btn-en-m" onclick="setLang('en')" aria-label="English">
@@ -429,7 +472,7 @@
   <div class="hero-grid"></div>
   <div class="hero-content">
     <p class="hero-callsign">ICAO: BRV &nbsp;·&nbsp; HUB: SBGR &nbsp;·&nbsp; IVAO Partner Virtual Airline</p>
-    <img src="assets/logo.png" class="hero-logo" alt="Bravo Virtual Airline" />
+    <img src="assets/logo.png?v=1777246397516" class="hero-logo" alt="Bravo Virtual Airline" />
     <p class="hero-sub" data-pt="A excelência em aviação virtual no <strong>IVAO</strong>.<br />Hub: São Paulo – Guarulhos (SBGR)" data-en="Excellence in virtual aviation on the <strong>IVAO</strong> network.<br />Hub: São Paulo – Guarulhos (SBGR)">
       A excelência em aviação virtual no <strong>IVAO</strong>.<br />Hub: São Paulo – Guarulhos (SBGR)
     </p>
@@ -527,10 +570,10 @@
         <div class="fleet-visual">
           <div class="plane-silhouette">
             <svg class="plane-svg" width="220" height="80" viewBox="0 0 220 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M8 46 L180 38 L210 36 L210 40 L180 42 L50 60 Z" fill="#C8961C"/>
-              <path d="M180 38 L210 28 L215 36 L210 36 Z" fill="#C8961C"/>
-              <path d="M60 60 L80 46 L120 44 L110 60 Z" fill="#C8961C"/>
-              <path d="M150 42 L168 38 L170 46 L152 48 Z" fill="#C8961C"/>
+              <path d="M8 46 L180 38 L210 36 L210 40 L180 42 L50 60 Z" fill="#FF2080"/>
+              <path d="M180 38 L210 28 L215 36 L210 36 Z" fill="#FF2080"/>
+              <path d="M60 60 L80 46 L120 44 L110 60 Z" fill="#FF2080"/>
+              <path d="M150 42 L168 38 L170 46 L152 48 Z" fill="#FF2080"/>
             </svg>
             <span data-pt="Ilustração da aeronave" data-en="Aircraft illustration">Ilustração da aeronave</span>
           </div>
@@ -558,10 +601,10 @@
         <div class="fleet-visual">
           <div class="plane-silhouette">
             <svg class="plane-svg" width="220" height="80" viewBox="0 0 220 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M8 46 L175 37 L208 35 L208 39 L175 41 L50 60 Z" fill="#C8961C"/>
-              <path d="M175 37 L208 26 L213 35 L208 35 Z" fill="#C8961C"/>
-              <path d="M58 60 L78 46 L116 44 L108 60 Z" fill="#C8961C"/>
-              <path d="M148 41 L164 37 L166 45 L150 47 Z" fill="#C8961C"/>
+              <path d="M8 46 L175 37 L208 35 L208 39 L175 41 L50 60 Z" fill="#FF2080"/>
+              <path d="M175 37 L208 26 L213 35 L208 35 Z" fill="#FF2080"/>
+              <path d="M58 60 L78 46 L116 44 L108 60 Z" fill="#FF2080"/>
+              <path d="M148 41 L164 37 L166 45 L150 47 Z" fill="#FF2080"/>
             </svg>
             <span data-pt="Ilustração da aeronave" data-en="Aircraft illustration">Ilustração da aeronave</span>
           </div>
@@ -669,36 +712,31 @@
           <div class="form-row">
             <div class="form-group">
               <label data-pt="Nome" data-en="First Name">Nome</label>
-              <input id="join-first" type="text" data-placeholder-pt="João" data-placeholder-en="John" placeholder="João" required />
+              <input type="text" data-placeholder-pt="João" data-placeholder-en="John" placeholder="João" required />
             </div>
             <div class="form-group">
               <label data-pt="Sobrenome" data-en="Last Name">Sobrenome</label>
-              <input id="join-last" type="text" data-placeholder-pt="Silva" data-placeholder-en="Smith" placeholder="Silva" required />
+              <input type="text" data-placeholder-pt="Silva" data-placeholder-en="Smith" placeholder="Silva" required />
             </div>
           </div>
           <div class="form-group">
             <label>VID IVAO</label>
-            <input id="join-vid" type="text" placeholder="123456" required pattern="[0-9]{5,8}" />
+            <input type="text" placeholder="123456" required pattern="[0-9]{5,8}" />
           </div>
           <div class="form-group">
             <label data-pt="E-mail" data-en="E-mail">E-mail</label>
-            <input id="join-email" type="email" placeholder="email@exemplo.com" required />
-          </div>
-          <div class="form-group">
-            <label data-pt="Senha" data-en="Password">Senha</label>
-            <input id="join-password" type="password" placeholder="Mínimo 6 caracteres" required minlength="6" />
+            <input type="email" placeholder="email@exemplo.com" required />
           </div>
           <div class="form-group">
             <label data-pt="Aeronave preferida" data-en="Preferred aircraft">Aeronave preferida</label>
-            <select id="join-aircraft">
+            <select>
               <option value="" data-pt="Selecione" data-en="Select">Selecione</option>
               <option>Boeing 737-800</option>
               <option>Airbus A320</option>
               <option data-pt="Sem preferência" data-en="No preference">Sem preferência</option>
             </select>
           </div>
-          <button type="submit" class="btn-submit" id="join-btn" data-pt="Enviar candidatura" data-en="Submit application">Enviar candidatura</button>
-          <div id="join-error" style="display:none;margin-top:12px;color:#e05555;font-size:12px;"></div>
+          <button type="submit" class="btn-submit" data-pt="Enviar candidatura" data-en="Submit application">Enviar candidatura</button>
           <div class="form-note" data-pt="Seu e-mail pessoal não será divulgado publicamente." data-en="Your personal email will not be displayed publicly.">Seu e-mail pessoal não será divulgado publicamente.</div>
         </form>
         <div class="success-msg" id="joinSuccess" data-pt="✓ Candidatura enviada! Entraremos em contato em até 72h." data-en="✓ Application submitted! We'll reach out within 72h.">✓ Candidatura enviada! Entraremos em contato em até 72h.</div>
@@ -819,7 +857,7 @@
 <footer>
   <div class="footer-inner">
     <div class="footer-logo">
-      <img src="assets/logo.png" alt="Bravo Virtual Airline" />
+      <img src="assets/logo.png?v=1777246397516" alt="Bravo Virtual Airline" />
     </div>
     <div class="footer-copy">
       © 2025 Bravo Virtual Airline — Callsign BRV — Hub SBGR<br />
@@ -911,51 +949,26 @@
 
   /* ── MOBILE MENU ── */
   const mobileMenu = document.getElementById('mobile-menu');
+  const menuBtn = document.querySelector('.menu-btn');
   let menuOpen = false;
   function toggleMobileMenu() {
     menuOpen = !menuOpen;
-    mobileMenu.style.display = menuOpen ? 'flex' : 'none';
+    mobileMenu.classList.toggle('open', menuOpen);
+    menuBtn.classList.toggle('open', menuOpen);
     document.body.style.overflow = menuOpen ? 'hidden' : '';
   }
   function closeMobileMenu() {
     menuOpen = false;
-    mobileMenu.style.display = 'none';
+    mobileMenu.classList.remove('open');
+    menuBtn.classList.remove('open');
     document.body.style.overflow = '';
   }
 
   /* ── FORMS ── */
-  async function handleJoin(e) {
+  function handleJoin(e) {
     e.preventDefault();
-    const btn = document.getElementById('join-btn');
-    const errEl = document.getElementById('join-error');
-    btn.disabled = true;
-    btn.textContent = 'Enviando...';
-    errEl.style.display = 'none';
-    const firstName = document.getElementById('join-first').value.trim();
-    const lastName  = document.getElementById('join-last').value.trim();
-    const vid       = document.getElementById('join-vid').value.trim();
-    const email     = document.getElementById('join-email').value.trim().toLowerCase();
-    const password  = document.getElementById('join-password').value;
-    const aircraft  = document.getElementById('join-aircraft').value || 'Sem preferência';
-    try {
-      const cred = await firebase.auth().createUserWithEmailAndPassword(email, password);
-      await firebase.firestore().collection('applications').doc(cred.user.uid).set({
-        name: firstName + ' ' + lastName, firstName, lastName, vid, email, aircraft,
-        status: 'pending',
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-      await firebase.auth().signOut();
-      document.getElementById('joinForm').style.display = 'none';
-      document.getElementById('joinSuccess').classList.add('show');
-    } catch (err) {
-      let msg = 'Erro ao enviar candidatura. Tente novamente.';
-      if (err.code === 'auth/email-already-in-use') msg = 'Este e-mail já está cadastrado.';
-      if (err.code === 'auth/weak-password') msg = 'Senha muito fraca. Mínimo 6 caracteres.';
-      errEl.textContent = msg;
-      errEl.style.display = 'block';
-      btn.disabled = false;
-      btn.textContent = 'Enviar candidatura';
-    }
+    document.getElementById('joinForm').style.display = 'none';
+    document.getElementById('joinSuccess').classList.add('show');
   }
   function handleContact(e) {
     e.preventDefault();
@@ -963,18 +976,6 @@
     e.target.reset();
   }
 </script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script>
-  firebase.initializeApp({
-    apiKey: "AIzaSyC2dDGhKjzHSclyFwUFNGA60DtXAjLEJ6I",
-    authDomain: "bravo-aviation.firebaseapp.com",
-    projectId: "bravo-aviation",
-    storageBucket: "bravo-aviation.firebasestorage.app",
-    messagingSenderId: "712016002234",
-    appId: "1:712016002234:web:ce7a8e39c28bc6d8ca5683"
-  });
-</script>
+
 </body>
 </html>

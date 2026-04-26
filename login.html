@@ -9,19 +9,22 @@
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
 <style>
   :root {
-    --bg: #080A12;
-    --surface: #0F1220;
-    --surface2: #141728;
-    --border: #1E2340;
-    --gold: #C8961C;
-    --gold-light: #E0B050;
-    --gold-dim: #7A5A10;
-    --text: #F0EDE6;
-    --text-sec: #8A8FA8;
-    --text-dim: #4A506A;
-    --radius: 4px;
-    --danger: #e05050;
-  }
+  --bg: #080612;
+  --surface: #0E0B1E;
+  --surface2: #130F27;
+  --border: #1E1840;
+  --gold: #00EEFF;
+  --gold-light: #60F5FF;
+  --gold-dim: #007A99;
+    --pink: #FF2080;
+    --pink-light: #FF60A8;
+  --text: #F0EAF8;
+  --text-sec: #9A8FB8;
+  --text-dim: #4A4068;
+  --radius: 4px;
+  --blue: #00EEFF;
+  --purple: #9B30FF;
+}
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; }
   body {
@@ -40,14 +43,14 @@
   .bg-grid {
     position: fixed; inset: 0; z-index: 0;
     background-image:
-      linear-gradient(rgba(200,150,28,0.035) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(200,150,28,0.035) 1px, transparent 1px);
+      linear-gradient(rgba(0,238,255,0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,238,255,0.035) 1px, transparent 1px);
     background-size: 80px 80px;
     mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, black 20%, transparent 80%);
   }
   .bg-glow {
     position: fixed; inset: 0; z-index: 0;
-    background: radial-gradient(ellipse 60% 50% at 50% 40%, rgba(200,150,28,0.06) 0%, transparent 70%);
+    background: radial-gradient(ellipse 60% 50% at 40% 40%, rgba(0,238,255,0.10) 0%, transparent 60%), radial-gradient(ellipse 40% 40% at 75% 60%, rgba(0,238,255,0.07) 0%, transparent 60%);
   }
 
   /* Card */
@@ -60,7 +63,7 @@
   @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
   .login-header { text-align: center; margin-bottom: 36px; }
-  .login-logo { height: 56px; margin-bottom: 20px; filter: drop-shadow(0 0 24px rgba(200,150,28,0.2)); }
+  .login-logo { height: 100px; margin-bottom: 16px; filter: drop-shadow(0 0 32px rgba(0,238,255,0.4)) drop-shadow(0 0 20px rgba(255,32,128,0.3)); mix-blend-mode: screen; }
   .login-header h1 {
     font-family: 'Barlow Condensed', sans-serif;
     font-size: 13px; font-weight: 600;
@@ -79,7 +82,7 @@
   .login-card::before {
     content: '';
     position: absolute; top: 0; left: 0; right: 0; height: 2px;
-    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    background: linear-gradient(90deg, transparent, var(--gold), var(--info, #00EEFF), transparent);
   }
 
   .card-title {
@@ -104,7 +107,7 @@
     font-family: 'Inter', sans-serif; font-size: 14px;
     transition: border-color 0.2s, box-shadow 0.2s;
   }
-  .input-wrap input:focus { outline: none; border-color: var(--gold-dim); box-shadow: 0 0 0 3px rgba(200,150,28,0.08); }
+  .input-wrap input:focus { outline: none; border-color: var(--gold-dim); box-shadow: 0 0 0 3px rgba(0,238,255,0.08); }
   .input-wrap input::placeholder { color: var(--text-dim); }
   .input-wrap input.error { border-color: var(--danger); }
 
@@ -128,7 +131,7 @@
   .forgot:hover { color: var(--gold); }
 
   .btn-login {
-    width: 100%; background: var(--gold); color: #000;
+    width: 100%; background: #00EEFF; color: #000;
     border: none; cursor: pointer; padding: 14px;
     border-radius: var(--radius);
     font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700;
@@ -136,7 +139,7 @@
     transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
     position: relative; overflow: hidden;
   }
-  .btn-login:hover { background: var(--gold-light); transform: translateY(-1px); box-shadow: 0 6px 24px rgba(200,150,28,0.3); }
+  .btn-login:hover { background: #60F5FF; transform: translateY(-1px); box-shadow: 0 6px 24px rgba(0,238,255,0.4); }
   .btn-login:active { transform: translateY(0); }
   .btn-login.loading { pointer-events: none; opacity: 0.7; }
 
@@ -167,7 +170,7 @@
   .divider span { font-size: 11px; color: var(--text-dim); letter-spacing: 0.1em; white-space: nowrap; }
 
   .demo-hint {
-    background: rgba(200,150,28,0.06); border: 1px solid rgba(200,150,28,0.15);
+    background: rgba(0,238,255,0.06); border: 1px solid rgba(0,238,255,0.15);
     border-radius: var(--radius); padding: 14px 16px;
     font-size: 12px; color: var(--text-dim); line-height: 1.6;
     text-align: center;
@@ -188,7 +191,7 @@
     border-radius: var(--radius); font-size: 12px; color: var(--text-dim);
   }
   .vid-badge {
-    background: rgba(200,150,28,0.12); border: 1px solid rgba(200,150,28,0.2);
+    background: rgba(0,238,255,0.12); border: 1px solid rgba(0,238,255,0.2);
     color: var(--gold); font-size: 10px; font-weight: 700;
     letter-spacing: 0.15em; text-transform: uppercase;
     padding: 2px 8px; border-radius: 10px; flex-shrink: 0;
@@ -202,7 +205,7 @@
 
 <div class="login-wrap">
   <div class="login-header">
-    <img src="assets/logo.png" alt="Bravo Virtual Airline" class="login-logo" />
+    <img src="assets/logo.png?v=1777246397516" alt="Bravo Virtual Airline" class="login-logo" />
     <h1>Área de Membros</h1>
     <p>ICAO: BRV &nbsp;·&nbsp; Hub: SBGR &nbsp;·&nbsp; IVAO Partner</p>
   </div>
@@ -251,20 +254,36 @@
   </div>
 </div>
 
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
-  firebase.initializeApp({
-    apiKey: "AIzaSyC2dDGhKjzHSclyFwUFNGA60DtXAjLEJ6I",
-    authDomain: "bravo-aviation.firebaseapp.com",
-    projectId: "bravo-aviation",
-    storageBucket: "bravo-aviation.firebasestorage.app",
-    messagingSenderId: "712016002234",
-    appId: "1:712016002234:web:ce7a8e39c28bc6d8ca5683"
-  });
-  const auth = firebase.auth();
-  const db   = firebase.firestore();
+  // Demo users
+  const USERS = [
+    {
+      email: 'piloto@bravo.aero',
+      password: 'brv2024',
+      name: 'João Silva',
+      vid: '487231',
+      rank: 'Comandante',
+      rankLevel: 4,
+      hours: 623.5,
+      flights: 87,
+      joinDate: '2024-03-15',
+      aircraft: 'Boeing 737-800',
+      avatar: 'JS'
+    },
+    {
+      email: 'admin@bravo.aero',
+      password: 'admin2024',
+      name: 'Carlos Bravo',
+      vid: '123456',
+      rank: 'Comandante Sênior',
+      rankLevel: 5,
+      hours: 1240,
+      flights: 210,
+      joinDate: '2024-01-01',
+      aircraft: 'Airbus A320',
+      avatar: 'CB'
+    }
+  ];
 
   function togglePass() {
     const inp = document.getElementById('password');
@@ -273,65 +292,27 @@
     else { inp.type = 'password'; btn.textContent = '👁'; }
   }
 
-  function showStatus(type) {
-    document.querySelector('.login-card').style.display = 'none';
-    document.getElementById('statusBox').style.display = 'block';
-    document.getElementById('statusBox').innerHTML = type === 'pending'
-      ? `<div style="text-align:center;padding:32px 0;">
-           <div style="font-size:40px;margin-bottom:16px;">⏳</div>
-           <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700;margin-bottom:8px;">Candidatura em análise</div>
-           <div style="color:var(--text-sec);font-size:13px;line-height:1.7;">Sua candidatura está sendo analisada pelo staff.<br>Você receberá acesso em até 72h.</div>
-           <button onclick="backToLogin()" style="margin-top:24px;background:none;border:1px solid var(--border);color:var(--text-sec);padding:10px 24px;border-radius:4px;cursor:pointer;font-size:12px;">← Voltar</button>
-         </div>`
-      : `<div style="text-align:center;padding:32px 0;">
-           <div style="font-size:40px;margin-bottom:16px;">❌</div>
-           <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700;margin-bottom:8px;">Candidatura recusada</div>
-           <div style="color:var(--text-sec);font-size:13px;">Entre em contato com o staff para mais informações.</div>
-           <button onclick="backToLogin()" style="margin-top:24px;background:none;border:1px solid var(--border);color:var(--text-sec);padding:10px 24px;border-radius:4px;cursor:pointer;font-size:12px;">← Voltar</button>
-         </div>`;
-  }
-
-  function backToLogin() {
-    auth.signOut();
-    document.getElementById('statusBox').style.display = 'none';
-    document.querySelector('.login-card').style.display = 'block';
-  }
-
   function handleLogin(e) {
     e.preventDefault();
-    const email    = document.getElementById('email').value.trim().toLowerCase();
+    const email = document.getElementById('email').value.trim().toLowerCase();
     const password = document.getElementById('password').value;
     const remember = document.getElementById('remember').checked;
     const btn = document.getElementById('loginBtn');
     const err = document.getElementById('errorMsg');
+
     err.classList.remove('show');
     btn.classList.add('loading');
 
-    const persistence = remember
-      ? firebase.auth.Auth.Persistence.LOCAL
-      : firebase.auth.Auth.Persistence.SESSION;
+    setTimeout(() => {
+      const user = USERS.find(u => u.email === email && u.password === password);
+      btn.classList.remove('loading');
 
-    auth.setPersistence(persistence)
-      .then(() => auth.signInWithEmailAndPassword(email, password))
-      .then(async (cred) => {
-        const uid = cred.user.uid;
-        const [userSnap, appSnap] = await Promise.all([
-          db.collection('users').doc(uid).get(),
-          db.collection('applications').doc(uid).get()
-        ]);
-        if (userSnap.exists && userSnap.data().role === 'admin') {
-          window.location.href = 'admin.html'; return;
-        }
-        if (appSnap.exists && appSnap.data().status === 'pending') {
-          showStatus('pending'); btn.classList.remove('loading'); return;
-        }
-        if (appSnap.exists && appSnap.data().status === 'rejected') {
-          showStatus('rejected'); btn.classList.remove('loading'); return;
-        }
+      if (user) {
+        const storage = remember ? localStorage : sessionStorage;
+        storage.setItem('brv_user', JSON.stringify(user));
+        localStorage.setItem('brv_lang', localStorage.getItem('brv_lang') || 'pt');
         window.location.href = 'dashboard.html';
-      })
-      .catch(() => {
-        btn.classList.remove('loading');
+      } else {
         err.classList.add('show');
         document.getElementById('email').classList.add('error');
         document.getElementById('password').classList.add('error');
@@ -339,23 +320,13 @@
           document.getElementById('email').classList.remove('error');
           document.getElementById('password').classList.remove('error');
         }, 2000);
-      });
+      }
+    }, 900);
   }
 
-  auth.onAuthStateChanged(async (u) => {
-    if (!u) return;
-    const [userSnap, appSnap] = await Promise.all([
-      db.collection('users').doc(u.uid).get(),
-      db.collection('applications').doc(u.uid).get()
-    ]);
-    if (userSnap.exists && userSnap.data().role === 'admin') { window.location.href = 'admin.html'; return; }
-    if (appSnap.exists && appSnap.data().status === 'pending') return;
-    if (userSnap.exists) window.location.href = 'dashboard.html';
-  });
+  // Check if already logged in
+  const stored = localStorage.getItem('brv_user') || sessionStorage.getItem('brv_user');
+  if (stored) window.location.href = 'dashboard.html';
 </script>
-<!-- Status box (hidden by default) -->
-<div id="statusBox" style="display:none;position:fixed;inset:0;z-index:100;background:var(--bg);display:none;align-items:center;justify-content:center;">
-  <div style="background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:40px;max-width:400px;width:90%;"></div>
-</div>
 </body>
 </html>
