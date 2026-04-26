@@ -517,53 +517,91 @@ tr:hover td { background: rgba(255,255,255,0.02); }
   </div>
 </main>
 
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
-/* ── AUTH ── */
-const user = JSON.parse(localStorage.getItem('brv_user') || sessionStorage.getItem('brv_user') || 'null');
-if (!user) { window.location.href = 'login.html'; throw new Error('Not authenticated'); }
+/* ── FIREBASE ── */
+const firebaseConfig = {
+  apiKey: "AIzaSyC2dDGhKjzHSclyFwUFNGA60DtXAjLEJ6I",
+  authDomain: "bravo-aviation.firebaseapp.com",
+  projectId: "bravo-aviation",
+  storageBucket: "bravo-aviation.firebasestorage.app",
+  messagingSenderId: "712016002234",
+  appId: "1:712016002234:web:ce7a8e39c28bc6d8ca5683"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
 
-function logout() {
-  localStorage.removeItem('brv_user');
-  sessionStorage.removeItem('brv_user');
-  window.location.href = 'login.html';
-}
+let currentUser = null;
+let user = null;
+let flights = [];
+let PILOTS = [];
 
 /* ── RANK SYSTEM ── */
 const RANKS = [
-  { name: 'Cadete',           min: 0,    max: 50   },
-  { name: '2º Oficial',       min: 50,   max: 150  },
-  { name: '1º Oficial',       min: 150,  max: 350  },
-  { name: 'Comandante',       min: 350,  max: 800  },
-  { name: 'Comandante Sênior',min: 800,  max: 99999}
+  { name: 'Cadete',            min: 0,    max: 50    },
+  { name: '2º Oficial',        min: 50,   max: 150   },
+  { name: '1º Oficial',        min: 150,  max: 350   },
+  { name: 'Comandante',        min: 350,  max: 800   },
+  { name: 'Comandante Sênior', min: 800,  max: 99999 }
 ];
 
 function getRank(hours) {
-  return RANKS.find(r => hours >= r.min && hours < r.max) || RANKS[RANKS.length-1];
+  return RANKS.find(r => hours >= r.min && hours < r.max) || RANKS[RANKS.length - 1];
 }
 
-/* ── SAMPLE DATA ── */
-const FLIGHTS_KEY = 'brv_flights_' + user.vid;
-let flights = JSON.parse(localStorage.getItem(FLIGHTS_KEY) || '[]');
-if (!flights.length) {
-  flights = [
-    { id:1, dep:'SBGR', arr:'SBBR', ac:'Boeing 737-800', dur:'01:45', fl:'330', date:'2025-04-10T08:00', sim:'MSFS 2024', obs:'', status:'approved' },
-    { id:2, dep:'SBBR', arr:'SBGR', ac:'Boeing 737-800', dur:'01:50', fl:'320', date:'2025-04-08T14:30', sim:'MSFS 2024', obs:'Boas condições.', status:'approved' },
-    { id:3, dep:'SBGR', arr:'SBGL', ac:'Airbus A320', dur:'00:55', fl:'280', date:'2025-04-05T10:00', sim:'X-Plane 12', obs:'', status:'approved' },
-    { id:4, dep:'SBGL', arr:'SBSP', ac:'Airbus A320', dur:'00:45', fl:'200', date:'2025-04-02T16:00', sim:'MSFS 2020', obs:'', status:'approved' },
-    { id:5, dep:'SBGR', arr:'SBCF', ac:'Boeing 737-800', dur:'01:10', fl:'310', date:'2025-03-28T09:00', sim:'MSFS 2024', obs:'', status:'pending' },
-  ];
-  localStorage.setItem(FLIGHTS_KEY, JSON.stringify(flights));
-}
+/* ── AUTH STATE ── */
+auth.onAuthStateChanged(async (fbUser) => {
+  if (!fbUser) { window.location.href = 'login.html'; return; }
+  currentUser = fbUser;
 
-const PILOTS = [
-  { name:'Carlos Bravo', vid:'123456', rank:'Comandante Sênior', flights:210, hours:1240, aircraft:'Airbus A320' },
-  { name:'Ana Ferreira', vid:'334421', rank:'Comandante', flights:120, hours:780, aircraft:'Boeing 737-800' },
-  { name: user.name, vid: user.vid, rank: getRank(user.hours).name, flights: user.flights, hours: user.hours, aircraft: user.aircraft },
-  { name:'Rafael Costa', vid:'567890', rank:'1º Oficial', flights:60, hours:310, aircraft:'Airbus A320' },
-  { name:'Mariana Lima', vid:'112233', rank:'1º Oficial', flights:45, hours:260, aircraft:'Boeing 737-800' },
-  { name:'Pedro Souza', vid:'998877', rank:'2º Oficial', flights:22, hours:130, aircraft:'Airbus A320' },
-  { name:'Lucas Alves', vid:'445566', rank:'Cadete', flights:8, hours:38, aircraft:'Boeing 737-800' },
-].sort((a,b) => b.hours - a.hours);
+  const snap = await db.collection('users').doc(fbUser.uid).get();
+  if (snap.exists) {
+    user = snap.data();
+    user.email = fbUser.email;
+  } else {
+    user = {
+      name: fbUser.email.split('@')[0],
+      vid: '000000',
+      hours: 0,
+      flights: 0,
+      joinDate: new Date().toISOString().slice(0, 10),
+      aircraft: 'Boeing 737-800',
+      email: fbUser.email
+    };
+    await db.collection('users').doc(fbUser.uid).set(user);
+  }
+  user.avatar = user.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+
+  try {
+    const fSnap = await db.collection('pireps').where('userId', '==', fbUser.uid).get();
+    flights = fSnap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => {
+        const at = a.createdAt?.toMillis ? a.createdAt.toMillis() : new Date(a.date).getTime();
+        const bt = b.createdAt?.toMillis ? b.createdAt.toMillis() : new Date(b.date).getTime();
+        return bt - at;
+      });
+  } catch { flights = []; }
+
+  try {
+    const pSnap = await db.collection('users').get();
+    PILOTS = pSnap.docs.map(d => {
+      const p = d.data();
+      return { uid: d.id, name: p.name || '—', vid: p.vid || '—', rank: getRank(p.hours || 0).name, flights: p.flights || 0, hours: p.hours || 0, aircraft: p.aircraft || '—' };
+    }).sort((a, b) => b.hours - a.hours);
+  } catch {
+    PILOTS = [{ uid: fbUser.uid, name: user.name, vid: user.vid, rank: getRank(user.hours).name, flights: user.flights, hours: user.hours, aircraft: user.aircraft }];
+  }
+
+  initUserUI();
+});
+
+function logout() {
+  auth.signOut().then(() => { window.location.href = 'login.html'; });
+}
 
 const ROUTES = [
   { dep:'SBGR', arr:'SBBR', city1:'São Paulo', city2:'Brasília', dur:'1h45', dist:'1070km', freq:'Diário', ac:'B737-800' },
@@ -592,6 +630,7 @@ let NOTIFS = [
 ];
 
 /* ── NAV ── */
+
 const PAGE_TITLES = {
   overview:'Visão Geral', profile:'Meu Perfil', pirep:'Registrar Voo (PIREP)',
   flights:'Meus Voos', routes:'Rotas Disponíveis', ranking:'Ranking de Pilotos',
@@ -621,10 +660,10 @@ function initUserUI() {
   document.getElementById('sidebar-rank').textContent = rank.name;
 
   // Overview stats
-  document.getElementById('ov-hours').textContent = user.hours.toFixed(1) + 'h';
+  document.getElementById('ov-hours').textContent = (user.hours || 0).toFixed(1) + 'h';
   document.getElementById('ov-flights').textContent = flights.filter(f=>f.status==='approved').length;
-  const pos = PILOTS.findIndex(p => p.vid === user.vid) + 1;
-  document.getElementById('ov-rank-pos').textContent = '#' + pos;
+  const pos = PILOTS.findIndex(p => p.uid === currentUser.uid) + 1;
+  document.getElementById('ov-rank-pos').textContent = '#' + (pos || 1);
   document.getElementById('ov-rank-name').textContent = rank.name;
   const nextRank = RANKS[RANKS.indexOf(rank) + 1];
   document.getElementById('ov-rank-next').textContent = nextRank ? 'Próxima: ' + nextRank.name + ' (' + nextRank.min + 'h)' : 'Patente máxima atingida!';
@@ -651,7 +690,7 @@ function initUserUI() {
 
   const pct = rank.max === 99999 ? 100 : ((user.hours - rank.min) / (rank.max - rank.min)) * 100;
   setTimeout(() => { document.getElementById('ov-progress-fill').style.width = Math.min(pct, 100) + '%'; }, 200);
-  document.getElementById('ov-prog-cur').textContent = rank.name + ' · ' + user.hours.toFixed(1) + 'h';
+  document.getElementById('ov-prog-cur').textContent = rank.name + ' · ' + (user.hours || 0).toFixed(1) + 'h';
   document.getElementById('ov-prog-next').textContent = nextRank ? 'Próximo: ' + nextRank.name + ' · ' + nextRank.min + 'h' : '🏆 Patente máxima';
 
   // Recent notifs
@@ -673,8 +712,8 @@ function initUserUI() {
   document.getElementById('pf-email').textContent = user.email;
   document.getElementById('pf-aircraft').textContent = user.aircraft;
   document.getElementById('pf-join').textContent = new Date(user.joinDate).toLocaleDateString('pt-BR');
-  document.getElementById('pf-hours').textContent = user.hours.toFixed(1) + 'h';
-  document.getElementById('pf-flights').textContent = user.flights;
+  document.getElementById('pf-hours').textContent = (user.hours || 0).toFixed(1) + 'h';
+  document.getElementById('pf-flights').textContent = user.flights || 0;
   document.getElementById('edit-name').value = user.name;
   document.getElementById('edit-email').value = user.email;
   document.getElementById('edit-vid').value = user.vid;
@@ -718,12 +757,12 @@ function initUserUI() {
   // Ranking
   const rtbody = document.getElementById('ranking-table');
   rtbody.innerHTML = PILOTS.map((p,i) => `
-    <tr class="${p.vid === user.vid ? 'rank-me' : ''}">
+    <tr class="${p.uid === currentUser.uid ? 'rank-me' : ''}">
       <td><span class="rank-position ${i===0?'top1':i===1?'top2':i===2?'top3':''}">${i===0?'🥇':i===1?'🥈':i===2?'🥉':'#'+(i+1)}</span></td>
-      <td class="td-main">${p.name}${p.vid===user.vid?' <span style="font-size:10px;color:var(--gold)">(você)</span>':''}</td>
+      <td class="td-main">${p.name}${p.uid===currentUser.uid?' <span style="font-size:10px;color:var(--gold)">(você)</span>':''}</td>
       <td>${p.rank}</td>
       <td>${p.flights}</td>
-      <td><strong style="color:var(--gold)">${p.hours.toFixed(1)}h</strong></td>
+      <td><strong style="color:var(--gold)">${(p.hours||0).toFixed(1)}h</strong></td>
       <td>${p.aircraft}</td>
     </tr>`).join('');
 
@@ -784,10 +823,12 @@ function markAllRead() {
 }
 
 /* ── PIREP SUBMIT ── */
-function submitPirep(e) {
+async function submitPirep(e) {
   e.preventDefault();
+  const submitBtn = document.querySelector('#pirepForm [type=submit]');
+  submitBtn.disabled = true;
   const newFlight = {
-    id: flights.length + 1,
+    userId: currentUser.uid,
     dep: document.getElementById('dep').value.toUpperCase(),
     arr: document.getElementById('arr').value.toUpperCase(),
     ac: document.getElementById('pirep-ac').value,
@@ -796,31 +837,40 @@ function submitPirep(e) {
     date: document.getElementById('pirep-date').value,
     sim: document.getElementById('pirep-sim').value,
     obs: document.getElementById('pirep-obs').value,
-    status: 'pending'
+    status: 'pending',
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
   };
-  flights.unshift(newFlight);
-  localStorage.setItem(FLIGHTS_KEY, JSON.stringify(flights));
-  document.getElementById('pirep-success').classList.add('show');
-  document.getElementById('pirepForm').reset();
-  setTimeout(() => document.getElementById('pirep-success').classList.remove('show'), 5000);
-  // Add notif
-  NOTIFS.unshift({ id: Date.now(), title: 'PIREP enviado: ' + newFlight.dep + '→' + newFlight.arr, text: 'Seu voo está aguardando aprovação do staff.', date: new Date().toLocaleDateString('pt-BR'), read: false });
-  updateNotifBadge();
+  try {
+    const ref = await db.collection('pireps').add(newFlight);
+    flights.unshift({ ...newFlight, id: ref.id, createdAt: new Date() });
+    document.getElementById('pirep-success').classList.add('show');
+    document.getElementById('pirepForm').reset();
+    setTimeout(() => document.getElementById('pirep-success').classList.remove('show'), 5000);
+    NOTIFS.unshift({ id: Date.now(), title: 'PIREP enviado: ' + newFlight.dep + '→' + newFlight.arr, text: 'Seu voo está aguardando aprovação do staff.', date: new Date().toLocaleDateString('pt-BR'), read: false });
+    updateNotifBadge();
+    initUserUI();
+  } catch { alert('Erro ao enviar PIREP. Tente novamente.'); }
+  submitBtn.disabled = false;
 }
 
 /* ── PROFILE SAVE ── */
-function saveProfile(e) {
+async function saveProfile(e) {
   e.preventDefault();
-  user.name = document.getElementById('edit-name').value;
-  user.email = document.getElementById('edit-email').value;
-  user.aircraft = document.getElementById('edit-aircraft').value;
-  localStorage.setItem('brv_user', JSON.stringify(user));
-  document.getElementById('profile-success').classList.add('show');
-  document.getElementById('pf-name').textContent = user.name;
-  document.getElementById('pf-email').textContent = user.email;
-  document.getElementById('pf-aircraft').textContent = user.aircraft;
-  document.getElementById('sidebar-name').textContent = user.name;
-  setTimeout(() => document.getElementById('profile-success').classList.remove('show'), 4000);
+  const updates = {
+    name: document.getElementById('edit-name').value,
+    aircraft: document.getElementById('edit-aircraft').value,
+  };
+  try {
+    await db.collection('users').doc(currentUser.uid).update(updates);
+    Object.assign(user, updates);
+    user.avatar = user.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+    document.getElementById('profile-success').classList.add('show');
+    document.getElementById('pf-name').textContent = user.name;
+    document.getElementById('pf-aircraft').textContent = user.aircraft;
+    document.getElementById('sidebar-name').textContent = user.name;
+    document.getElementById('sidebar-avatar').textContent = user.avatar;
+    setTimeout(() => document.getElementById('profile-success').classList.remove('show'), 4000);
+  } catch { alert('Erro ao salvar perfil.'); }
 }
 
 /* ── DOWNLOAD FAKE ── */
@@ -855,7 +905,6 @@ window.addEventListener('click', e => {
   }
 });
 
-initUserUI();
 </script>
 </body>
 </html>

@@ -251,36 +251,19 @@
   </div>
 </div>
 
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script>
-  // Demo users
-  const USERS = [
-    {
-      email: 'piloto@bravo.aero',
-      password: 'brv2024',
-      name: 'João Silva',
-      vid: '487231',
-      rank: 'Comandante',
-      rankLevel: 4,
-      hours: 623.5,
-      flights: 87,
-      joinDate: '2024-03-15',
-      aircraft: 'Boeing 737-800',
-      avatar: 'JS'
-    },
-    {
-      email: 'admin@bravo.aero',
-      password: 'admin2024',
-      name: 'Carlos Bravo',
-      vid: '123456',
-      rank: 'Comandante Sênior',
-      rankLevel: 5,
-      hours: 1240,
-      flights: 210,
-      joinDate: '2024-01-01',
-      aircraft: 'Airbus A320',
-      avatar: 'CB'
-    }
-  ];
+  const firebaseConfig = {
+    apiKey: "AIzaSyC2dDGhKjzHSclyFwUFNGA60DtXAjLEJ6I",
+    authDomain: "bravo-aviation.firebaseapp.com",
+    projectId: "bravo-aviation",
+    storageBucket: "bravo-aviation.firebasestorage.app",
+    messagingSenderId: "712016002234",
+    appId: "1:712016002234:web:ce7a8e39c28bc6d8ca5683"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
 
   function togglePass() {
     const inp = document.getElementById('password');
@@ -300,16 +283,15 @@
     err.classList.remove('show');
     btn.classList.add('loading');
 
-    setTimeout(() => {
-      const user = USERS.find(u => u.email === email && u.password === password);
-      btn.classList.remove('loading');
+    const persistence = remember
+      ? firebase.auth.Auth.Persistence.LOCAL
+      : firebase.auth.Auth.Persistence.SESSION;
 
-      if (user) {
-        const storage = remember ? localStorage : sessionStorage;
-        storage.setItem('brv_user', JSON.stringify(user));
-        localStorage.setItem('brv_lang', localStorage.getItem('brv_lang') || 'pt');
-        window.location.href = 'dashboard.html';
-      } else {
+    auth.setPersistence(persistence)
+      .then(() => auth.signInWithEmailAndPassword(email, password))
+      .then(() => { window.location.href = 'dashboard.html'; })
+      .catch(() => {
+        btn.classList.remove('loading');
         err.classList.add('show');
         document.getElementById('email').classList.add('error');
         document.getElementById('password').classList.add('error');
@@ -317,13 +299,10 @@
           document.getElementById('email').classList.remove('error');
           document.getElementById('password').classList.remove('error');
         }, 2000);
-      }
-    }, 900);
+      });
   }
 
-  // Check if already logged in
-  const stored = localStorage.getItem('brv_user') || sessionStorage.getItem('brv_user');
-  if (stored) window.location.href = 'dashboard.html';
+  auth.onAuthStateChanged(u => { if (u) window.location.href = 'dashboard.html'; });
 </script>
 </body>
 </html>
