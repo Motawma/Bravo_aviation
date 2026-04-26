@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<title>Setup — Bravo Aviation</title>
+<style>
+  body { background:#080A12; color:#F0EDE6; font-family:monospace; padding:40px; }
+  .log { margin:6px 0; font-size:14px; }
+  .ok { color:#3db07a; }
+  .err { color:#e05555; }
+  .info { color:#C8961C; }
+  button { margin-top:24px; background:#C8961C; color:#000; border:none; padding:14px 32px; font-size:14px; font-weight:700; cursor:pointer; border-radius:4px; }
+  button:disabled { opacity:0.5; cursor:not-allowed; }
+</style>
+</head>
+<body>
+<h2 style="color:#C8961C;">Bravo Aviation — Setup inicial</h2>
+<p style="color:#8A8FA8;margin-bottom:24px;">Clique no botão para criar os documentos dos usuários no Firestore.</p>
+<button id="btn" onclick="runSetup()">Executar setup</button>
+<div id="log" style="margin-top:24px;"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyC2dDGhKjzHSclyFwUFNGA60DtXAjLEJ6I",
+  authDomain: "bravo-aviation.firebaseapp.com",
+  projectId: "bravo-aviation",
+  storageBucket: "bravo-aviation.firebasestorage.app",
+  messagingSenderId: "712016002234",
+  appId: "1:712016002234:web:ce7a8e39c28bc6d8ca5683"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+function log(msg, type = 'info') {
+  const d = document.getElementById('log');
+  d.innerHTML += `<div class="log ${type}">${msg}</div>`;
+}
+
+const USERS_DATA = [
+  {
+    email: 'piloto@bravo.aero',
+    password: 'brv2024',
+    uid: 'koW0iERbEVQUvuN2WoqEEMzbaNX2',
+    doc: {
+      name: 'João Silva',
+      vid: '487231',
+      hours: 623.5,
+      flights: 87,
+      joinDate: '2024-03-15',
+      aircraft: 'Boeing 737-800',
+      email: 'piloto@bravo.aero'
+    }
+  },
+  {
+    email: 'admin@bravo.aero',
+    password: 'admin2024',
+    uid: 'x70Fn6d74TNpxULpElmyi2GujhD3',
+    doc: {
+      name: 'Carlos Bravo',
+      vid: '123456',
+      hours: 1240,
+      flights: 210,
+      joinDate: '2024-01-01',
+      aircraft: 'Airbus A320',
+      email: 'admin@bravo.aero'
+    }
+  }
+];
+
+async function runSetup() {
+  document.getElementById('btn').disabled = true;
+  log('Iniciando setup...', 'info');
+
+  for (const u of USERS_DATA) {
+    try {
+      log(`Fazendo login como ${u.email}...`, 'info');
+      await auth.signInWithEmailAndPassword(u.email, u.password);
+      log(`Login OK — UID: ${u.uid}`, 'ok');
+
+      log(`Criando documento users/${u.uid}...`, 'info');
+      await db.collection('users').doc(u.uid).set(u.doc);
+      log(`Documento criado para ${u.doc.name}`, 'ok');
+
+      await auth.signOut();
+      log(`Logout OK`, 'ok');
+    } catch (err) {
+      log(`Erro com ${u.email}: ${err.message}`, 'err');
+      await auth.signOut().catch(() => {});
+    }
+  }
+
+  log('', 'info');
+  log('✓ Setup concluído! Você pode fechar esta página.', 'ok');
+  log('Agora acesse: <a href="login.html" style="color:#C8961C">login.html</a>', 'ok');
+}
+</script>
+</body>
+</html>
