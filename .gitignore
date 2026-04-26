@@ -1,0 +1,3 @@
+*.zip
+uploads/*
+!uploads/.gitkeep

@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Dashboard — Bravo Virtual Airline</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<style>
+:root {
+  --bg: #080A12; --surface: #0F1220; --surface2: #141728; --surface3: #1A1F35;
+  --border: #1E2340; --gold: #C8961C; --gold-light: #E0B050; --gold-dim: #7A5A10;
+  --text: #F0EDE6; --text-sec: #8A8FA8; --text-dim: #4A506A;
+  --radius: 4px; --danger: #e05555; --success: #3db07a; --info: #3a7fd4;
+  --sidebar: 240px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; font-size: 14px; display: flex; overflow: hidden; }
+
+/* ── SIDEBAR ── */
+aside {
+  width: var(--sidebar); min-height: 100vh; background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  flex-shrink: 0; position: relative; z-index: 10;
+}
+.sidebar-logo {
+  padding: 24px 20px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+}
+.sidebar-logo img { height: 68px; }
+.sidebar-nav { flex: 1; padding: 12px 0; overflow-y: auto; }
+.nav-section-label {
+  font-size: 9px; font-weight: 700; letter-spacing: 0.25em; text-transform: uppercase;
+  color: var(--text-dim); padding: 14px 20px 6px;
+}
+.nav-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 20px; cursor: pointer;
+  font-size: 13px; font-weight: 500; color: var(--text-sec);
+  border-left: 2px solid transparent;
+  transition: color 0.2s, background 0.2s, border-color 0.2s;
+  text-decoration: none; user-select: none;
+}
+.nav-item:hover { color: var(--text); background: rgba(255,255,255,0.03); }
+.nav-item.active { color: var(--gold); background: rgba(200,150,28,0.07); border-left-color: var(--gold); }
+.nav-icon { font-size: 16px; width: 20px; text-align: center; }
+.nav-badge {
+  margin-left: auto; background: var(--gold); color: #000;
+  font-size: 10px; font-weight: 700;
+  padding: 1px 7px; border-radius: 10px; min-width: 20px; text-align: center;
+}
+
+.sidebar-user {
+  padding: 16px 20px; border-top: 1px solid var(--border);
+  display: flex; align-items: center; gap: 12px;
+}
+.user-avatar {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: rgba(200,150,28,0.12); border: 1px solid rgba(200,150,28,0.3);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Barlow Condensed', sans-serif; font-size: 14px; font-weight: 700; color: var(--gold);
+  flex-shrink: 0;
+}
+.user-info { flex: 1; min-width: 0; }
+.user-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.user-rank { font-size: 10px; color: var(--gold); font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; }
+.logout-btn { background: none; border: none; cursor: pointer; color: var(--text-dim); font-size: 16px; transition: color 0.2s; flex-shrink: 0; }
+.logout-btn:hover { color: var(--danger); }
+
+/* ── MAIN ── */
+main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.topbar {
+  height: 60px; background: var(--surface); border-bottom: 1px solid var(--border);
+  padding: 0 32px; display: flex; align-items: center; justify-content: space-between;
+  flex-shrink: 0;
+}
+.topbar-title { font-family: 'Barlow Condensed', sans-serif; font-size: 20px; font-weight: 700; }
+.topbar-right { display: flex; align-items: center; gap: 16px; }
+.topbar-date { font-size: 12px; color: var(--text-dim); }
+.notif-btn { position: relative; background: none; border: none; cursor: pointer; font-size: 18px; color: var(--text-sec); transition: color 0.2s; }
+.notif-btn:hover { color: var(--gold); }
+.notif-dot { position: absolute; top: 0; right: 0; width: 8px; height: 8px; background: var(--gold); border-radius: 50%; border: 2px solid var(--surface); }
+
+.content { flex: 1; overflow-y: auto; padding: 32px; }
+
+/* ── PAGES ── */
+.page { display: none; animation: fadeIn 0.3s ease; }
+.page.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* ── CARDS GRID ── */
+.cards-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 24px; }
+.stat-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 20px 22px; position: relative; overflow: hidden;
+}
+.stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--border); }
+.stat-card.gold::before { background: var(--gold); }
+.stat-card.blue::before { background: var(--info); }
+.stat-card.green::before { background: var(--success); }
+.stat-card-label { font-size: 10px; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 10px; }
+.stat-card-value { font-family: 'Barlow Condensed', sans-serif; font-size: 32px; font-weight: 800; color: var(--text); line-height: 1; }
+.stat-card-sub { font-size: 11px; color: var(--text-sec); margin-top: 6px; }
+
+/* ── SECTION HEADER ── */
+.sec-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.sec-title { font-family: 'Barlow Condensed', sans-serif; font-size: 18px; font-weight: 700; }
+.sec-action { font-size: 12px; color: var(--gold); cursor: pointer; text-decoration: none; background: none; border: none; font-family: 'Inter', sans-serif; }
+.sec-action:hover { color: var(--gold-light); }
+
+/* ── TABLE ── */
+.table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+table { width: 100%; border-collapse: collapse; }
+th { font-size: 10px; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-dim); padding: 12px 16px; text-align: left; background: var(--surface2); border-bottom: 1px solid var(--border); }
+td { padding: 13px 16px; font-size: 13px; border-bottom: 1px solid rgba(30,35,64,0.5); color: var(--text-sec); }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: rgba(255,255,255,0.02); }
+.td-main { color: var(--text); font-weight: 500; }
+.status-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 3px 10px; border-radius: 10px;
+}
+.status-badge.approved { background: rgba(61,176,122,0.12); color: var(--success); border: 1px solid rgba(61,176,122,0.25); }
+.status-badge.pending { background: rgba(200,150,28,0.1); color: var(--gold); border: 1px solid rgba(200,150,28,0.2); }
+.status-badge.rejected { background: rgba(224,85,85,0.1); color: var(--danger); border: 1px solid rgba(224,85,85,0.2); }
+
+/* ── RANK PROGRESS ── */
+.rank-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 28px; position: relative; overflow: hidden;
+}
+.rank-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, var(--gold), transparent); }
+.rank-header { display: flex; align-items: center; gap: 20px; margin-bottom: 24px; }
+.rank-avatar { width: 72px; height: 72px; border-radius: 50%; background: rgba(200,150,28,0.1); border: 2px solid rgba(200,150,28,0.3); display: flex; align-items: center; justify-content: center; font-family: 'Barlow Condensed', sans-serif; font-size: 24px; font-weight: 700; color: var(--gold); flex-shrink: 0; }
+.rank-info h2 { font-family: 'Barlow Condensed', sans-serif; font-size: 26px; font-weight: 700; margin-bottom: 4px; }
+.rank-badge-lg { display: inline-block; background: rgba(200,150,28,0.1); border: 1px solid rgba(200,150,28,0.25); color: var(--gold); font-size: 11px; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; padding: 3px 12px; border-radius: 10px; }
+.rank-tiers { display: flex; gap: 0; margin-bottom: 20px; }
+.rank-tier {
+  flex: 1; text-align: center; padding: 10px 4px;
+  font-size: 9px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--text-dim); border-bottom: 2px solid var(--border);
+  transition: color 0.2s, border-color 0.2s;
+}
+.rank-tier.done { color: var(--gold); border-color: var(--gold); }
+.rank-tier.current { color: var(--gold-light); border-color: var(--gold-light); }
+.progress-bar { height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+.progress-fill { height: 100%; background: linear-gradient(90deg, var(--gold-dim), var(--gold)); border-radius: 3px; transition: width 1s ease; }
+.progress-meta { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-dim); margin-top: 8px; }
+
+/* ── FORM ── */
+.form-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; }
+.form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.form-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+.form-group { margin-bottom: 18px; }
+.form-group label { display: block; font-size: 10px; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 7px; }
+.form-group input, .form-group select, .form-group textarea {
+  width: 100%; background: var(--bg); border: 1px solid var(--border);
+  color: var(--text); padding: 11px 14px; border-radius: var(--radius);
+  font-family: 'Inter', sans-serif; font-size: 13px; transition: border-color 0.2s;
+  appearance: none;
+}
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: var(--gold-dim); }
+.form-group input::placeholder, .form-group textarea::placeholder { color: var(--text-dim); }
+.form-group textarea { resize: vertical; min-height: 80px; }
+.btn-gold { background: var(--gold); color: #000; border: none; cursor: pointer; padding: 12px 28px; border-radius: var(--radius); font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; transition: background 0.2s, transform 0.15s; }
+.btn-gold:hover { background: var(--gold-light); transform: translateY(-1px); }
+.btn-ghost { background: transparent; color: var(--text-sec); border: 1px solid var(--border); cursor: pointer; padding: 12px 28px; border-radius: var(--radius); font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; transition: border-color 0.2s, color 0.2s; margin-right: 10px; }
+.btn-ghost:hover { border-color: var(--gold-dim); color: var(--gold); }
+.form-success { display: none; margin-top: 16px; background: rgba(61,176,122,0.1); border: 1px solid rgba(61,176,122,0.25); border-radius: var(--radius); padding: 14px; color: var(--success); font-size: 13px; text-align: center; }
+.form-success.show { display: block; }
+
+/* ── ROUTES ── */
+.routes-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
+.route-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; transition: border-color 0.3s, transform 0.3s; cursor: default; }
+.route-card:hover { border-color: var(--gold-dim); transform: translateY(-2px); }
+.route-airports { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.route-icao { font-family: 'Barlow Condensed', sans-serif; font-size: 24px; font-weight: 800; color: var(--text); }
+.route-arrow { color: var(--gold); font-size: 14px; flex: 1; text-align: center; }
+.route-meta { font-size: 11px; color: var(--text-dim); display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.route-meta span { display: flex; align-items: center; gap: 4px; }
+.route-tag { display: inline-block; background: rgba(200,150,28,0.08); border: 1px solid rgba(200,150,28,0.15); color: var(--gold); font-size: 9px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; padding: 2px 8px; border-radius: 2px; }
+
+/* ── RANKING ── */
+.rank-position { font-family: 'Barlow Condensed', sans-serif; font-size: 18px; font-weight: 800; color: var(--text-dim); width: 32px; }
+.rank-position.top1 { color: #FFD700; }
+.rank-position.top2 { color: #C0C0C0; }
+.rank-position.top3 { color: #CD7F32; }
+.rank-me td { background: rgba(200,150,28,0.04) !important; }
+
+/* ── DOWNLOADS ── */
+.downloads-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
+.dl-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px; transition: border-color 0.3s; }
+.dl-card:hover { border-color: var(--gold-dim); }
+.dl-type { font-size: 9px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); margin-bottom: 8px; }
+.dl-name { font-family: 'Barlow Condensed', sans-serif; font-size: 18px; font-weight: 700; margin-bottom: 6px; line-height: 1.2; }
+.dl-desc { font-size: 12px; color: var(--text-sec); line-height: 1.6; margin-bottom: 14px; }
+.dl-meta { display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--text-dim); margin-bottom: 14px; }
+.btn-dl { width: 100%; background: var(--surface2); border: 1px solid var(--border); color: var(--text-sec); cursor: pointer; padding: 9px; border-radius: var(--radius); font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; transition: background 0.2s, border-color 0.2s, color 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px; }
+.btn-dl:hover { background: rgba(200,150,28,0.1); border-color: var(--gold-dim); color: var(--gold); }
+
+/* ── NOTIFICATIONS ── */
+.notif-list { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.notif-item { padding: 18px 22px; border-bottom: 1px solid rgba(30,35,64,0.5); display: flex; gap: 16px; align-items: flex-start; transition: background 0.2s; }
+.notif-item:last-child { border-bottom: none; }
+.notif-item:hover { background: rgba(255,255,255,0.02); }
+.notif-item.unread { border-left: 3px solid var(--gold); }
+.notif-dot-ui { width: 8px; height: 8px; border-radius: 50%; background: var(--gold); flex-shrink: 0; margin-top: 5px; }
+.notif-item.read .notif-dot-ui { background: var(--text-dim); }
+.notif-body { flex: 1; }
+.notif-title { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+.notif-text { font-size: 12px; color: var(--text-sec); line-height: 1.5; }
+.notif-date { font-size: 11px; color: var(--text-dim); margin-top: 6px; }
+
+/* ── PROFILE EDIT ── */
+.profile-grid { display: grid; grid-template-columns: 260px 1fr; gap: 24px; }
+.profile-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; text-align: center; }
+.profile-avatar-lg { width: 80px; height: 80px; border-radius: 50%; background: rgba(200,150,28,0.1); border: 2px solid rgba(200,150,28,0.3); display: flex; align-items: center; justify-content: center; font-family: 'Barlow Condensed', sans-serif; font-size: 28px; font-weight: 700; color: var(--gold); margin: 0 auto 16px; }
+.profile-name-lg { font-family: 'Barlow Condensed', sans-serif; font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+.profile-rank-badge { display: inline-block; background: rgba(200,150,28,0.1); border: 1px solid rgba(200,150,28,0.25); color: var(--gold); font-size: 10px; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; padding: 3px 12px; border-radius: 10px; margin-bottom: 20px; }
+.profile-stats { display: flex; flex-direction: column; gap: 12px; margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border); }
+.profile-stat-row { display: flex; justify-content: space-between; font-size: 12px; }
+.profile-stat-row .k { color: var(--text-dim); }
+.profile-stat-row .v { color: var(--text); font-weight: 500; }
+
+/* ── HELPERS ── */
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.gap-b { margin-bottom: 24px; }
+.tag-sim { display: inline-block; background: rgba(58,127,212,0.1); border: 1px solid rgba(58,127,212,0.2); color: var(--info); font-size: 9px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; padding: 2px 8px; border-radius: 2px; }
+.empty-state { text-align: center; padding: 48px 24px; color: var(--text-dim); font-size: 13px; }
+.empty-state .big { font-size: 36px; margin-bottom: 12px; }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 1100px) {
+  :root { --sidebar: 200px; }
+  .routes-grid, .downloads-grid { grid-template-columns: repeat(2,1fr); }
+  .cards-row { grid-template-columns: repeat(2,1fr); }
+}
+@media (max-width: 768px) {
+  aside { position: fixed; left: -240px; transition: left 0.3s; z-index: 200; width: 240px; }
+  aside.open { left: 0; }
+  .topbar { padding: 0 16px; }
+  .content { padding: 20px 16px; }
+  .routes-grid, .downloads-grid { grid-template-columns: 1fr; }
+  .cards-row { grid-template-columns: repeat(2,1fr); }
+  .profile-grid, .two-col, .form-grid-2, .form-grid-3 { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside id="sidebar">
+  <div class="sidebar-logo">
+    <img src="assets/logo.png" alt="BRV" />
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">Principal</div>
+    <a class="nav-item active" onclick="goTo('overview',this)">
+      <span class="nav-icon">🏠</span> Visão Geral
+    </a>
+    <a class="nav-item" onclick="goTo('profile',this)">
+      <span class="nav-icon">👤</span> Meu Perfil
+    </a>
+    <div class="nav-section-label">Operações</div>
+    <a class="nav-item" onclick="goTo('pirep',this)">
+      <span class="nav-icon">✈️</span> Registrar Voo
+    </a>
+    <a class="nav-item" onclick="goTo('flights',this)">
+      <span class="nav-icon">📋</span> Meus Voos
+    </a>
+    <a class="nav-item" onclick="goTo('routes',this)">
+      <span class="nav-icon">🗺️</span> Rotas
+    </a>
+    <div class="nav-section-label">Comunidade</div>
+    <a class="nav-item" onclick="goTo('ranking',this)">
+      <span class="nav-icon">🏆</span> Ranking
+    </a>
+    <a class="nav-item" onclick="goTo('downloads',this)">
+      <span class="nav-icon">📦</span> Downloads
+    </a>
+    <a class="nav-item" onclick="goTo('notifs',this)" id="nav-notifs">
+      <span class="nav-icon">🔔</span> Notificações
+      <span class="nav-badge" id="notif-badge">3</span>
+    </a>
+  </nav>
+  <div class="sidebar-user">
+    <div class="user-avatar" id="sidebar-avatar">JS</div>
+    <div class="user-info">
+      <div class="user-name" id="sidebar-name">João Silva</div>
+      <div class="user-rank" id="sidebar-rank">Comandante</div>
+    </div>
+    <button class="logout-btn" onclick="logout()" title="Sair">⏏</button>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main>
+  <div class="topbar">
+    <div style="display:flex;align-items:center;gap:16px;">
+      <button onclick="document.getElementById('sidebar').classList.toggle('open')" style="display:none;background:none;border:none;cursor:pointer;color:var(--text);font-size:20px;" id="menu-toggle">☰</button>
+      <div class="topbar-title" id="topbar-title">Visão Geral</div>
+    </div>
+    <div class="topbar-right">
+      <div class="topbar-date" id="topbar-date"></div>
+      <button class="notif-btn" onclick="goTo('notifs',null)">🔔<span class="notif-dot" id="notif-dot"></span></button>
+      <a href="index.html" style="font-size:12px;color:var(--text-dim);text-decoration:none;display:flex;align-items:center;gap:4px;">← Site</a>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- OVERVIEW -->
+    <div class="page active" id="page-overview">
+      <div class="cards-row gap-b">
+        <div class="stat-card gold">
+          <div class="stat-card-label">Horas de voo</div>
+          <div class="stat-card-value" id="ov-hours">—</div>
+          <div class="stat-card-sub">Total acumulado</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-label">Voos registrados</div>
+          <div class="stat-card-value" id="ov-flights">—</div>
+          <div class="stat-card-sub">PIREPs aprovados</div>
+        </div>
+        <div class="stat-card blue">
+          <div class="stat-card-label">Posição no ranking</div>
+          <div class="stat-card-value" id="ov-rank-pos">—</div>
+          <div class="stat-card-sub">Entre todos os pilotos</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-label">Patente atual</div>
+          <div class="stat-card-value" style="font-size:18px;padding-top:4px;" id="ov-rank-name">—</div>
+          <div class="stat-card-sub" id="ov-rank-next"></div>
+        </div>
+      </div>
+
+      <div class="two-col gap-b">
+        <!-- Últimos voos -->
+        <div>
+          <div class="sec-header">
+            <div class="sec-title">Últimos voos</div>
+            <button class="sec-action" onclick="goTo('flights',null)">Ver todos →</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Rota</th><th>Aeronave</th><th>Duração</th><th>Status</th></tr></thead>
+              <tbody id="ov-flights-table"></tbody>
+            </table>
+          </div>
+        </div>
+        <!-- Notificações recentes -->
+        <div>
+          <div class="sec-header">
+            <div class="sec-title">Avisos recentes</div>
+            <button class="sec-action" onclick="goTo('notifs',null)">Ver todos →</button>
+          </div>
+          <div class="notif-list" id="ov-notifs-list"></div>
+        </div>
+      </div>
+
+      <!-- Rank progress -->
+      <div class="sec-header"><div class="sec-title">Progresso de patente</div></div>
+      <div class="rank-card">
+        <div class="rank-tiers" id="ov-tiers"></div>
+        <div class="progress-bar"><div class="progress-fill" id="ov-progress-fill" style="width:0%"></div></div>
+        <div class="progress-meta">
+          <span id="ov-prog-cur">—</span>
+          <span id="ov-prog-next">—</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROFILE -->
+    <div class="page" id="page-profile">
+      <div class="profile-grid">
+        <div>
+          <div class="profile-card">
+            <div class="profile-avatar-lg" id="pf-avatar">JS</div>
+            <div class="profile-name-lg" id="pf-name">—</div>
+            <div class="profile-rank-badge" id="pf-rank">—</div>
+            <div class="profile-stats">
+              <div class="profile-stat-row"><span class="k">VID IVAO</span><span class="v" id="pf-vid">—</span></div>
+              <div class="profile-stat-row"><span class="k">E-mail</span><span class="v" id="pf-email">—</span></div>
+              <div class="profile-stat-row"><span class="k">Aeronave principal</span><span class="v" id="pf-aircraft">—</span></div>
+              <div class="profile-stat-row"><span class="k">Membro desde</span><span class="v" id="pf-join">—</span></div>
+              <div class="profile-stat-row"><span class="k">Total de horas</span><span class="v" id="pf-hours">—</span></div>
+              <div class="profile-stat-row"><span class="k">Total de voos</span><span class="v" id="pf-flights">—</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="form-card">
+          <div class="sec-title" style="margin-bottom:20px;">Editar perfil</div>
+          <form onsubmit="saveProfile(event)">
+            <div class="form-grid-2">
+              <div class="form-group"><label>Nome</label><input type="text" id="edit-name" /></div>
+              <div class="form-group"><label>E-mail</label><input type="email" id="edit-email" /></div>
+            </div>
+            <div class="form-grid-2">
+              <div class="form-group"><label>VID IVAO</label><input type="text" id="edit-vid" readonly style="opacity:0.5;cursor:not-allowed;" /></div>
+              <div class="form-group"><label>Aeronave preferida</label>
+                <select id="edit-aircraft">
+                  <option>Boeing 737-800</option>
+                  <option>Airbus A320</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group"><label>Nova senha (deixe em branco para manter)</label><input type="password" placeholder="••••••••" /></div>
+            <button type="submit" class="btn-gold">Salvar alterações</button>
+            <div class="form-success" id="profile-success">✓ Perfil atualizado com sucesso!</div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- PIREP -->
+    <div class="page" id="page-pirep">
+      <div class="form-card">
+        <div class="sec-title" style="margin-bottom:6px;">Registrar voo (PIREP)</div>
+        <div style="font-size:13px;color:var(--text-sec);margin-bottom:24px;">Preencha os dados do seu voo realizado na rede IVAO.</div>
+        <form onsubmit="submitPirep(event)" id="pirepForm">
+          <div class="form-grid-2">
+            <div class="form-group"><label>Aeroporto de origem (ICAO)</label><input type="text" id="dep" placeholder="SBGR" maxlength="4" style="text-transform:uppercase;" required /></div>
+            <div class="form-group"><label>Aeroporto de destino (ICAO)</label><input type="text" id="arr" placeholder="SBBR" maxlength="4" style="text-transform:uppercase;" required /></div>
+          </div>
+          <div class="form-grid-3">
+            <div class="form-group"><label>Aeronave</label>
+              <select id="pirep-ac" required>
+                <option value="">Selecione</option>
+                <option>Boeing 737-800</option>
+                <option>Airbus A320</option>
+              </select>
+            </div>
+            <div class="form-group"><label>Duração (hh:mm)</label><input type="text" id="pirep-dur" placeholder="01:45" pattern="[0-9]{1,2}:[0-5][0-9]" required /></div>
+            <div class="form-group"><label>Nível de voo (FL)</label><input type="text" id="pirep-fl" placeholder="350" /></div>
+          </div>
+          <div class="form-grid-2">
+            <div class="form-group"><label>Data e hora de partida (UTC)</label><input type="datetime-local" id="pirep-date" required /></div>
+            <div class="form-group"><label>Simulador</label>
+              <select id="pirep-sim">
+                <option>MSFS 2024</option>
+                <option>MSFS 2020</option>
+                <option>X-Plane 12</option>
+                <option>X-Plane 11</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group"><label>Observações (opcional)</label><textarea id="pirep-obs" placeholder="Condições meteorológicas, eventos durante o voo, etc."></textarea></div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
+            <button type="button" class="btn-ghost" onclick="document.getElementById('pirepForm').reset()">Limpar</button>
+            <button type="submit" class="btn-gold">Enviar PIREP</button>
+          </div>
+          <div class="form-success" id="pirep-success">✓ PIREP enviado com sucesso! Aguardando aprovação do staff.</div>
+        </form>
+      </div>
+    </div>
+
+    <!-- FLIGHTS -->
+    <div class="page" id="page-flights">
+      <div class="sec-header gap-b">
+        <div class="sec-title">Meus voos</div>
+        <button class="sec-action" onclick="goTo('pirep',null)">+ Registrar novo voo</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>#</th><th>Rota</th><th>Aeronave</th><th>Duração</th><th>FL</th><th>Data</th><th>Simulador</th><th>Status</th></tr></thead>
+          <tbody id="flights-table"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ROUTES -->
+    <div class="page" id="page-routes">
+      <div class="sec-header gap-b">
+        <div class="sec-title">Rotas disponíveis</div>
+        <span style="font-size:12px;color:var(--text-dim);">Hub principal: SBGR</span>
+      </div>
+      <div class="routes-grid" id="routes-grid"></div>
+    </div>
+
+    <!-- RANKING -->
+    <div class="page" id="page-ranking">
+      <div class="sec-header gap-b">
+        <div class="sec-title">Ranking de pilotos</div>
+        <span style="font-size:12px;color:var(--text-dim);">Por horas de voo</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>#</th><th>Piloto</th><th>Patente</th><th>Voos</th><th>Horas</th><th>Aeronave</th></tr></thead>
+          <tbody id="ranking-table"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- DOWNLOADS -->
+    <div class="page" id="page-downloads">
+      <div class="sec-header gap-b">
+        <div class="sec-title">Downloads</div>
+        <span style="font-size:12px;color:var(--text-dim);">Liveries, manuais e materiais exclusivos</span>
+      </div>
+      <div class="downloads-grid" id="downloads-grid"></div>
+    </div>
+
+    <!-- NOTIFS -->
+    <div class="page" id="page-notifs">
+      <div class="sec-header gap-b">
+        <div class="sec-title">Notificações & Avisos</div>
+        <button class="sec-action" onclick="markAllRead()">Marcar todas como lidas</button>
+      </div>
+      <div class="notif-list" id="notifs-full-list"></div>
+    </div>
+
+  </div>
+</main>
+
+<script>
+/* ── AUTH ── */
+const user = JSON.parse(localStorage.getItem('brv_user') || sessionStorage.getItem('brv_user') || 'null');
+if (!user) { window.location.href = 'login.html'; throw new Error('Not authenticated'); }
+
+function logout() {
+  localStorage.removeItem('brv_user');
+  sessionStorage.removeItem('brv_user');
+  window.location.href = 'login.html';
+}
+
+/* ── RANK SYSTEM ── */
+const RANKS = [
+  { name: 'Cadete',           min: 0,    max: 50   },
+  { name: '2º Oficial',       min: 50,   max: 150  },
+  { name: '1º Oficial',       min: 150,  max: 350  },
+  { name: 'Comandante',       min: 350,  max: 800  },
+  { name: 'Comandante Sênior',min: 800,  max: 99999}
+];
+
+function getRank(hours) {
+  return RANKS.find(r => hours >= r.min && hours < r.max) || RANKS[RANKS.length-1];
+}
+
+/* ── SAMPLE DATA ── */
+const FLIGHTS_KEY = 'brv_flights_' + user.vid;
+let flights = JSON.parse(localStorage.getItem(FLIGHTS_KEY) || '[]');
+if (!flights.length) {
+  flights = [
+    { id:1, dep:'SBGR', arr:'SBBR', ac:'Boeing 737-800', dur:'01:45', fl:'330', date:'2025-04-10T08:00', sim:'MSFS 2024', obs:'', status:'approved' },
+    { id:2, dep:'SBBR', arr:'SBGR', ac:'Boeing 737-800', dur:'01:50', fl:'320', date:'2025-04-08T14:30', sim:'MSFS 2024', obs:'Boas condições.', status:'approved' },
+    { id:3, dep:'SBGR', arr:'SBGL', ac:'Airbus A320', dur:'00:55', fl:'280', date:'2025-04-05T10:00', sim:'X-Plane 12', obs:'', status:'approved' },
+    { id:4, dep:'SBGL', arr:'SBSP', ac:'Airbus A320', dur:'00:45', fl:'200', date:'2025-04-02T16:00', sim:'MSFS 2020', obs:'', status:'approved' },
+    { id:5, dep:'SBGR', arr:'SBCF', ac:'Boeing 737-800', dur:'01:10', fl:'310', date:'2025-03-28T09:00', sim:'MSFS 2024', obs:'', status:'pending' },
+  ];
+  localStorage.setItem(FLIGHTS_KEY, JSON.stringify(flights));
+}
+
+const PILOTS = [
+  { name:'Carlos Bravo', vid:'123456', rank:'Comandante Sênior', flights:210, hours:1240, aircraft:'Airbus A320' },
+  { name:'Ana Ferreira', vid:'334421', rank:'Comandante', flights:120, hours:780, aircraft:'Boeing 737-800' },
+  { name: user.name, vid: user.vid, rank: getRank(user.hours).name, flights: user.flights, hours: user.hours, aircraft: user.aircraft },
+  { name:'Rafael Costa', vid:'567890', rank:'1º Oficial', flights:60, hours:310, aircraft:'Airbus A320' },
+  { name:'Mariana Lima', vid:'112233', rank:'1º Oficial', flights:45, hours:260, aircraft:'Boeing 737-800' },
+  { name:'Pedro Souza', vid:'998877', rank:'2º Oficial', flights:22, hours:130, aircraft:'Airbus A320' },
+  { name:'Lucas Alves', vid:'445566', rank:'Cadete', flights:8, hours:38, aircraft:'Boeing 737-800' },
+].sort((a,b) => b.hours - a.hours);
+
+const ROUTES = [
+  { dep:'SBGR', arr:'SBBR', city1:'São Paulo', city2:'Brasília', dur:'1h45', dist:'1070km', freq:'Diário', ac:'B737-800' },
+  { dep:'SBGR', arr:'SBGL', city1:'São Paulo', city2:'Rio de Janeiro', dur:'0h55', dist:'360km', freq:'Diário', ac:'A320' },
+  { dep:'SBGR', arr:'SBCF', city1:'São Paulo', city2:'Belo Horizonte', dur:'1h10', dist:'590km', freq:'Diário', ac:'B737-800' },
+  { dep:'SBGR', arr:'SBSV', city1:'São Paulo', city2:'Salvador', dur:'2h15', dist:'1960km', freq:'Semanal', ac:'A320' },
+  { dep:'SBGR', arr:'SBRF', city1:'São Paulo', city2:'Recife', dur:'3h00', dist:'2680km', freq:'Semanal', ac:'B737-800' },
+  { dep:'SBGR', arr:'SBPA', city1:'São Paulo', city2:'Porto Alegre', dur:'1h50', dist:'1100km', freq:'Diário', ac:'A320' },
+];
+
+const DOWNLOADS = [
+  { type:'Livery — MSFS 2024', name:'BRV Boeing 737-800', desc:'Livery oficial Bravo Aviation para Boeing 737-800 no MSFS 2024.', ver:'v1.2', size:'28 MB', date:'Abr 2025' },
+  { type:'Livery — MSFS 2024', name:'BRV Airbus A320', desc:'Livery oficial Bravo Aviation para Airbus A320 no MSFS 2024.', ver:'v1.1', size:'22 MB', date:'Mar 2025' },
+  { type:'Livery — X-Plane 12', name:'BRV Boeing 737-800 XP12', desc:'Livery oficial para o Boeing 737-800 Zibo no X-Plane 12.', ver:'v1.0', size:'18 MB', date:'Mar 2025' },
+  { type:'Manual', name:'Manual de Operações BRV', desc:'Procedimentos operacionais padrão, políticas de voo e regras da VA.', ver:'v2.0', size:'3.2 MB', date:'Jan 2025' },
+  { type:'Manual', name:'SOP — Boeing 737-800', desc:'Standard Operating Procedures para a frota Boeing 737-800.', ver:'v1.5', size:'5.1 MB', date:'Fev 2025' },
+  { type:'Manual', name:'SOP — Airbus A320', desc:'Standard Operating Procedures para a frota Airbus A320.', ver:'v1.3', size:'4.8 MB', date:'Fev 2025' },
+];
+
+let NOTIFS = [
+  { id:1, title:'Bem-vindo à área de membros!', text:'Sua conta BRV está ativa. Explore o dashboard e registre seus primeiros voos.', date:'25 Abr 2025', read:false },
+  { id:2, title:'Nova livery disponível — A320 MSFS 2024', text:'A livery oficial do Airbus A320 para MSFS 2024 foi atualizada para v1.1. Acesse a área de Downloads.', date:'20 Abr 2025', read:false },
+  { id:3, title:'PIREP #5 aguardando aprovação', text:'Seu voo SBGR→SBCF foi recebido e está sendo analisado pelo staff. Aguarde até 48h.', date:'18 Abr 2025', read:false },
+  { id:4, title:'Nova rota inaugurada: SBGR → SBPA', text:'Porto Alegre agora faz parte da malha BRV com voos diários operados pelo Airbus A320.', date:'10 Abr 2025', read:true },
+  { id:5, title:'Certificação IVAO renovada', text:'A Bravo Aviation renovou sua parceria com o IVAO por mais 12 meses.', date:'01 Abr 2025', read:true },
+];
+
+/* ── NAV ── */
+const PAGE_TITLES = {
+  overview:'Visão Geral', profile:'Meu Perfil', pirep:'Registrar Voo (PIREP)',
+  flights:'Meus Voos', routes:'Rotas Disponíveis', ranking:'Ranking de Pilotos',
+  downloads:'Downloads', notifs:'Notificações'
+};
+
+function goTo(id, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  if (el) el.classList.add('active');
+  else {
+    document.querySelectorAll('.nav-item').forEach(n => {
+      if (n.getAttribute('onclick') && n.getAttribute('onclick').includes("'" + id + "'")) n.classList.add('active');
+    });
+  }
+  document.getElementById('topbar-title').textContent = PAGE_TITLES[id] || '';
+  if (id === 'notifs') renderNotifs();
+}
+
+/* ── INIT USER UI ── */
+function initUserUI() {
+  if (!user) return;
+  document.getElementById('sidebar-avatar').textContent = user.avatar || user.name.split(' ').map(w=>w[0]).join('').slice(0,2);
+  document.getElementById('sidebar-name').textContent = user.name;
+  const rank = getRank(user.hours);
+  document.getElementById('sidebar-rank').textContent = rank.name;
+
+  // Overview stats
+  document.getElementById('ov-hours').textContent = user.hours.toFixed(1) + 'h';
+  document.getElementById('ov-flights').textContent = flights.filter(f=>f.status==='approved').length;
+  const pos = PILOTS.findIndex(p => p.vid === user.vid) + 1;
+  document.getElementById('ov-rank-pos').textContent = '#' + pos;
+  document.getElementById('ov-rank-name').textContent = rank.name;
+  const nextRank = RANKS[RANKS.indexOf(rank) + 1];
+  document.getElementById('ov-rank-next').textContent = nextRank ? 'Próxima: ' + nextRank.name + ' (' + nextRank.min + 'h)' : 'Patente máxima atingida!';
+
+  // Recent flights table
+  const tbody = document.getElementById('ov-flights-table');
+  const recent = [...flights].slice(0,4);
+  if (!recent.length) {
+    tbody.innerHTML = '<tr><td colspan="4" class="empty-state">Nenhum voo registrado ainda.</td></tr>';
+  } else {
+    tbody.innerHTML = recent.map(f => `
+      <tr>
+        <td class="td-main">${f.dep} → ${f.arr}</td>
+        <td>${f.ac}</td>
+        <td>${f.dur}</td>
+        <td><span class="status-badge ${f.status}">${f.status==='approved'?'Aprovado':f.status==='pending'?'Pendente':'Recusado'}</span></td>
+      </tr>`).join('');
+  }
+
+  // Rank progress
+  const rankIdx = RANKS.indexOf(rank);
+  const tiersEl = document.getElementById('ov-tiers');
+  tiersEl.innerHTML = RANKS.map((r,i) => `<div class="rank-tier ${i < rankIdx ? 'done' : i === rankIdx ? 'current' : ''}">${r.name}</div>`).join('');
+
+  const pct = rank.max === 99999 ? 100 : ((user.hours - rank.min) / (rank.max - rank.min)) * 100;
+  setTimeout(() => { document.getElementById('ov-progress-fill').style.width = Math.min(pct, 100) + '%'; }, 200);
+  document.getElementById('ov-prog-cur').textContent = rank.name + ' · ' + user.hours.toFixed(1) + 'h';
+  document.getElementById('ov-prog-next').textContent = nextRank ? 'Próximo: ' + nextRank.name + ' · ' + nextRank.min + 'h' : '🏆 Patente máxima';
+
+  // Recent notifs
+  const ovNotifs = document.getElementById('ov-notifs-list');
+  ovNotifs.innerHTML = NOTIFS.slice(0,3).map(n => `
+    <div class="notif-item ${n.read ? 'read' : 'unread'}">
+      <div class="notif-dot-ui"></div>
+      <div class="notif-body">
+        <div class="notif-title">${n.title}</div>
+        <div class="notif-date">${n.date}</div>
+      </div>
+    </div>`).join('');
+
+  // Profile page
+  document.getElementById('pf-avatar').textContent = user.avatar || user.name.split(' ').map(w=>w[0]).join('').slice(0,2);
+  document.getElementById('pf-name').textContent = user.name;
+  document.getElementById('pf-rank').textContent = rank.name;
+  document.getElementById('pf-vid').textContent = user.vid;
+  document.getElementById('pf-email').textContent = user.email;
+  document.getElementById('pf-aircraft').textContent = user.aircraft;
+  document.getElementById('pf-join').textContent = new Date(user.joinDate).toLocaleDateString('pt-BR');
+  document.getElementById('pf-hours').textContent = user.hours.toFixed(1) + 'h';
+  document.getElementById('pf-flights').textContent = user.flights;
+  document.getElementById('edit-name').value = user.name;
+  document.getElementById('edit-email').value = user.email;
+  document.getElementById('edit-vid').value = user.vid;
+  document.getElementById('edit-aircraft').value = user.aircraft;
+
+  // Full flights table
+  const ftbody = document.getElementById('flights-table');
+  if (!flights.length) {
+    ftbody.innerHTML = '<tr><td colspan="8"><div class="empty-state"><div class="big">✈️</div>Nenhum voo registrado. <button class="sec-action" onclick="goTo(\'pirep\',null)">Registrar voo →</button></div></td></tr>';
+  } else {
+    ftbody.innerHTML = flights.map((f,i) => `
+      <tr>
+        <td>${flights.length - i}</td>
+        <td class="td-main">${f.dep} → ${f.arr}</td>
+        <td>${f.ac}</td>
+        <td>${f.dur}</td>
+        <td>FL${f.fl}</td>
+        <td>${new Date(f.date).toLocaleDateString('pt-BR')}</td>
+        <td><span class="tag-sim">${f.sim}</span></td>
+        <td><span class="status-badge ${f.status}">${f.status==='approved'?'Aprovado':f.status==='pending'?'Pendente':'Recusado'}</span></td>
+      </tr>`).join('');
+  }
+
+  // Routes
+  document.getElementById('routes-grid').innerHTML = ROUTES.map(r => `
+    <div class="route-card">
+      <div class="route-airports">
+        <div class="route-icao">${r.dep}</div>
+        <div class="route-arrow">──✈──</div>
+        <div class="route-icao">${r.arr}</div>
+      </div>
+      <div style="font-size:12px;color:var(--text-sec);margin-bottom:10px;">${r.city1} → ${r.city2}</div>
+      <div class="route-meta">
+        <span>🕐 ${r.dur}</span>
+        <span>📍 ${r.dist}</span>
+        <span>📅 ${r.freq}</span>
+      </div>
+      <span class="route-tag">${r.ac}</span>
+    </div>`).join('');
+
+  // Ranking
+  const rtbody = document.getElementById('ranking-table');
+  rtbody.innerHTML = PILOTS.map((p,i) => `
+    <tr class="${p.vid === user.vid ? 'rank-me' : ''}">
+      <td><span class="rank-position ${i===0?'top1':i===1?'top2':i===2?'top3':''}">${i===0?'🥇':i===1?'🥈':i===2?'🥉':'#'+(i+1)}</span></td>
+      <td class="td-main">${p.name}${p.vid===user.vid?' <span style="font-size:10px;color:var(--gold)">(você)</span>':''}</td>
+      <td>${p.rank}</td>
+      <td>${p.flights}</td>
+      <td><strong style="color:var(--gold)">${p.hours.toFixed(1)}h</strong></td>
+      <td>${p.aircraft}</td>
+    </tr>`).join('');
+
+  // Downloads
+  document.getElementById('downloads-grid').innerHTML = DOWNLOADS.map(d => `
+    <div class="dl-card">
+      <div class="dl-type">${d.type}</div>
+      <div class="dl-name">${d.name}</div>
+      <div class="dl-desc">${d.desc}</div>
+      <div class="dl-meta">
+        <span>${d.ver}</span>
+        <span>${d.size}</span>
+        <span>${d.date}</span>
+      </div>
+      <button class="btn-dl" onclick="fakeDownload(this, '${d.name}')">
+        <span>⬇</span> Download
+      </button>
+    </div>`).join('');
+
+  // Notification badge
+  updateNotifBadge();
+}
+
+function updateNotifBadge() {
+  const unread = NOTIFS.filter(n => !n.read).length;
+  const badge = document.getElementById('notif-badge');
+  const dot = document.getElementById('notif-dot');
+  if (unread > 0) {
+    badge.textContent = unread; badge.style.display = '';
+    dot.style.display = '';
+  } else {
+    badge.style.display = 'none';
+    dot.style.display = 'none';
+  }
+}
+
+function renderNotifs() {
+  document.getElementById('notifs-full-list').innerHTML = NOTIFS.map(n => `
+    <div class="notif-item ${n.read ? 'read' : 'unread'}" onclick="readNotif(${n.id}, this)">
+      <div class="notif-dot-ui"></div>
+      <div class="notif-body">
+        <div class="notif-title">${n.title}</div>
+        <div class="notif-text">${n.text}</div>
+        <div class="notif-date">${n.date}</div>
+      </div>
+    </div>`).join('');
+}
+
+function readNotif(id, el) {
+  const n = NOTIFS.find(x => x.id === id);
+  if (n) { n.read = true; el.classList.remove('unread'); el.classList.add('read'); el.querySelector('.notif-dot-ui').style.background = 'var(--text-dim)'; }
+  updateNotifBadge();
+}
+
+function markAllRead() {
+  NOTIFS.forEach(n => n.read = true);
+  renderNotifs(); updateNotifBadge();
+}
+
+/* ── PIREP SUBMIT ── */
+function submitPirep(e) {
+  e.preventDefault();
+  const newFlight = {
+    id: flights.length + 1,
+    dep: document.getElementById('dep').value.toUpperCase(),
+    arr: document.getElementById('arr').value.toUpperCase(),
+    ac: document.getElementById('pirep-ac').value,
+    dur: document.getElementById('pirep-dur').value,
+    fl: document.getElementById('pirep-fl').value,
+    date: document.getElementById('pirep-date').value,
+    sim: document.getElementById('pirep-sim').value,
+    obs: document.getElementById('pirep-obs').value,
+    status: 'pending'
+  };
+  flights.unshift(newFlight);
+  localStorage.setItem(FLIGHTS_KEY, JSON.stringify(flights));
+  document.getElementById('pirep-success').classList.add('show');
+  document.getElementById('pirepForm').reset();
+  setTimeout(() => document.getElementById('pirep-success').classList.remove('show'), 5000);
+  // Add notif
+  NOTIFS.unshift({ id: Date.now(), title: 'PIREP enviado: ' + newFlight.dep + '→' + newFlight.arr, text: 'Seu voo está aguardando aprovação do staff.', date: new Date().toLocaleDateString('pt-BR'), read: false });
+  updateNotifBadge();
+}
+
+/* ── PROFILE SAVE ── */
+function saveProfile(e) {
+  e.preventDefault();
+  user.name = document.getElementById('edit-name').value;
+  user.email = document.getElementById('edit-email').value;
+  user.aircraft = document.getElementById('edit-aircraft').value;
+  localStorage.setItem('brv_user', JSON.stringify(user));
+  document.getElementById('profile-success').classList.add('show');
+  document.getElementById('pf-name').textContent = user.name;
+  document.getElementById('pf-email').textContent = user.email;
+  document.getElementById('pf-aircraft').textContent = user.aircraft;
+  document.getElementById('sidebar-name').textContent = user.name;
+  setTimeout(() => document.getElementById('profile-success').classList.remove('show'), 4000);
+}
+
+/* ── DOWNLOAD FAKE ── */
+function fakeDownload(btn, name) {
+  btn.textContent = '⏳ Preparando...';
+  btn.disabled = true;
+  setTimeout(() => {
+    btn.innerHTML = '<span>✓</span> Download iniciado';
+    btn.style.color = 'var(--success)';
+    setTimeout(() => {
+      btn.innerHTML = '<span>⬇</span> Download';
+      btn.style.color = '';
+      btn.disabled = false;
+    }, 3000);
+  }, 1200);
+}
+
+/* ── DATE ── */
+document.getElementById('topbar-date').textContent = new Date().toLocaleDateString('pt-BR', { weekday:'short', day:'numeric', month:'short', year:'numeric' });
+
+/* ── PIREP DEFAULT DATE ── */
+const now = new Date(); now.setMinutes(0,0,0);
+const pad = n => String(n).padStart(2,'0');
+document.getElementById('pirep-date').value = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:00`;
+
+/* ── MOBILE ── */
+if (window.innerWidth <= 768) document.getElementById('menu-toggle').style.display = 'block';
+window.addEventListener('click', e => {
+  const sidebar = document.getElementById('sidebar');
+  if (window.innerWidth <= 768 && sidebar.classList.contains('open') && !sidebar.contains(e.target) && e.target.id !== 'menu-toggle') {
+    sidebar.classList.remove('open');
+  }
+});
+
+initUserUI();
+</script>
+</body>
+</html>

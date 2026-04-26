@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="pt-BR" id="html-root">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Bravo Virtual Airline — BRV</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;400;500;600;700;800;900&family=Barlow:wght@300;400;500;600&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+
+<style>
+  :root {
+    --bg: #080A12;
+    --surface: #0F1220;
+    --surface2: #141728;
+    --border: #1E2340;
+    --gold: #C8961C;
+    --gold-light: #E0B050;
+    --gold-dim: #7A5A10;
+    --text: #F0EDE6;
+    --text-sec: #8A8FA8;
+    --text-dim: #4A506A;
+    --radius: 4px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  /* ── NAV ── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 48px; height: 68px;
+    background: transparent;
+    transition: background 0.4s, border-bottom 0.4s, backdrop-filter 0.4s;
+    border-bottom: 1px solid transparent;
+  }
+  nav.scrolled {
+    background: rgba(8,10,18,0.92);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-logo { display: flex; align-items: center; gap: 12px; }
+  .nav-logo img { height: 38px; width: auto; }
+  .nav-links { display: flex; gap: 36px; list-style: none; }
+  .nav-links a {
+    color: var(--text-sec);
+    text-decoration: none;
+    font-family: 'Inter', sans-serif;
+    font-size: 12px; font-weight: 500;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    transition: color 0.2s;
+  }
+  .nav-links a:hover { color: var(--gold-light); }
+
+  /* ── LANG SWITCHER ── */
+  .lang-switcher {
+    display: flex; align-items: center; gap: 4px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 3px;
+  }
+  .lang-btn {
+    display: flex; align-items: center; gap: 5px;
+    background: none; border: none; cursor: pointer;
+    padding: 5px 10px; border-radius: 16px;
+    font-family: 'Inter', sans-serif;
+    font-size: 11px; font-weight: 600;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--text-dim);
+    transition: background 0.2s, color 0.2s;
+  }
+  .lang-btn:hover { color: var(--text-sec); }
+  .lang-btn.active {
+    background: var(--gold);
+    color: #000;
+  }
+  .lang-btn .flag { font-size: 14px; line-height: 1; }
+
+  .nav-right { display: flex; align-items: center; gap: 16px; }
+  .nav-cta {
+    background: var(--gold); color: #000;
+    padding: 9px 22px;
+    font-size: 12px; font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    text-decoration: none; border-radius: var(--radius);
+    transition: background 0.2s, transform 0.15s;
+  }
+  .nav-cta:hover { background: var(--gold-light); transform: translateY(-1px); }
+
+  /* ── HERO ── */
+  #hero {
+    position: relative; height: 100vh; min-height: 640px;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center; overflow: hidden;
+  }
+  .hero-bg {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse 80% 60% at 50% 30%, rgba(200,150,28,0.07) 0%, transparent 70%),
+      radial-gradient(ellipse 60% 40% at 20% 80%, rgba(30,35,64,0.5) 0%, transparent 60%);
+  }
+  .hero-grid {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(200,150,28,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(200,150,28,0.04) 1px, transparent 1px);
+    background-size: 80px 80px;
+    mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 80%);
+  }
+  .hero-content { position: relative; z-index: 2; }
+  .hero-callsign {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px; font-weight: 600;
+    letter-spacing: 0.35em; text-transform: uppercase;
+    color: var(--gold); margin-bottom: 28px;
+    opacity: 0; animation: fadeUp 0.8s 0.2s forwards;
+  }
+  .hero-logo {
+    width: min(480px, 80vw); margin-bottom: 32px;
+    opacity: 0; animation: fadeUp 0.9s 0.4s forwards;
+    filter: drop-shadow(0 0 40px rgba(200,150,28,0.25));
+  }
+  .hero-sub {
+    font-family: 'Barlow', sans-serif;
+    font-size: 16px; font-weight: 300;
+    color: var(--text-sec); letter-spacing: 0.06em;
+    max-width: 540px;
+    opacity: 0; animation: fadeUp 0.9s 0.6s forwards;
+    line-height: 1.7;
+  }
+  .hero-sub strong { color: var(--gold-light); font-weight: 500; }
+  .hero-actions {
+    display: flex; gap: 16px; justify-content: center; margin-top: 40px;
+    opacity: 0; animation: fadeUp 0.9s 0.8s forwards;
+  }
+  .btn-primary {
+    background: var(--gold); color: #000;
+    padding: 14px 36px; font-size: 13px; font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    text-decoration: none; border-radius: var(--radius);
+    transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+  }
+  .btn-primary:hover {
+    background: var(--gold-light); transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(200,150,28,0.35);
+  }
+  .btn-outline {
+    background: transparent; color: var(--text);
+    padding: 14px 36px; font-size: 13px; font-weight: 600;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    text-decoration: none; border-radius: var(--radius);
+    border: 1px solid var(--border);
+    transition: border-color 0.2s, color 0.2s, transform 0.15s;
+  }
+  .btn-outline:hover { border-color: var(--gold-dim); color: var(--gold-light); transform: translateY(-2px); }
+  .hero-scroll {
+    position: absolute; bottom: 36px; left: 50%; transform: translateX(-50%);
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    opacity: 0; animation: fadeUp 1s 1.2s forwards;
+  }
+  .hero-scroll span { font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-dim); }
+  .scroll-line { width: 1px; height: 40px; background: linear-gradient(to bottom, var(--gold-dim), transparent); animation: scrollPulse 2s infinite; }
+
+  /* ── STATS ── */
+  #stats {
+    border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+    background: var(--surface); padding: 32px 48px;
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px;
+  }
+  .stat-item { text-align: center; padding: 8px 0; border-right: 1px solid var(--border); }
+  .stat-item:last-child { border-right: none; }
+  .stat-num {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 42px; font-weight: 800; color: var(--gold);
+    line-height: 1; letter-spacing: -0.01em;
+  }
+  .stat-label { font-size: 11px; font-weight: 500; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-sec); margin-top: 6px; }
+
+  /* ── SECTIONS ── */
+  section { padding: 100px 48px; }
+  .section-tag {
+    font-size: 10px; font-weight: 600;
+    letter-spacing: 0.35em; text-transform: uppercase;
+    color: var(--gold); margin-bottom: 16px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .section-tag::before { content: ''; display: block; width: 24px; height: 1px; background: var(--gold); }
+  h2 { font-family: 'Barlow Condensed', sans-serif; font-size: clamp(36px, 5vw, 56px); font-weight: 700; line-height: 1.05; letter-spacing: -0.01em; }
+  h3 { font-family: 'Barlow Condensed', sans-serif; font-size: 22px; font-weight: 600; }
+  .max-w { max-width: 1200px; margin: 0 auto; }
+  .divider { width: 40px; height: 2px; background: var(--gold); margin: 20px 0 0; }
+
+  /* Reveal */
+  .reveal { opacity: 0; transform: translateY(30px); transition: opacity 0.7s ease, transform 0.7s ease; }
+  .reveal.visible { opacity: 1; transform: none; }
+  .reveal-delay-1 { transition-delay: 0.1s; }
+  .reveal-delay-2 { transition-delay: 0.2s; }
+  .reveal-delay-3 { transition-delay: 0.3s; }
+  .reveal-delay-4 { transition-delay: 0.4s; }
+
+  /* ── ABOUT ── */
+  #about { background: var(--bg); }
+  .about-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: center; margin-top: 56px; }
+  .about-text p { color: var(--text-sec); font-size: 16px; line-height: 1.8; margin-bottom: 20px; }
+  .about-text p strong { color: var(--text); font-weight: 600; }
+  .about-visual {
+    position: relative; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 2px; padding: 48px;
+    display: flex; flex-direction: column; gap: 24px;
+  }
+  .about-visual::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, var(--gold), transparent); }
+  .info-row { display: flex; justify-content: space-between; align-items: center; padding-bottom: 20px; border-bottom: 1px solid var(--border); }
+  .info-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .info-key { font-size: 10px; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-dim); }
+  .info-val { font-family: 'Barlow Condensed', sans-serif; font-size: 17px; font-weight: 600; color: var(--text); }
+  .info-val.gold { color: var(--gold); }
+
+  /* ── FLEET ── */
+  #fleet { background: var(--surface); }
+  .fleet-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; margin-top: 56px; }
+  .fleet-card {
+    background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius);
+    overflow: hidden; transition: border-color 0.3s, transform 0.3s; cursor: default;
+  }
+  .fleet-card:hover { border-color: var(--gold-dim); transform: translateY(-4px); }
+  .fleet-visual {
+    height: 200px; background: var(--surface2);
+    display: flex; align-items: center; justify-content: center;
+    position: relative; overflow: hidden;
+  }
+  .fleet-visual::after { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at 60% 50%, rgba(200,150,28,0.06) 0%, transparent 70%); }
+  .plane-silhouette { font-family: 'Barlow Condensed', sans-serif; font-size: 11px; font-weight: 500; letter-spacing: 0.25em; text-transform: uppercase; color: var(--text-dim); display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .plane-svg { opacity: 0.18; }
+  .fleet-info { padding: 28px 32px; }
+  .fleet-type { font-size: 10px; letter-spacing: 0.25em; text-transform: uppercase; color: var(--gold); font-weight: 600; margin-bottom: 8px; }
+  .fleet-name { font-family: 'Barlow Condensed', sans-serif; font-size: 28px; font-weight: 700; margin-bottom: 16px; }
+  .fleet-specs { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
+  .spec-key { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-dim); }
+  .spec-val { font-family: 'Barlow Condensed', sans-serif; font-size: 18px; font-weight: 600; color: var(--text); margin-top: 2px; }
+
+  /* ── NEWS ── */
+  #news { background: var(--bg); }
+  .news-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 56px; }
+  .news-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 32px; transition: border-color 0.3s; position: relative; overflow: hidden;
+  }
+  .news-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--border); transition: background 0.3s; }
+  .news-card:hover::before { background: var(--gold); }
+  .news-date { font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); font-weight: 600; margin-bottom: 14px; }
+  .news-title { font-family: 'Barlow Condensed', sans-serif; font-size: 20px; font-weight: 700; margin-bottom: 12px; line-height: 1.2; }
+  .news-body { font-size: 14px; color: var(--text-sec); line-height: 1.7; }
+  .news-tag { display: inline-block; margin-bottom: 14px; background: rgba(200,150,28,0.1); color: var(--gold); border: 1px solid rgba(200,150,28,0.2); font-size: 10px; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; padding: 3px 10px; border-radius: 2px; }
+
+  /* ── JOIN ── */
+  #join { background: var(--surface); }
+  .join-inner { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-top: 56px; display: grid; grid-template-columns: 1fr 1fr; }
+  .join-steps { padding: 56px; }
+  .join-steps .lead { color: var(--text-sec); font-size: 15px; margin-bottom: 40px; line-height: 1.7; margin-top: 12px; }
+  .steps-list { display: flex; flex-direction: column; gap: 28px; }
+  .step { display: flex; gap: 20px; align-items: flex-start; }
+  .step-num { font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 700; color: var(--gold); letter-spacing: 0.1em; background: rgba(200,150,28,0.08); border: 1px solid rgba(200,150,28,0.2); width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .step-content h4 { font-family: 'Barlow Condensed', sans-serif; font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+  .step-content p { font-size: 13px; color: var(--text-sec); line-height: 1.6; }
+  .join-form-side { background: var(--surface2); border-left: 1px solid var(--border); padding: 56px; display: flex; flex-direction: column; justify-content: center; }
+  .join-form-side .sub { color: var(--text-sec); font-size: 13px; margin-bottom: 32px; margin-top: 8px; }
+  .form-group { margin-bottom: 20px; }
+  .form-group label { display: block; font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-dim); font-weight: 600; margin-bottom: 8px; }
+  .form-group input, .form-group select { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 12px 16px; border-radius: var(--radius); font-family: 'Inter', sans-serif; font-size: 14px; transition: border-color 0.2s; appearance: none; }
+  .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--gold-dim); }
+  .form-group input::placeholder { color: var(--text-dim); }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .btn-submit { width: 100%; background: var(--gold); color: #000; border: none; cursor: pointer; padding: 14px; border-radius: var(--radius); font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; margin-top: 8px; transition: background 0.2s, transform 0.15s; }
+  .btn-submit:hover { background: var(--gold-light); transform: translateY(-1px); }
+  .form-note { font-size: 11px; color: var(--text-dim); margin-top: 12px; text-align: center; }
+
+  /* ── STAFF ── */
+  #staff { background: var(--bg); }
+  .staff-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 56px; }
+  .staff-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 32px; text-align: center; transition: border-color 0.3s, transform 0.3s; }
+  .staff-card:hover { border-color: var(--gold-dim); transform: translateY(-3px); }
+  .staff-avatar { width: 72px; height: 72px; border-radius: 50%; background: var(--surface2); border: 2px solid var(--border); margin: 0 auto 18px; display: flex; align-items: center; justify-content: center; font-family: 'Barlow Condensed', sans-serif; font-size: 26px; font-weight: 700; color: var(--gold); transition: border-color 0.3s; }
+  .staff-card:hover .staff-avatar { border-color: var(--gold-dim); }
+  .staff-name { font-family: 'Barlow Condensed', sans-serif; font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+  .staff-role { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); font-weight: 600; margin-bottom: 12px; }
+  .staff-vid { font-size: 12px; color: var(--text-dim); }
+
+  /* ── IVAO ── */
+  #ivao { background: var(--surface); text-align: center; }
+  .ivao-inner { max-width: 700px; margin: 0 auto; }
+  .ivao-badge { display: inline-flex; align-items: center; gap: 16px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px 36px; margin-top: 48px; text-decoration: none; transition: border-color 0.3s; }
+  .ivao-badge:hover { border-color: var(--gold-dim); }
+  .ivao-logo-text { font-family: 'Barlow Condensed', sans-serif; font-size: 32px; font-weight: 800; color: #1a6fba; letter-spacing: 0.02em; }
+  .ivao-partner-label { text-align: left; }
+  .ivao-partner-label .line1 { font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-dim); font-weight: 600; }
+  .ivao-partner-label .line2 { font-family: 'Barlow Condensed', sans-serif; font-size: 20px; font-weight: 700; color: var(--text); }
+  .ivao-desc { color: var(--text-sec); font-size: 15px; line-height: 1.8; margin-top: 20px; }
+
+  /* ── CONTACT ── */
+  #contact { background: var(--bg); }
+  .contact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; margin-top: 56px; align-items: start; }
+  .contact-info p { color: var(--text-sec); font-size: 15px; line-height: 1.8; margin-bottom: 32px; margin-top: 20px; }
+  .contact-items { display: flex; flex-direction: column; gap: 20px; }
+  .contact-item { display: flex; gap: 16px; align-items: flex-start; padding: 20px 24px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+  .contact-icon { width: 36px; height: 36px; border-radius: 50%; background: rgba(200,150,28,0.1); border: 1px solid rgba(200,150,28,0.2); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 15px; }
+  .contact-item-text .key { font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-dim); font-weight: 600; margin-bottom: 4px; }
+  .contact-item-text .val { font-size: 14px; color: var(--text); }
+  .contact-form { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 40px; }
+  textarea { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); resize: vertical; padding: 12px 16px; border-radius: var(--radius); font-family: 'Inter', sans-serif; font-size: 14px; transition: border-color 0.2s; min-height: 120px; }
+  textarea:focus { outline: none; border-color: var(--gold-dim); }
+  textarea::placeholder { color: var(--text-dim); }
+
+  /* ── FOOTER ── */
+  footer { background: var(--surface); border-top: 1px solid var(--border); padding: 40px 48px; }
+  .footer-inner { max-width: 1200px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; }
+  .footer-logo img { height: 28px; opacity: 0.7; }
+  .footer-copy { font-size: 12px; color: var(--text-dim); text-align: center; line-height: 1.6; }
+  .footer-links { display: flex; gap: 24px; }
+  .footer-links a { font-size: 12px; color: var(--text-dim); text-decoration: none; transition: color 0.2s; }
+  .footer-links a:hover { color: var(--gold); }
+  .ivao-link { color: var(--gold); text-decoration: none; }
+  .ivao-link:hover { text-decoration: underline; }
+
+  /* ── ANIMATIONS ── */
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes scrollPulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
+
+  /* ── SUCCESS ── */
+  .success-msg { display: none; background: rgba(200,150,28,0.1); border: 1px solid rgba(200,150,28,0.3); border-radius: var(--radius); padding: 16px; color: var(--gold-light); font-size: 14px; text-align: center; margin-top: 16px; }
+  .success-msg.show { display: block; }
+
+  /* ── MOBILE MENU ── */
+  .menu-btn { display: none; background: none; border: none; cursor: pointer; padding: 4px; flex-direction: column; gap: 5px; }
+  .menu-btn span { display: block; width: 24px; height: 1.5px; background: var(--text); }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 900px) {
+    nav { padding: 0 24px; }
+    .nav-links { display: none; }
+    .menu-btn { display: flex; }
+    section { padding: 72px 24px; }
+    #stats { grid-template-columns: repeat(2,1fr); padding: 32px 24px; }
+    .stat-item:nth-child(2) { border-right: none; }
+    .about-grid, .join-inner, .contact-grid { grid-template-columns: 1fr; gap: 40px; }
+    .fleet-grid, .news-grid { grid-template-columns: 1fr; }
+    .staff-grid { grid-template-columns: repeat(2,1fr); }
+    .join-form-side { border-left: none; border-top: 1px solid var(--border); }
+    .footer-inner { flex-direction: column; gap: 24px; text-align: center; }
+  }
+  @media (max-width: 600px) {
+    .hero-logo { width: min(320px, 90vw); }
+    .staff-grid, .news-grid { grid-template-columns: 1fr; }
+    .fleet-specs { grid-template-columns: repeat(2,1fr); }
+    #stats { grid-template-columns: repeat(2,1fr); }
+    .stat-item { border-right: none; border-bottom: 1px solid var(--border); }
+    .stat-item:last-child { border-bottom: none; }
+    .form-row { grid-template-columns: 1fr; }
+    .lang-btn .lang-code { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav id="navbar">
+  <div class="nav-logo">
+    <img src="assets/logo.png" alt="Bravo Virtual Airline" />
+  </div>
+  <ul class="nav-links">
+    <li><a href="#about" data-pt="Sobre" data-en="About">Sobre</a></li>
+    <li><a href="#fleet" data-pt="Frota" data-en="Fleet">Frota</a></li>
+    <li><a href="#news" data-pt="Notícias" data-en="News">Notícias</a></li>
+    <li><a href="#staff" data-pt="Staff" data-en="Staff">Staff</a></li>
+    <li><a href="#contact" data-pt="Contato" data-en="Contact">Contato</a></li>
+  </ul>
+  <div class="nav-right">
+    <!-- MEMBER AREA -->
+    <a href="login.html" style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-sec);text-decoration:none;padding:7px 14px;border:1px solid var(--border);border-radius:var(--radius);transition:border-color 0.2s,color 0.2s;" onmouseover="this.style.borderColor='var(--gold-dim)';this.style.color='var(--gold)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-sec)'" data-pt="Área de Membros" data-en="Member Area">👤 Área de Membros</a>
+    <!-- LANG SWITCHER -->
+    <div class="lang-switcher" role="group" aria-label="Idioma / Language">
+      <button class="lang-btn active" id="btn-pt" onclick="setLang('pt')" aria-label="Português">
+        <span class="flag">🇧🇷</span>
+        <span class="lang-code">PT</span>
+      </button>
+      <button class="lang-btn" id="btn-en" onclick="setLang('en')" aria-label="English">
+        <span class="flag">🇺🇸</span>
+        <span class="lang-code">EN</span>
+      </button>
+    </div>
+    <a href="#join" class="nav-cta" data-pt="Junte-se" data-en="Join Us">Junte-se</a>
+    <button class="menu-btn" aria-label="Menu" onclick="toggleMobileMenu()">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+
+<!-- MOBILE MENU -->
+<div id="mobile-menu" style="display:none; position:fixed; inset:0; z-index:99; background:rgba(8,10,18,0.97); flex-direction:column; align-items:center; justify-content:center; gap:32px;">
+  <a href="#about" onclick="closeMobileMenu()" style="color:var(--text);text-decoration:none;font-size:28px;font-family:'Barlow Condensed',sans-serif;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;" data-pt="Sobre" data-en="About">Sobre</a>
+  <a href="#fleet" onclick="closeMobileMenu()" style="color:var(--text);text-decoration:none;font-size:28px;font-family:'Barlow Condensed',sans-serif;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;" data-pt="Frota" data-en="Fleet">Frota</a>
+  <a href="#news" onclick="closeMobileMenu()" style="color:var(--text);text-decoration:none;font-size:28px;font-family:'Barlow Condensed',sans-serif;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;" data-pt="Notícias" data-en="News">Notícias</a>
+  <a href="#staff" onclick="closeMobileMenu()" style="color:var(--text);text-decoration:none;font-size:28px;font-family:'Barlow Condensed',sans-serif;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;" data-pt="Staff" data-en="Staff">Staff</a>
+  <a href="#contact" onclick="closeMobileMenu()" style="color:var(--text);text-decoration:none;font-size:28px;font-family:'Barlow Condensed',sans-serif;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;" data-pt="Contato" data-en="Contact">Contato</a>
+  <a href="#join" class="btn-primary" onclick="closeMobileMenu()" data-pt="Junte-se" data-en="Join Us">Junte-se</a>
+  <div class="lang-switcher" style="margin-top:8px;">
+    <button class="lang-btn active" id="btn-pt-m" onclick="setLang('pt')" aria-label="Português">
+      <span class="flag">🇧🇷</span><span class="lang-code">PT</span>
+    </button>
+    <button class="lang-btn" id="btn-en-m" onclick="setLang('en')" aria-label="English">
+      <span class="flag">🇺🇸</span><span class="lang-code">EN</span>
+    </button>
+  </div>
+</div>
+
+<!-- HERO -->
+<section id="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-grid"></div>
+  <div class="hero-content">
+    <p class="hero-callsign">ICAO: BRV &nbsp;·&nbsp; HUB: SBGR &nbsp;·&nbsp; IVAO Partner Virtual Airline</p>
+    <img src="assets/logo.png" class="hero-logo" alt="Bravo Virtual Airline" />
+    <p class="hero-sub" data-pt="A excelência em aviação virtual no <strong>IVAO</strong>.<br />Hub: São Paulo – Guarulhos (SBGR)" data-en="Excellence in virtual aviation on the <strong>IVAO</strong> network.<br />Hub: São Paulo – Guarulhos (SBGR)">
+      A excelência em aviação virtual no <strong>IVAO</strong>.<br />Hub: São Paulo – Guarulhos (SBGR)
+    </p>
+    <div class="hero-actions">
+      <a href="#join" class="btn-primary" data-pt="Junte-se" data-en="Join Us">Junte-se</a>
+      <a href="#about" class="btn-outline" data-pt="Saiba mais" data-en="Learn more">Saiba mais</a>
+    </div>
+  </div>
+  <div class="hero-scroll">
+    <span>scroll</span>
+    <div class="scroll-line"></div>
+  </div>
+</section>
+
+<!-- STATS -->
+<div id="stats">
+  <div class="stat-item reveal">
+    <div class="stat-num" data-count="47">0</div>
+    <div class="stat-label" data-pt="Pilotos ativos" data-en="Active pilots">Pilotos ativos</div>
+  </div>
+  <div class="stat-item reveal reveal-delay-1">
+    <div class="stat-num" data-count="1240">0</div>
+    <div class="stat-label" data-pt="Horas voadas" data-en="Flight hours">Horas voadas</div>
+  </div>
+  <div class="stat-item reveal reveal-delay-2">
+    <div class="stat-num" data-count="380">0</div>
+    <div class="stat-label" data-pt="Voos realizados" data-en="Flights flown">Voos realizados</div>
+  </div>
+  <div class="stat-item reveal reveal-delay-3">
+    <div class="stat-num" data-count="2">0</div>
+    <div class="stat-label" data-pt="Tipos de aeronave" data-en="Aircraft types">Tipos de aeronave</div>
+  </div>
+</div>
+
+<!-- ABOUT -->
+<section id="about">
+  <div class="max-w">
+    <div class="section-tag reveal" data-pt="Sobre nós" data-en="About us">Sobre nós</div>
+    <h2 class="reveal reveal-delay-1">
+      <span data-pt="Voando com" data-en="Flying with">Voando com</span><br />
+      <span style="color:var(--gold)" data-pt="excelência" data-en="excellence">excelência</span>
+    </h2>
+    <div class="about-grid">
+      <div class="about-text reveal reveal-delay-2">
+        <p data-pt="A <strong>Bravo Virtual Airline</strong> é uma companhia aérea virtual parceira da IVAO, fundada por pilotos apaixonados pela aviação de simulação. Operamos com os mais altos padrões de realismo e profissionalismo na rede IVAO."
+           data-en="<strong>Bravo Virtual Airline</strong> is an IVAO Partner Virtual Airline founded by passionate flight simulation enthusiasts. We operate to the highest standards of realism and professionalism on the IVAO network.">
+          A <strong>Bravo Virtual Airline</strong> é uma companhia aérea virtual parceira da IVAO, fundada por pilotos apaixonados pela aviação de simulação. Operamos com os mais altos padrões de realismo e profissionalismo na rede IVAO.
+        </p>
+        <p data-pt="Nossa missão é proporcionar a melhor experiência de aviação virtual do Brasil, conectando pilotos de todo o mundo sob o código <strong>BRV</strong>, com base em <strong>São Paulo – Guarulhos (SBGR)</strong>."
+           data-en="Our mission is to provide the best virtual aviation experience in Brazil, connecting pilots from all over the world under the code <strong>BRV</strong>, based at <strong>São Paulo – Guarulhos (SBGR)</strong>.">
+          Nossa missão é proporcionar a melhor experiência de aviação virtual do Brasil, conectando pilotos de todo o mundo sob o código <strong>BRV</strong>, com base em <strong>São Paulo – Guarulhos (SBGR)</strong>.
+        </p>
+        <div class="divider"></div>
+      </div>
+      <div class="about-visual reveal reveal-delay-3">
+        <div class="info-row">
+          <span class="info-key" data-pt="Nome" data-en="Name">Nome</span>
+          <span class="info-val">Bravo Virtual Airline</span>
+        </div>
+        <div class="info-row">
+          <span class="info-key" data-pt="Código ICAO" data-en="ICAO Code">Código ICAO</span>
+          <span class="info-val gold">BRV</span>
+        </div>
+        <div class="info-row">
+          <span class="info-key" data-pt="Hub principal" data-en="Main hub">Hub principal</span>
+          <span class="info-val">SBGR — São Paulo</span>
+        </div>
+        <div class="info-row">
+          <span class="info-key" data-pt="Rede" data-en="Network">Rede</span>
+          <span class="info-val">IVAO Partner</span>
+        </div>
+        <div class="info-row">
+          <span class="info-key" data-pt="Fundação" data-en="Founded">Fundação</span>
+          <span class="info-val">2024</span>
+        </div>
+        <div class="info-row">
+          <span class="info-key" data-pt="Simuladores" data-en="Simulators">Simuladores</span>
+          <span class="info-val" style="font-size:13px;">MSFS 2020/2024 · X-Plane</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FLEET -->
+<section id="fleet">
+  <div class="max-w">
+    <div class="section-tag reveal" data-pt="Nossa Frota" data-en="Our Fleet">Nossa Frota</div>
+    <h2 class="reveal reveal-delay-1">
+      <span data-pt="Aeronaves em" data-en="Aircraft in">Aeronaves em</span><br />
+      <span style="color:var(--gold)" data-pt="operação" data-en="operation">operação</span>
+    </h2>
+    <div class="fleet-grid">
+      <div class="fleet-card reveal reveal-delay-2">
+        <div class="fleet-visual">
+          <div class="plane-silhouette">
+            <svg class="plane-svg" width="220" height="80" viewBox="0 0 220 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M8 46 L180 38 L210 36 L210 40 L180 42 L50 60 Z" fill="#C8961C"/>
+              <path d="M180 38 L210 28 L215 36 L210 36 Z" fill="#C8961C"/>
+              <path d="M60 60 L80 46 L120 44 L110 60 Z" fill="#C8961C"/>
+              <path d="M150 42 L168 38 L170 46 L152 48 Z" fill="#C8961C"/>
+            </svg>
+            <span data-pt="Ilustração da aeronave" data-en="Aircraft illustration">Ilustração da aeronave</span>
+          </div>
+        </div>
+        <div class="fleet-info">
+          <div class="fleet-type" data-pt="Narrow Body · Curto–Médio Alcance" data-en="Narrow Body · Short–Medium Haul">Narrow Body · Curto–Médio Alcance</div>
+          <div class="fleet-name">Boeing 737-800</div>
+          <div class="fleet-specs">
+            <div class="spec-item">
+              <div class="spec-key" data-pt="Passageiros" data-en="Passengers">Passageiros</div>
+              <div class="spec-val">162</div>
+            </div>
+            <div class="spec-item">
+              <div class="spec-key" data-pt="Alcance" data-en="Range">Alcance</div>
+              <div class="spec-val">5.765 km</div>
+            </div>
+            <div class="spec-item">
+              <div class="spec-key" data-pt="Velocidade" data-en="Speed">Velocidade</div>
+              <div class="spec-val">Mach 0.79</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="fleet-card reveal reveal-delay-3">
+        <div class="fleet-visual">
+          <div class="plane-silhouette">
+            <svg class="plane-svg" width="220" height="80" viewBox="0 0 220 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M8 46 L175 37 L208 35 L208 39 L175 41 L50 60 Z" fill="#C8961C"/>
+              <path d="M175 37 L208 26 L213 35 L208 35 Z" fill="#C8961C"/>
+              <path d="M58 60 L78 46 L116 44 L108 60 Z" fill="#C8961C"/>
+              <path d="M148 41 L164 37 L166 45 L150 47 Z" fill="#C8961C"/>
+            </svg>
+            <span data-pt="Ilustração da aeronave" data-en="Aircraft illustration">Ilustração da aeronave</span>
+          </div>
+        </div>
+        <div class="fleet-info">
+          <div class="fleet-type" data-pt="Narrow Body · Curto–Médio Alcance" data-en="Narrow Body · Short–Medium Haul">Narrow Body · Curto–Médio Alcance</div>
+          <div class="fleet-name">Airbus A320</div>
+          <div class="fleet-specs">
+            <div class="spec-item">
+              <div class="spec-key" data-pt="Passageiros" data-en="Passengers">Passageiros</div>
+              <div class="spec-val">150</div>
+            </div>
+            <div class="spec-item">
+              <div class="spec-key" data-pt="Alcance" data-en="Range">Alcance</div>
+              <div class="spec-val">6.100 km</div>
+            </div>
+            <div class="spec-item">
+              <div class="spec-key" data-pt="Velocidade" data-en="Speed">Velocidade</div>
+              <div class="spec-val">Mach 0.78</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- NEWS -->
+<section id="news">
+  <div class="max-w">
+    <div class="section-tag reveal" data-pt="Notícias &amp; Avisos" data-en="News &amp; Notices">Notícias &amp; Avisos</div>
+    <h2 class="reveal reveal-delay-1">
+      <span data-pt="Últimas" data-en="Latest">Últimas</span>
+      <span style="color:var(--gold)" data-pt=" novidades" data-en=" updates"> novidades</span>
+    </h2>
+    <div class="news-grid">
+      <div class="news-card reveal reveal-delay-1">
+        <span class="news-tag" data-pt="Aviso" data-en="Notice">Aviso</span>
+        <div class="news-date" data-pt="Abril 2025" data-en="April 2025">Abril 2025</div>
+        <div class="news-title" data-pt="Bravo Aviation agora é parceira oficial IVAO" data-en="Bravo Aviation is now an official IVAO partner">Bravo Aviation agora é parceira oficial IVAO</div>
+        <div class="news-body" data-pt="Confirmamos nossa certificação como Partner Virtual Airline no IVAO. A partir de agora, todos os voos BRV podem ser registrados na rede." data-en="We confirmed our certification as a Partner Virtual Airline on IVAO. From now on, all BRV flights can be logged on the network.">Confirmamos nossa certificação como Partner Virtual Airline no IVAO. A partir de agora, todos os voos BRV podem ser registrados na rede.</div>
+      </div>
+      <div class="news-card reveal reveal-delay-2">
+        <span class="news-tag" data-pt="Operações" data-en="Operations">Operações</span>
+        <div class="news-date" data-pt="Março 2025" data-en="March 2025">Março 2025</div>
+        <div class="news-title" data-pt="Nova rota: SBGR → SBBR inaugurada" data-en="New route: SBGR → SBBR launched">Nova rota: SBGR → SBBR inaugurada</div>
+        <div class="news-body" data-pt="Adicionamos a rota São Paulo – Brasília à nossa malha operacional, com voos diários operados pelo Boeing 737-800." data-en="We added the São Paulo – Brasília route to our network, with daily flights operated by the Boeing 737-800.">Adicionamos a rota São Paulo – Brasília à nossa malha operacional, com voos diários operados pelo Boeing 737-800.</div>
+      </div>
+      <div class="news-card reveal reveal-delay-3">
+        <span class="news-tag" data-pt="Recrutamento" data-en="Recruitment">Recrutamento</span>
+        <div class="news-date" data-pt="Fevereiro 2025" data-en="February 2025">Fevereiro 2025</div>
+        <div class="news-title" data-pt="Vagas abertas para co-pilotos na frota A320" data-en="Open positions for co-pilots on the A320 fleet">Vagas abertas para co-pilotos na frota A320</div>
+        <div class="news-body" data-pt="Estamos recrutando pilotos para operar o Airbus A320 em rotas domésticas e internacionais." data-en="We are recruiting pilots to operate the Airbus A320 on domestic and international routes.">Estamos recrutando pilotos para operar o Airbus A320 em rotas domésticas e internacionais.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- JOIN -->
+<section id="join">
+  <div class="max-w">
+    <div class="section-tag reveal" data-pt="Recrutamento" data-en="Join Us">Recrutamento</div>
+    <h2 class="reveal reveal-delay-1">
+      <span data-pt="Faça parte da" data-en="Become part of">Faça parte da</span><br />
+      <span style="color:var(--gold)">Bravo Aviation</span>
+    </h2>
+    <div class="join-inner reveal reveal-delay-2">
+      <div class="join-steps">
+        <p class="lead" data-pt="Seja bem-vindo à nossa família virtual. O processo de ingresso é simples — basta ter uma conta ativa no IVAO e preencher o formulário ao lado." data-en="Welcome to our virtual family. The process is simple — just hold an active IVAO account and fill in the form on the right.">Seja bem-vindo à nossa família virtual. O processo de ingresso é simples — basta ter uma conta ativa no IVAO e preencher o formulário ao lado.</p>
+        <div class="steps-list">
+          <div class="step">
+            <div class="step-num">01</div>
+            <div class="step-content">
+              <h4 data-pt="Conta IVAO ativa" data-en="Active IVAO account">Conta IVAO ativa</h4>
+              <p data-pt="Você precisa ter uma conta registrada e ativa na rede IVAO (ivao.aero)." data-en="You must have a registered and active account on the IVAO network (ivao.aero).">Você precisa ter uma conta registrada e ativa na rede IVAO (ivao.aero).</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num">02</div>
+            <div class="step-content">
+              <h4 data-pt="Preencha o formulário" data-en="Fill in the form">Preencha o formulário</h4>
+              <p data-pt="Informe seu VID IVAO, nome e preferências de aeronave no formulário ao lado." data-en="Provide your IVAO VID, name and aircraft preference in the form on the right.">Informe seu VID IVAO, nome e preferências de aeronave no formulário ao lado.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num">03</div>
+            <div class="step-content">
+              <h4 data-pt="Aprovação pelo staff" data-en="Staff approval">Aprovação pelo staff</h4>
+              <p data-pt="Nosso staff analisa e aprova sua candidatura em até 72 horas." data-en="Our staff reviews and approves your application within 72 hours.">Nosso staff analisa e aprova sua candidatura em até 72 horas.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num">04</div>
+            <div class="step-content">
+              <h4 data-pt="Bem-vindo a bordo!" data-en="Welcome aboard!">Bem-vindo a bordo!</h4>
+              <p data-pt="Receba seu callsign BRV e comece a voar representando a Bravo Aviation." data-en="Receive your BRV callsign and start flying representing Bravo Aviation.">Receba seu callsign BRV e comece a voar representando a Bravo Aviation.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="join-form-side">
+        <h3 data-pt="Candidatura" data-en="Application">Candidatura</h3>
+        <p class="sub" data-pt="Preencha os campos abaixo" data-en="Fill in the fields below">Preencha os campos abaixo</p>
+        <form id="joinForm" onsubmit="handleJoin(event)">
+          <div class="form-row">
+            <div class="form-group">
+              <label data-pt="Nome" data-en="First Name">Nome</label>
+              <input type="text" data-placeholder-pt="João" data-placeholder-en="John" placeholder="João" required />
+            </div>
+            <div class="form-group">
+              <label data-pt="Sobrenome" data-en="Last Name">Sobrenome</label>
+              <input type="text" data-placeholder-pt="Silva" data-placeholder-en="Smith" placeholder="Silva" required />
+            </div>
+          </div>
+          <div class="form-group">
+            <label>VID IVAO</label>
+            <input type="text" placeholder="123456" required pattern="[0-9]{5,8}" />
+          </div>
+          <div class="form-group">
+            <label data-pt="E-mail" data-en="E-mail">E-mail</label>
+            <input type="email" placeholder="email@exemplo.com" required />
+          </div>
+          <div class="form-group">
+            <label data-pt="Aeronave preferida" data-en="Preferred aircraft">Aeronave preferida</label>
+            <select>
+              <option value="" data-pt="Selecione" data-en="Select">Selecione</option>
+              <option>Boeing 737-800</option>
+              <option>Airbus A320</option>
+              <option data-pt="Sem preferência" data-en="No preference">Sem preferência</option>
+            </select>
+          </div>
+          <button type="submit" class="btn-submit" data-pt="Enviar candidatura" data-en="Submit application">Enviar candidatura</button>
+          <div class="form-note" data-pt="Seu e-mail pessoal não será divulgado publicamente." data-en="Your personal email will not be displayed publicly.">Seu e-mail pessoal não será divulgado publicamente.</div>
+        </form>
+        <div class="success-msg" id="joinSuccess" data-pt="✓ Candidatura enviada! Entraremos em contato em até 72h." data-en="✓ Application submitted! We'll reach out within 72h.">✓ Candidatura enviada! Entraremos em contato em até 72h.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- STAFF -->
+<section id="staff">
+  <div class="max-w">
+    <div class="section-tag reveal" data-pt="Nossa equipe" data-en="Our Team">Nossa equipe</div>
+    <h2 class="reveal reveal-delay-1">Staff <span style="color:var(--gold)">BRV</span></h2>
+    <div class="staff-grid">
+      <div class="staff-card reveal reveal-delay-1">
+        <div class="staff-avatar">CEO</div>
+        <div class="staff-name" data-pt="Nome do CEO" data-en="CEO Name">Nome do CEO</div>
+        <div class="staff-role">Chief Executive Officer</div>
+        <div class="staff-vid">VID: ######</div>
+      </div>
+      <div class="staff-card reveal reveal-delay-2">
+        <div class="staff-avatar">OPS</div>
+        <div class="staff-name" data-pt="Nome do Ops" data-en="Ops Name">Nome do Ops</div>
+        <div class="staff-role">Director of Operations</div>
+        <div class="staff-vid">VID: ######</div>
+      </div>
+      <div class="staff-card reveal reveal-delay-3">
+        <div class="staff-avatar">HR</div>
+        <div class="staff-name" data-pt="Nome do RH" data-en="HR Name">Nome do RH</div>
+        <div class="staff-role">Human Resources</div>
+        <div class="staff-vid">VID: ######</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- IVAO PARTNERSHIP -->
+<section id="ivao">
+  <div class="ivao-inner">
+    <div class="section-tag reveal" style="justify-content:center; text-align:center;" data-pt="Parceria" data-en="Partnership">Parceria</div>
+    <h2 class="reveal reveal-delay-1">IVAO Partner<br /><span style="color:var(--gold)" data-pt="Virtual Airline" data-en="Virtual Airline">Virtual Airline</span></h2>
+    <p class="ivao-desc reveal reveal-delay-2" data-pt="A Bravo Virtual Airline é uma <strong>Partner Virtual Airline oficial do IVAO</strong> — International Virtual Aviation Organization. Todos os voos são realizados na rede IVAO seguindo os mais altos padrões de aviação virtual." data-en="Bravo Virtual Airline is an official <strong>IVAO Partner Virtual Airline</strong> — International Virtual Aviation Organization. All flights are conducted on the IVAO network under the highest standards of virtual aviation.">
+      A Bravo Virtual Airline é uma <strong>Partner Virtual Airline oficial do IVAO</strong> — International Virtual Aviation Organization. Todos os voos são realizados na rede IVAO seguindo os mais altos padrões de aviação virtual.
+    </p>
+    <a href="https://www.ivao.aero" target="_blank" rel="noopener" class="ivao-badge reveal reveal-delay-3">
+      <div class="ivao-logo-text">IVAO</div>
+      <div style="width:1px; height:36px; background:var(--border);"></div>
+      <div class="ivao-partner-label">
+        <div class="line1" data-pt="Certificada" data-en="Certified">Certificada</div>
+        <div class="line2">Partner Virtual Airline</div>
+      </div>
+    </a>
+    <p style="font-size:12px; color:var(--text-dim); margin-top:16px;" data-pt="A Bravo Aviation não possui objetivos comerciais." data-en="Bravo Aviation has no commercial goals.">A Bravo Aviation não possui objetivos comerciais.</p>
+  </div>
+</section>
+
+<!-- CONTACT -->
+<section id="contact">
+  <div class="max-w">
+    <div class="section-tag reveal" data-pt="Contato" data-en="Contact">Contato</div>
+    <h2 class="reveal reveal-delay-1">
+      <span data-pt="Fale com a" data-en="Talk to our">Fale com a</span><br />
+      <span style="color:var(--gold)" data-pt="nossa equipe" data-en="team">nossa equipe</span>
+    </h2>
+    <div class="contact-grid">
+      <div class="contact-info reveal reveal-delay-2">
+        <p data-pt="Tem perguntas sobre nossa VA, operações ou sobre como ingressar? Entre em contato com nosso staff." data-en="Have questions about our VA, operations or how to join? Reach out to our staff.">Tem perguntas sobre nossa VA, operações ou sobre como ingressar? Entre em contato com nosso staff.</p>
+        <div class="contact-items">
+          <div class="contact-item">
+            <div class="contact-icon">✉</div>
+            <div class="contact-item-text">
+              <div class="key" data-pt="E-mail oficial" data-en="Official e-mail">E-mail oficial</div>
+              <div class="val">contato@bravoaviation.aero</div>
+            </div>
+          </div>
+          <div class="contact-item">
+            <div class="contact-icon">💬</div>
+            <div class="contact-item-text">
+              <div class="key">Discord</div>
+              <div class="val">discord.gg/bravoaviation</div>
+            </div>
+          </div>
+          <div class="contact-item">
+            <div class="contact-icon">✈</div>
+            <div class="contact-item-text">
+              <div class="key" data-pt="Hub principal" data-en="Main hub">Hub principal</div>
+              <div class="val">SBGR — Guarulhos International Airport</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="contact-form reveal reveal-delay-3">
+        <h3 data-pt="Envie uma mensagem" data-en="Send a message">Envie uma mensagem</h3>
+        <form onsubmit="handleContact(event)" style="margin-top:24px;">
+          <div class="form-row">
+            <div class="form-group">
+              <label data-pt="Nome" data-en="Name">Nome</label>
+              <input type="text" data-placeholder-pt="Seu nome" data-placeholder-en="Your name" placeholder="Seu nome" required />
+            </div>
+            <div class="form-group">
+              <label>E-mail</label>
+              <input type="email" data-placeholder-pt="email@exemplo.com" data-placeholder-en="email@example.com" placeholder="email@exemplo.com" required />
+            </div>
+          </div>
+          <div class="form-group">
+            <label data-pt="Mensagem" data-en="Message">Mensagem</label>
+            <textarea data-placeholder-pt="Como podemos ajudar?" data-placeholder-en="How can we help?" placeholder="Como podemos ajudar?" required></textarea>
+          </div>
+          <button type="submit" class="btn-submit" data-pt="Enviar" data-en="Send">Enviar</button>
+          <div class="success-msg" id="contactSuccess" data-pt="✓ Mensagem enviada!" data-en="✓ Message sent!">✓ Mensagem enviada!</div>
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-logo">
+      <img src="assets/logo.png" alt="Bravo Virtual Airline" />
+    </div>
+    <div class="footer-copy">
+      © 2025 Bravo Virtual Airline — Callsign BRV — Hub SBGR<br />
+      <span data-pt="Orgulhosamente parceira" data-en="Proudly partnered with">Orgulhosamente parceira</span>
+      <a href="https://www.ivao.aero" target="_blank" class="ivao-link"> IVAO</a>
+      &nbsp;·&nbsp;
+      <span data-pt="Não possui fins comerciais" data-en="Non-commercial">Não possui fins comerciais</span>
+    </div>
+    <div class="footer-links">
+      <a href="#about" data-pt="Sobre" data-en="About">Sobre</a>
+      <a href="#fleet" data-pt="Frota" data-en="Fleet">Frota</a>
+      <a href="#join" data-pt="Junte-se" data-en="Join">Junte-se</a>
+      <a href="https://www.ivao.aero" target="_blank">IVAO</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+  /* ── LANGUAGE SWITCHER ── */
+  const LANG_KEY = 'brv_lang';
+
+  function setLang(lang) {
+    localStorage.setItem(LANG_KEY, lang);
+    document.getElementById('html-root').lang = lang === 'pt' ? 'pt-BR' : 'en';
+
+    // Update all [data-pt] / [data-en] elements
+    document.querySelectorAll('[data-pt], [data-en]').forEach(el => {
+      const text = el.getAttribute('data-' + lang);
+      if (text !== null) {
+        // Use innerHTML so we can have <strong> etc.
+        el.innerHTML = text;
+      }
+    });
+
+    // Update placeholders
+    document.querySelectorAll('[data-placeholder-pt], [data-placeholder-en]').forEach(el => {
+      const ph = el.getAttribute('data-placeholder-' + lang);
+      if (ph) el.placeholder = ph;
+    });
+
+    // Update active button states (desktop + mobile)
+    ['btn-pt','btn-en','btn-pt-m','btn-en-m'].forEach(id => {
+      const btn = document.getElementById(id);
+      if (!btn) return;
+      btn.classList.toggle('active', id.includes(lang));
+    });
+  }
+
+  // Init from localStorage (default: PT)
+  const savedLang = localStorage.getItem(LANG_KEY) || 'pt';
+  setLang(savedLang);
+
+  /* ── NAV SCROLL ── */
+  const navbar = document.getElementById('navbar');
+  window.addEventListener('scroll', () => {
+    navbar.classList.toggle('scrolled', window.scrollY > 40);
+  });
+
+  /* ── REVEAL ── */
+  const reveals = document.querySelectorAll('.reveal');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) { e.target.classList.add('visible'); observer.unobserve(e.target); }
+    });
+  }, { threshold: 0.12 });
+  reveals.forEach(el => observer.observe(el));
+
+  /* ── COUNTERS ── */
+  function animateCounter(el, target) {
+    const duration = 1600;
+    const start = performance.now();
+    const step = (now) => {
+      const t = Math.min((now - start) / duration, 1);
+      const ease = 1 - Math.pow(1 - t, 3);
+      el.textContent = Math.round(ease * target).toLocaleString('pt-BR');
+      if (t < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+  const counterObserver = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        animateCounter(e.target, parseInt(e.target.dataset.count));
+        counterObserver.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.3 });
+  document.querySelectorAll('[data-count]').forEach(el => counterObserver.observe(el));
+
+  /* ── MOBILE MENU ── */
+  const mobileMenu = document.getElementById('mobile-menu');
+  let menuOpen = false;
+  function toggleMobileMenu() {
+    menuOpen = !menuOpen;
+    mobileMenu.style.display = menuOpen ? 'flex' : 'none';
+    document.body.style.overflow = menuOpen ? 'hidden' : '';
+  }
+  function closeMobileMenu() {
+    menuOpen = false;
+    mobileMenu.style.display = 'none';
+    document.body.style.overflow = '';
+  }
+
+  /* ── FORMS ── */
+  function handleJoin(e) {
+    e.preventDefault();
+    document.getElementById('joinForm').style.display = 'none';
+    document.getElementById('joinSuccess').classList.add('show');
+  }
+  function handleContact(e) {
+    e.preventDefault();
+    document.getElementById('contactSuccess').classList.add('show');
+    e.target.reset();
+  }
+</script>
+
+</body>
+</html>
