@@ -266,21 +266,21 @@ tr:hover td { background: rgba(255,255,255,0.02); }
     <a class="nav-item" onclick="goTo('profile',this)">
       <span class="nav-icon">👤</span> Meu Perfil
     </a>
-    <div class="nav-section-label">Operações</div>
-    <a class="nav-item" onclick="goTo('pirep',this)">
+    <div class="nav-section-label" id="nav-label-ops">Operações</div>
+    <a class="nav-item" id="nav-pirep" onclick="goTo('pirep',this)">
       <span class="nav-icon">✈️</span> Registrar Voo
     </a>
-    <a class="nav-item" onclick="goTo('flights',this)">
+    <a class="nav-item" id="nav-flights" onclick="goTo('flights',this)">
       <span class="nav-icon">📋</span> Meus Voos
     </a>
-    <a class="nav-item" onclick="goTo('routes',this)">
+    <a class="nav-item" id="nav-routes" onclick="goTo('routes',this)">
       <span class="nav-icon">🗺️</span> Rotas
     </a>
-    <div class="nav-section-label">Comunidade</div>
-    <a class="nav-item" onclick="goTo('ranking',this)">
+    <div class="nav-section-label" id="nav-label-community">Comunidade</div>
+    <a class="nav-item" id="nav-ranking" onclick="goTo('ranking',this)">
       <span class="nav-icon">🏆</span> Ranking
     </a>
-    <a class="nav-item" onclick="goTo('downloads',this)">
+    <a class="nav-item" id="nav-downloads" onclick="goTo('downloads',this)">
       <span class="nav-icon">📦</span> Downloads
     </a>
     <a class="nav-item" onclick="goTo('notifs',this)" id="nav-notifs">
@@ -341,10 +341,10 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 
       <div class="two-col gap-b">
         <!-- Últimos voos -->
-        <div>
+        <div id="ov-flights-section">
           <div class="sec-header">
             <div class="sec-title">Últimos voos</div>
-            <button class="sec-action" onclick="goTo('flights',null)">Ver todos →</button>
+            <button class="sec-action" id="ov-flights-btn" onclick="goTo('flights',null)">Ver todos →</button>
           </div>
           <div class="table-wrap">
             <table>
@@ -354,10 +354,10 @@ tr:hover td { background: rgba(255,255,255,0.02); }
           </div>
         </div>
         <!-- Notificações recentes -->
-        <div>
+        <div id="ov-notifs-section">
           <div class="sec-header">
             <div class="sec-title">Avisos recentes</div>
-            <button class="sec-action" onclick="goTo('notifs',null)">Ver todos →</button>
+            <button class="sec-action" id="ov-notifs-btn" onclick="goTo('notifs',null)">Ver todos →</button>
           </div>
           <div class="notif-list" id="ov-notifs-list"></div>
         </div>
@@ -642,7 +642,11 @@ const PAGE_TITLES = {
   downloads:'Downloads', notifs:'Notificações'
 };
 
+const PERM_MAP = { pirep:'pirep', flights:'flights', routes:'routes', ranking:'ranking', downloads:'downloads', notifs:'notifications' };
+
 function goTo(id, el) {
+  const permKey = PERM_MAP[id];
+  if (permKey && user?.permissions && user.permissions[permKey] === false) return;
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById('page-' + id).classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -654,6 +658,31 @@ function goTo(id, el) {
   }
   document.getElementById('topbar-title').textContent = PAGE_TITLES[id] || '';
   if (id === 'notifs') renderNotifs();
+}
+
+function applyPermissions(perms) {
+  if (!perms) return;
+  const NAV_IDS = { pirep:'nav-pirep', flights:'nav-flights', routes:'nav-routes', ranking:'nav-ranking', downloads:'nav-downloads', notifications:'nav-notifs' };
+  Object.entries(NAV_IDS).forEach(([key, id]) => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = perms[key] === false ? 'none' : '';
+  });
+  // Hide section labels if all their children are hidden
+  const opsHidden = ['pirep','flights','routes'].every(k => perms[k] === false);
+  const comHidden = ['ranking','downloads','notifications'].every(k => perms[k] === false);
+  document.getElementById('nav-label-ops').style.display = opsHidden ? 'none' : '';
+  document.getElementById('nav-label-community').style.display = comHidden ? 'none' : '';
+  // Overview: hide sub-sections the user can't access
+  const oFlight = document.getElementById('ov-flights-section');
+  if (oFlight) oFlight.style.display = perms.flights === false ? 'none' : '';
+  const oNotifs = document.getElementById('ov-notifs-section');
+  if (oNotifs) oNotifs.style.display = perms.notifications === false ? 'none' : '';
+  // Topbar notification bell
+  const notifBtn = document.querySelector('.notif-btn');
+  if (notifBtn) notifBtn.style.display = perms.notifications === false ? 'none' : '';
+  // Flights page: hide "registrar voo" shortcut if pirep is blocked
+  const pirepShortcut = document.querySelector('#page-flights .sec-action');
+  if (pirepShortcut) pirepShortcut.style.display = perms.pirep === false ? 'none' : '';
 }
 
 /* ── INIT USER UI ── */
@@ -789,6 +818,9 @@ function initUserUI() {
 
   // Notification badge
   updateNotifBadge();
+
+  // Apply per-user permissions
+  applyPermissions(user.permissions);
 }
 
 function updateNotifBadge() {
