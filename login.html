@@ -253,17 +253,18 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
-  const firebaseConfig = {
+  firebase.initializeApp({
     apiKey: "AIzaSyC2dDGhKjzHSclyFwUFNGA60DtXAjLEJ6I",
     authDomain: "bravo-aviation.firebaseapp.com",
     projectId: "bravo-aviation",
     storageBucket: "bravo-aviation.firebasestorage.app",
     messagingSenderId: "712016002234",
     appId: "1:712016002234:web:ce7a8e39c28bc6d8ca5683"
-  };
-  firebase.initializeApp(firebaseConfig);
+  });
   const auth = firebase.auth();
+  const db   = firebase.firestore();
 
   function togglePass() {
     const inp = document.getElementById('password');
@@ -272,14 +273,37 @@
     else { inp.type = 'password'; btn.textContent = '👁'; }
   }
 
+  function showStatus(type) {
+    document.querySelector('.login-card').style.display = 'none';
+    document.getElementById('statusBox').style.display = 'block';
+    document.getElementById('statusBox').innerHTML = type === 'pending'
+      ? `<div style="text-align:center;padding:32px 0;">
+           <div style="font-size:40px;margin-bottom:16px;">⏳</div>
+           <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700;margin-bottom:8px;">Candidatura em análise</div>
+           <div style="color:var(--text-sec);font-size:13px;line-height:1.7;">Sua candidatura está sendo analisada pelo staff.<br>Você receberá acesso em até 72h.</div>
+           <button onclick="backToLogin()" style="margin-top:24px;background:none;border:1px solid var(--border);color:var(--text-sec);padding:10px 24px;border-radius:4px;cursor:pointer;font-size:12px;">← Voltar</button>
+         </div>`
+      : `<div style="text-align:center;padding:32px 0;">
+           <div style="font-size:40px;margin-bottom:16px;">❌</div>
+           <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700;margin-bottom:8px;">Candidatura recusada</div>
+           <div style="color:var(--text-sec);font-size:13px;">Entre em contato com o staff para mais informações.</div>
+           <button onclick="backToLogin()" style="margin-top:24px;background:none;border:1px solid var(--border);color:var(--text-sec);padding:10px 24px;border-radius:4px;cursor:pointer;font-size:12px;">← Voltar</button>
+         </div>`;
+  }
+
+  function backToLogin() {
+    auth.signOut();
+    document.getElementById('statusBox').style.display = 'none';
+    document.querySelector('.login-card').style.display = 'block';
+  }
+
   function handleLogin(e) {
     e.preventDefault();
-    const email = document.getElementById('email').value.trim().toLowerCase();
+    const email    = document.getElementById('email').value.trim().toLowerCase();
     const password = document.getElementById('password').value;
     const remember = document.getElementById('remember').checked;
     const btn = document.getElementById('loginBtn');
     const err = document.getElementById('errorMsg');
-
     err.classList.remove('show');
     btn.classList.add('loading');
 
@@ -289,7 +313,23 @@
 
     auth.setPersistence(persistence)
       .then(() => auth.signInWithEmailAndPassword(email, password))
-      .then(() => { window.location.href = 'dashboard.html'; })
+      .then(async (cred) => {
+        const uid = cred.user.uid;
+        const [userSnap, appSnap] = await Promise.all([
+          db.collection('users').doc(uid).get(),
+          db.collection('applications').doc(uid).get()
+        ]);
+        if (userSnap.exists && userSnap.data().role === 'admin') {
+          window.location.href = 'admin.html'; return;
+        }
+        if (appSnap.exists && appSnap.data().status === 'pending') {
+          showStatus('pending'); btn.classList.remove('loading'); return;
+        }
+        if (appSnap.exists && appSnap.data().status === 'rejected') {
+          showStatus('rejected'); btn.classList.remove('loading'); return;
+        }
+        window.location.href = 'dashboard.html';
+      })
       .catch(() => {
         btn.classList.remove('loading');
         err.classList.add('show');
@@ -302,7 +342,20 @@
       });
   }
 
-  auth.onAuthStateChanged(u => { if (u) window.location.href = 'dashboard.html'; });
+  auth.onAuthStateChanged(async (u) => {
+    if (!u) return;
+    const [userSnap, appSnap] = await Promise.all([
+      db.collection('users').doc(u.uid).get(),
+      db.collection('applications').doc(u.uid).get()
+    ]);
+    if (userSnap.exists && userSnap.data().role === 'admin') { window.location.href = 'admin.html'; return; }
+    if (appSnap.exists && appSnap.data().status === 'pending') return;
+    if (userSnap.exists) window.location.href = 'dashboard.html';
+  });
 </script>
+<!-- Status box (hidden by default) -->
+<div id="statusBox" style="display:none;position:fixed;inset:0;z-index:100;background:var(--bg);display:none;align-items:center;justify-content:center;">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:40px;max-width:400px;width:90%;"></div>
+</div>
 </body>
 </html>

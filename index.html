@@ -669,31 +669,36 @@
           <div class="form-row">
             <div class="form-group">
               <label data-pt="Nome" data-en="First Name">Nome</label>
-              <input type="text" data-placeholder-pt="João" data-placeholder-en="John" placeholder="João" required />
+              <input id="join-first" type="text" data-placeholder-pt="João" data-placeholder-en="John" placeholder="João" required />
             </div>
             <div class="form-group">
               <label data-pt="Sobrenome" data-en="Last Name">Sobrenome</label>
-              <input type="text" data-placeholder-pt="Silva" data-placeholder-en="Smith" placeholder="Silva" required />
+              <input id="join-last" type="text" data-placeholder-pt="Silva" data-placeholder-en="Smith" placeholder="Silva" required />
             </div>
           </div>
           <div class="form-group">
             <label>VID IVAO</label>
-            <input type="text" placeholder="123456" required pattern="[0-9]{5,8}" />
+            <input id="join-vid" type="text" placeholder="123456" required pattern="[0-9]{5,8}" />
           </div>
           <div class="form-group">
             <label data-pt="E-mail" data-en="E-mail">E-mail</label>
-            <input type="email" placeholder="email@exemplo.com" required />
+            <input id="join-email" type="email" placeholder="email@exemplo.com" required />
+          </div>
+          <div class="form-group">
+            <label data-pt="Senha" data-en="Password">Senha</label>
+            <input id="join-password" type="password" placeholder="Mínimo 6 caracteres" required minlength="6" />
           </div>
           <div class="form-group">
             <label data-pt="Aeronave preferida" data-en="Preferred aircraft">Aeronave preferida</label>
-            <select>
+            <select id="join-aircraft">
               <option value="" data-pt="Selecione" data-en="Select">Selecione</option>
               <option>Boeing 737-800</option>
               <option>Airbus A320</option>
               <option data-pt="Sem preferência" data-en="No preference">Sem preferência</option>
             </select>
           </div>
-          <button type="submit" class="btn-submit" data-pt="Enviar candidatura" data-en="Submit application">Enviar candidatura</button>
+          <button type="submit" class="btn-submit" id="join-btn" data-pt="Enviar candidatura" data-en="Submit application">Enviar candidatura</button>
+          <div id="join-error" style="display:none;margin-top:12px;color:#e05555;font-size:12px;"></div>
           <div class="form-note" data-pt="Seu e-mail pessoal não será divulgado publicamente." data-en="Your personal email will not be displayed publicly.">Seu e-mail pessoal não será divulgado publicamente.</div>
         </form>
         <div class="success-msg" id="joinSuccess" data-pt="✓ Candidatura enviada! Entraremos em contato em até 72h." data-en="✓ Application submitted! We'll reach out within 72h.">✓ Candidatura enviada! Entraremos em contato em até 72h.</div>
@@ -919,10 +924,38 @@
   }
 
   /* ── FORMS ── */
-  function handleJoin(e) {
+  async function handleJoin(e) {
     e.preventDefault();
-    document.getElementById('joinForm').style.display = 'none';
-    document.getElementById('joinSuccess').classList.add('show');
+    const btn = document.getElementById('join-btn');
+    const errEl = document.getElementById('join-error');
+    btn.disabled = true;
+    btn.textContent = 'Enviando...';
+    errEl.style.display = 'none';
+    const firstName = document.getElementById('join-first').value.trim();
+    const lastName  = document.getElementById('join-last').value.trim();
+    const vid       = document.getElementById('join-vid').value.trim();
+    const email     = document.getElementById('join-email').value.trim().toLowerCase();
+    const password  = document.getElementById('join-password').value;
+    const aircraft  = document.getElementById('join-aircraft').value || 'Sem preferência';
+    try {
+      const cred = await firebase.auth().createUserWithEmailAndPassword(email, password);
+      await firebase.firestore().collection('applications').doc(cred.user.uid).set({
+        name: firstName + ' ' + lastName, firstName, lastName, vid, email, aircraft,
+        status: 'pending',
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      await firebase.auth().signOut();
+      document.getElementById('joinForm').style.display = 'none';
+      document.getElementById('joinSuccess').classList.add('show');
+    } catch (err) {
+      let msg = 'Erro ao enviar candidatura. Tente novamente.';
+      if (err.code === 'auth/email-already-in-use') msg = 'Este e-mail já está cadastrado.';
+      if (err.code === 'auth/weak-password') msg = 'Senha muito fraca. Mínimo 6 caracteres.';
+      errEl.textContent = msg;
+      errEl.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'Enviar candidatura';
+    }
   }
   function handleContact(e) {
     e.preventDefault();
@@ -930,6 +963,18 @@
     e.target.reset();
   }
 </script>
-
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+  firebase.initializeApp({
+    apiKey: "AIzaSyC2dDGhKjzHSclyFwUFNGA60DtXAjLEJ6I",
+    authDomain: "bravo-aviation.firebaseapp.com",
+    projectId: "bravo-aviation",
+    storageBucket: "bravo-aviation.firebasestorage.app",
+    messagingSenderId: "712016002234",
+    appId: "1:712016002234:web:ce7a8e39c28bc6d8ca5683"
+  });
+</script>
 </body>
 </html>

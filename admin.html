@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Admin — Bravo Virtual Airline</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<style>
+:root {
+  --bg:#080A12;--surface:#0F1220;--surface2:#141728;--surface3:#1A1F35;
+  --border:#1E2340;--gold:#C8961C;--gold-light:#E0B050;--gold-dim:#7A5A10;
+  --text:#F0EDE6;--text-sec:#8A8FA8;--text-dim:#4A506A;
+  --radius:4px;--danger:#e05555;--success:#3db07a;--info:#3a7fd4;
+  --sidebar:240px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:14px;display:flex;overflow:hidden;}
+
+/* SIDEBAR */
+aside{width:var(--sidebar);min-height:100vh;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;z-index:10;}
+.sidebar-logo{padding:24px 20px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:center;}
+.sidebar-logo img{height:56px;}
+.admin-badge{display:flex;align-items:center;justify-content:center;margin:12px 20px 0;background:rgba(200,150,28,0.1);border:1px solid rgba(200,150,28,0.2);border-radius:4px;padding:5px;font-size:10px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:var(--gold);}
+.sidebar-nav{flex:1;padding:12px 0;overflow-y:auto;}
+.nav-section-label{font-size:9px;font-weight:700;letter-spacing:0.25em;text-transform:uppercase;color:var(--text-dim);padding:14px 20px 6px;}
+.nav-item{display:flex;align-items:center;gap:12px;padding:10px 20px;cursor:pointer;font-size:13px;font-weight:500;color:var(--text-sec);border-left:2px solid transparent;transition:color .2s,background .2s,border-color .2s;text-decoration:none;user-select:none;}
+.nav-item:hover{color:var(--text);background:rgba(255,255,255,.03);}
+.nav-item.active{color:var(--gold);background:rgba(200,150,28,.07);border-left-color:var(--gold);}
+.nav-icon{font-size:16px;width:20px;text-align:center;}
+.nav-badge{margin-left:auto;background:var(--danger);color:#fff;font-size:10px;font-weight:700;padding:1px 7px;border-radius:10px;min-width:20px;text-align:center;}
+.sidebar-user{padding:16px 20px;border-top:1px solid var(--border);display:flex;align-items:center;gap:12px;}
+.user-avatar{width:36px;height:36px;border-radius:50%;background:rgba(200,150,28,.12);border:1px solid rgba(200,150,28,.3);display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;color:var(--gold);flex-shrink:0;}
+.user-info{flex:1;min-width:0;}
+.user-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.user-rank{font-size:10px;color:var(--gold);font-weight:600;letter-spacing:.1em;text-transform:uppercase;}
+.logout-btn{background:none;border:none;cursor:pointer;color:var(--text-dim);font-size:16px;transition:color .2s;flex-shrink:0;}
+.logout-btn:hover{color:var(--danger);}
+
+/* MAIN */
+main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+.topbar{height:60px;background:var(--surface);border-bottom:1px solid var(--border);padding:0 32px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.topbar-title{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;}
+.topbar-right{display:flex;align-items:center;gap:16px;}
+.topbar-date{font-size:12px;color:var(--text-dim);}
+.content{flex:1;overflow-y:auto;padding:32px;}
+
+/* PAGES */
+.page{display:none;animation:fadeIn .3s ease;}
+.page.active{display:block;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* CARDS */
+.cards-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px;position:relative;overflow:hidden;}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--border);}
+.stat-card.gold::before{background:var(--gold);}
+.stat-card.blue::before{background:var(--info);}
+.stat-card.green::before{background:var(--success);}
+.stat-card.red::before{background:var(--danger);}
+.stat-card-label{font-size:10px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--text-dim);margin-bottom:10px;}
+.stat-card-value{font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:800;color:var(--text);line-height:1;}
+.stat-card-sub{font-size:11px;color:var(--text-sec);margin-top:6px;}
+
+/* SECTION */
+.sec-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.sec-title{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;}
+
+/* TABLE */
+.table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:24px;}
+table{width:100%;border-collapse:collapse;}
+th{font-size:10px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;color:var(--text-dim);padding:12px 16px;text-align:left;background:var(--surface2);border-bottom:1px solid var(--border);}
+td{padding:12px 16px;font-size:13px;border-bottom:1px solid rgba(30,35,64,.5);color:var(--text-sec);}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:rgba(255,255,255,.02);}
+.td-main{color:var(--text);font-weight:500;}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;padding:3px 10px;border-radius:10px;}
+.badge.pending{background:rgba(200,150,28,.1);color:var(--gold);border:1px solid rgba(200,150,28,.2);}
+.badge.approved,.badge.active{background:rgba(61,176,122,.12);color:var(--success);border:1px solid rgba(61,176,122,.25);}
+.badge.rejected{background:rgba(224,85,85,.1);color:var(--danger);border:1px solid rgba(224,85,85,.2);}
+.badge.admin{background:rgba(200,150,28,.15);color:var(--gold-light);border:1px solid rgba(200,150,28,.3);}
+.badge.pilot{background:rgba(58,127,212,.1);color:var(--info);border:1px solid rgba(58,127,212,.2);}
+
+/* BUTTONS */
+.btn-sm{background:none;border:1px solid var(--border);color:var(--text-sec);padding:5px 12px;border-radius:var(--radius);font-size:11px;font-weight:600;cursor:pointer;transition:all .2s;font-family:'Inter',sans-serif;}
+.btn-sm:hover{border-color:var(--gold-dim);color:var(--gold);}
+.btn-sm.approve{border-color:rgba(61,176,122,.3);color:var(--success);}
+.btn-sm.approve:hover{background:rgba(61,176,122,.1);}
+.btn-sm.reject{border-color:rgba(224,85,85,.3);color:var(--danger);}
+.btn-sm.reject:hover{background:rgba(224,85,85,.1);}
+.btn-sm:disabled{opacity:.4;cursor:not-allowed;}
+.btn-gold{background:var(--gold);color:#000;border:none;cursor:pointer;padding:10px 24px;border-radius:var(--radius);font-family:'Inter',sans-serif;font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;transition:background .2s;}
+.btn-gold:hover{background:var(--gold-light);}
+
+/* TABS */
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:20px;}
+.tab{padding:10px 20px;font-size:12px;font-weight:600;letter-spacing:.05em;color:var(--text-dim);cursor:pointer;border-bottom:2px solid transparent;transition:color .2s,border-color .2s;}
+.tab:hover{color:var(--text-sec);}
+.tab.active{color:var(--gold);border-bottom-color:var(--gold);}
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:center;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:32px;width:480px;max-width:90vw;max-height:90vh;overflow-y:auto;}
+.modal-title{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;margin-bottom:20px;}
+.form-group{margin-bottom:16px;}
+.form-group label{display:block;font-size:10px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;color:var(--text-dim);margin-bottom:7px;}
+.form-group input,.form-group select{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:10px 12px;border-radius:var(--radius);font-family:'Inter',sans-serif;font-size:13px;}
+.form-group input:focus,.form-group select:focus{outline:none;border-color:var(--gold-dim);}
+.modal-actions{display:flex;gap:10px;margin-top:20px;justify-content:flex-end;}
+.btn-ghost{background:transparent;color:var(--text-sec);border:1px solid var(--border);cursor:pointer;padding:10px 20px;border-radius:var(--radius);font-family:'Inter',sans-serif;font-size:12px;font-weight:600;}
+
+/* EMPTY */
+.empty-state{text-align:center;padding:48px;color:var(--text-dim);font-size:13px;}
+.empty-state .big{font-size:36px;margin-bottom:12px;}
+
+/* GAP */
+.gap-b{margin-bottom:24px;}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:24px;}
+
+@media(max-width:900px){
+  :root{--sidebar:200px;}
+  .cards-row{grid-template-columns:repeat(2,1fr);}
+  .two-col{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<aside id="sidebar">
+  <div class="sidebar-logo">
+    <img src="assets/logo.png" alt="BRV" />
+  </div>
+  <div class="admin-badge">⚙ Painel Admin</div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">Painel</div>
+    <a class="nav-item active" onclick="goTo('overview',this)">
+      <span class="nav-icon">🏠</span> Visão Geral
+    </a>
+    <div class="nav-section-label">Gestão</div>
+    <a class="nav-item" onclick="goTo('applications',this)" id="nav-applications">
+      <span class="nav-icon">📋</span> Candidaturas
+      <span class="nav-badge" id="app-badge" style="display:none">0</span>
+    </a>
+    <a class="nav-item" onclick="goTo('pilots',this)">
+      <span class="nav-icon">👥</span> Pilotos
+    </a>
+    <a class="nav-item" onclick="goTo('pireps',this)" id="nav-pireps">
+      <span class="nav-icon">✈️</span> PIREPs
+      <span class="nav-badge" id="pirep-badge" style="display:none">0</span>
+    </a>
+  </nav>
+  <div class="sidebar-user">
+    <div class="user-avatar" id="admin-avatar">AD</div>
+    <div class="user-info">
+      <div class="user-name" id="admin-name">Admin</div>
+      <div class="user-rank">Administrator</div>
+    </div>
+    <button class="logout-btn" onclick="logout()" title="Sair">⏏</button>
+  </div>
+</aside>
+
+<main>
+  <div class="topbar">
+    <div class="topbar-title" id="topbar-title">Visão Geral</div>
+    <div class="topbar-right">
+      <div class="topbar-date" id="topbar-date"></div>
+      <a href="dashboard.html" style="font-size:12px;color:var(--text-dim);text-decoration:none;">← Dashboard</a>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- OVERVIEW -->
+    <div class="page active" id="page-overview">
+      <div class="cards-row gap-b">
+        <div class="stat-card gold">
+          <div class="stat-card-label">Pilotos ativos</div>
+          <div class="stat-card-value" id="ov-pilots">—</div>
+          <div class="stat-card-sub">Membros aprovados</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-card-label">Horas totais</div>
+          <div class="stat-card-value" id="ov-hours">—</div>
+          <div class="stat-card-sub">Somadas da frota</div>
+        </div>
+        <div class="stat-card blue">
+          <div class="stat-card-label">Voos aprovados</div>
+          <div class="stat-card-value" id="ov-flights">—</div>
+          <div class="stat-card-sub">PIREPs aprovados</div>
+        </div>
+        <div class="stat-card red">
+          <div class="stat-card-label">Pendências</div>
+          <div class="stat-card-value" id="ov-pending">—</div>
+          <div class="stat-card-sub">Candidaturas + PIREPs</div>
+        </div>
+      </div>
+      <div class="two-col">
+        <div>
+          <div class="sec-header gap-b">
+            <div class="sec-title">Candidaturas recentes</div>
+            <button class="btn-sm" onclick="goTo('applications',null)">Ver todas →</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Nome</th><th>VID</th><th>Status</th><th>Ação</th></tr></thead>
+              <tbody id="ov-apps-table"></tbody>
+            </table>
+          </div>
+        </div>
+        <div>
+          <div class="sec-header gap-b">
+            <div class="sec-title">PIREPs pendentes</div>
+            <button class="btn-sm" onclick="goTo('pireps',null)">Ver todos →</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Piloto</th><th>Rota</th><th>Dur.</th><th>Ação</th></tr></thead>
+              <tbody id="ov-pireps-table"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- APPLICATIONS -->
+    <div class="page" id="page-applications">
+      <div class="tabs">
+        <div class="tab active" onclick="filterApps('pending',this)">Pendentes</div>
+        <div class="tab" onclick="filterApps('approved',this)">Aprovadas</div>
+        <div class="tab" onclick="filterApps('rejected',this)">Rejeitadas</div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Nome</th><th>VID IVAO</th><th>E-mail</th><th>Aeronave</th><th>Data</th><th>Status</th><th>Ações</th></tr></thead>
+          <tbody id="apps-table"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- PILOTS -->
+    <div class="page" id="page-pilots">
+      <div class="sec-header gap-b">
+        <div class="sec-title">Pilotos cadastrados</div>
+        <span id="pilots-count" style="font-size:12px;color:var(--text-dim);"></span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Nome</th><th>VID</th><th>E-mail</th><th>Patente</th><th>Horas</th><th>Voos</th><th>Role</th><th>Ações</th></tr></thead>
+          <tbody id="pilots-table"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- PIREPS -->
+    <div class="page" id="page-pireps">
+      <div class="tabs">
+        <div class="tab active" onclick="filterPireps('pending',this)">Pendentes</div>
+        <div class="tab" onclick="filterPireps('approved',this)">Aprovados</div>
+        <div class="tab" onclick="filterPireps('rejected',this)">Rejeitados</div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Piloto</th><th>Rota</th><th>Aeronave</th><th>Duração</th><th>FL</th><th>Data</th><th>Sim</th><th>Status</th><th>Ações</th></tr></thead>
+          <tbody id="pireps-table"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<!-- EDIT PILOT MODAL -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <div class="modal-title">Editar piloto</div>
+    <input type="hidden" id="edit-uid" />
+    <div class="form-group"><label>Nome</label><input id="edit-name" type="text" /></div>
+    <div class="form-group"><label>VID IVAO</label><input id="edit-vid" type="text" /></div>
+    <div class="form-group"><label>Horas de voo</label><input id="edit-hours" type="number" step="0.1" /></div>
+    <div class="form-group"><label>Voos</label><input id="edit-flights-count" type="number" /></div>
+    <div class="form-group"><label>Aeronave</label>
+      <select id="edit-aircraft">
+        <option>Boeing 737-800</option>
+        <option>Airbus A320</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Role</label>
+      <select id="edit-role">
+        <option value="pilot">Pilot</option>
+        <option value="admin">Admin</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn-gold" onclick="savePilot()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+firebase.initializeApp({
+  apiKey: "AIzaSyC2dDGhKjzHSclyFwUFNGA60DtXAjLEJ6I",
+  authDomain: "bravo-aviation.firebaseapp.com",
+  projectId: "bravo-aviation",
+  storageBucket: "bravo-aviation.firebasestorage.app",
+  messagingSenderId: "712016002234",
+  appId: "1:712016002234:web:ce7a8e39c28bc6d8ca5683"
+});
+const auth = firebase.auth();
+const db   = firebase.firestore();
+
+let adminUser = null;
+let allApplications = [];
+let allPilots = [];
+let allPireps = [];
+let currentAppFilter   = 'pending';
+let currentPirepFilter = 'pending';
+
+const RANKS = [
+  { name:'Cadete',            min:0,    max:50    },
+  { name:'2º Oficial',        min:50,   max:150   },
+  { name:'1º Oficial',        min:150,  max:350   },
+  { name:'Comandante',        min:350,  max:800   },
+  { name:'Comandante Sênior', min:800,  max:99999 }
+];
+function getRank(h){ return RANKS.find(r=>h>=r.min&&h<r.max)||RANKS[RANKS.length-1]; }
+
+/* ── AUTH ── */
+auth.onAuthStateChanged(async (u) => {
+  if (!u) { window.location.href = 'login.html'; return; }
+  const snap = await db.collection('users').doc(u.uid).get();
+  if (!snap.exists || snap.data().role !== 'admin') {
+    window.location.href = 'dashboard.html'; return;
+  }
+  adminUser = { uid: u.uid, ...snap.data() };
+  const av = (adminUser.name || 'AD').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  document.getElementById('admin-avatar').textContent = av;
+  document.getElementById('admin-name').textContent = adminUser.name || 'Admin';
+  await loadAll();
+});
+
+function logout(){ auth.signOut().then(()=>{ window.location.href='login.html'; }); }
+
+/* ── LOAD DATA ── */
+async function loadAll() {
+  const [appsSnap, pilotsSnap, pirepsSnap] = await Promise.all([
+    db.collection('applications').get(),
+    db.collection('users').get(),
+    db.collection('pireps').get()
+  ]);
+
+  allApplications = appsSnap.docs.map(d=>({ id:d.id, ...d.data() }));
+  allPilots = pilotsSnap.docs.map(d=>({ id:d.id, ...d.data() }));
+  allPireps = pirepsSnap.docs.map(d=>({ id:d.id, ...d.data() }));
+
+  updateBadges();
+  renderOverview();
+  renderApps();
+  renderPilots();
+  renderPireps();
+}
+
+function updateBadges() {
+  const pendingApps   = allApplications.filter(a=>a.status==='pending').length;
+  const pendingPireps = allPireps.filter(p=>p.status==='pending').length;
+  const appBadge  = document.getElementById('app-badge');
+  const pirepBadge= document.getElementById('pirep-badge');
+  appBadge.textContent   = pendingApps;
+  appBadge.style.display = pendingApps > 0 ? '' : 'none';
+  pirepBadge.textContent   = pendingPireps;
+  pirepBadge.style.display = pendingPireps > 0 ? '' : 'none';
+  document.getElementById('ov-pending').textContent = pendingApps + pendingPireps;
+}
+
+/* ── OVERVIEW ── */
+function renderOverview() {
+  const activePilots = allPilots.filter(p=>p.role!=='admin');
+  const totalHours   = activePilots.reduce((s,p)=>s+(p.hours||0),0);
+  const totalFlights = allPireps.filter(p=>p.status==='approved').length;
+  document.getElementById('ov-pilots').textContent  = activePilots.length;
+  document.getElementById('ov-hours').textContent   = totalHours.toFixed(1)+'h';
+  document.getElementById('ov-flights').textContent = totalFlights;
+
+  // Recent apps
+  const tbody = document.getElementById('ov-apps-table');
+  const recent = allApplications.filter(a=>a.status==='pending').slice(0,5);
+  if (!recent.length) {
+    tbody.innerHTML='<tr><td colspan="4" class="empty-state">Nenhuma candidatura pendente.</td></tr>';
+  } else {
+    tbody.innerHTML = recent.map(a=>`
+      <tr>
+        <td class="td-main">${a.name||'—'}</td>
+        <td>${a.vid||'—'}</td>
+        <td><span class="badge pending">Pendente</span></td>
+        <td style="display:flex;gap:6px;">
+          <button class="btn-sm approve" onclick="approveApp('${a.id}')">Aprovar</button>
+          <button class="btn-sm reject"  onclick="rejectApp('${a.id}')">Recusar</button>
+        </td>
+      </tr>`).join('');
+  }
+
+  // Recent PIREPs
+  const ptbody = document.getElementById('ov-pireps-table');
+  const pendPireps = allPireps.filter(p=>p.status==='pending').slice(0,5);
+  if (!pendPireps.length) {
+    ptbody.innerHTML='<tr><td colspan="4" class="empty-state">Nenhum PIREP pendente.</td></tr>';
+  } else {
+    ptbody.innerHTML = pendPireps.map(p=>{
+      const pilot = allPilots.find(u=>u.id===p.userId);
+      return `<tr>
+        <td class="td-main">${pilot?pilot.name:'—'}</td>
+        <td>${p.dep}→${p.arr}</td>
+        <td>${p.dur}</td>
+        <td style="display:flex;gap:6px;">
+          <button class="btn-sm approve" onclick="approvePirep('${p.id}','${p.userId}','${p.dur}')">Aprovar</button>
+          <button class="btn-sm reject"  onclick="rejectPirep('${p.id}')">Recusar</button>
+        </td>
+      </tr>`;}).join('');
+  }
+}
+
+/* ── APPLICATIONS ── */
+function renderApps() {
+  const list = allApplications.filter(a=>a.status===currentAppFilter);
+  const tbody = document.getElementById('apps-table');
+  if (!list.length) {
+    tbody.innerHTML=`<tr><td colspan="7"><div class="empty-state"><div class="big">📋</div>Nenhuma candidatura ${currentAppFilter==='pending'?'pendente':currentAppFilter==='approved'?'aprovada':'rejeitada'}.</div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = list.map(a=>{
+    const dt = a.createdAt?.toDate ? a.createdAt.toDate().toLocaleDateString('pt-BR') : '—';
+    const actions = a.status==='pending'
+      ? `<button class="btn-sm approve" onclick="approveApp('${a.id}')">Aprovar</button>
+         <button class="btn-sm reject"  onclick="rejectApp('${a.id}')">Recusar</button>`
+      : `<span style="color:var(--text-dim);font-size:12px;">${a.status==='approved'?'Aprovada':'Recusada'}</span>`;
+    return `<tr>
+      <td class="td-main">${a.name||'—'}</td>
+      <td>${a.vid||'—'}</td>
+      <td>${a.email||'—'}</td>
+      <td>${a.aircraft||'—'}</td>
+      <td>${dt}</td>
+      <td><span class="badge ${a.status}">${a.status==='pending'?'Pendente':a.status==='approved'?'Aprovada':'Recusada'}</span></td>
+      <td style="display:flex;gap:6px;">${actions}</td>
+    </tr>`;}).join('');
+}
+
+function filterApps(status, el) {
+  currentAppFilter = status;
+  document.querySelectorAll('#page-applications .tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  renderApps();
+}
+
+async function approveApp(uid) {
+  if (!confirm('Aprovar esta candidatura?')) return;
+  const app = allApplications.find(a=>a.id===uid);
+  if (!app) return;
+  await Promise.all([
+    db.collection('users').doc(uid).set({
+      name: app.name, vid: app.vid, email: app.email,
+      aircraft: app.aircraft, hours: 0, flights: 0,
+      joinDate: new Date().toISOString().slice(0,10),
+      role: 'pilot', status: 'active'
+    }),
+    db.collection('applications').doc(uid).update({ status: 'approved' })
+  ]);
+  app.status = 'approved';
+  allPilots.push({ id: uid, name: app.name, vid: app.vid, email: app.email, aircraft: app.aircraft, hours: 0, flights: 0, role: 'pilot' });
+  updateBadges(); renderOverview(); renderApps(); renderPilots();
+  alert(`✓ ${app.name} aprovado(a)!`);
+}
+
+async function rejectApp(uid) {
+  if (!confirm('Recusar esta candidatura?')) return;
+  await db.collection('applications').doc(uid).update({ status: 'rejected' });
+  const app = allApplications.find(a=>a.id===uid);
+  if (app) app.status = 'rejected';
+  updateBadges(); renderOverview(); renderApps();
+}
+
+/* ── PILOTS ── */
+function renderPilots() {
+  const tbody = document.getElementById('pilots-table');
+  document.getElementById('pilots-count').textContent = allPilots.length + ' pilotos';
+  if (!allPilots.length) {
+    tbody.innerHTML='<tr><td colspan="8"><div class="empty-state"><div class="big">👥</div>Nenhum piloto cadastrado.</div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = allPilots.sort((a,b)=>(b.hours||0)-(a.hours||0)).map(p=>`
+    <tr>
+      <td class="td-main">${p.name||'—'}</td>
+      <td>${p.vid||'—'}</td>
+      <td style="font-size:12px;">${p.email||'—'}</td>
+      <td>${getRank(p.hours||0).name}</td>
+      <td><strong style="color:var(--gold)">${(p.hours||0).toFixed(1)}h</strong></td>
+      <td>${p.flights||0}</td>
+      <td><span class="badge ${p.role==='admin'?'admin':'pilot'}">${p.role==='admin'?'Admin':'Pilot'}</span></td>
+      <td style="display:flex;gap:6px;">
+        <button class="btn-sm" onclick="openEditModal('${p.id}')">Editar</button>
+      </td>
+    </tr>`).join('');
+}
+
+function openEditModal(uid) {
+  const p = allPilots.find(x=>x.id===uid);
+  if (!p) return;
+  document.getElementById('edit-uid').value          = uid;
+  document.getElementById('edit-name').value         = p.name||'';
+  document.getElementById('edit-vid').value          = p.vid||'';
+  document.getElementById('edit-hours').value        = p.hours||0;
+  document.getElementById('edit-flights-count').value= p.flights||0;
+  document.getElementById('edit-aircraft').value     = p.aircraft||'Boeing 737-800';
+  document.getElementById('edit-role').value         = p.role||'pilot';
+  document.getElementById('editModal').classList.add('open');
+}
+
+function closeModal() { document.getElementById('editModal').classList.remove('open'); }
+
+async function savePilot() {
+  const uid = document.getElementById('edit-uid').value;
+  const data = {
+    name:    document.getElementById('edit-name').value.trim(),
+    vid:     document.getElementById('edit-vid').value.trim(),
+    hours:   parseFloat(document.getElementById('edit-hours').value)||0,
+    flights: parseInt(document.getElementById('edit-flights-count').value)||0,
+    aircraft:document.getElementById('edit-aircraft').value,
+    role:    document.getElementById('edit-role').value
+  };
+  await db.collection('users').doc(uid).update(data);
+  const idx = allPilots.findIndex(p=>p.id===uid);
+  if (idx>=0) Object.assign(allPilots[idx], data);
+  closeModal(); renderPilots(); renderOverview();
+  alert('✓ Piloto atualizado!');
+}
+
+/* ── PIREPS ── */
+function renderPireps() {
+  const list = allPireps.filter(p=>p.status===currentPirepFilter);
+  const tbody = document.getElementById('pireps-table');
+  if (!list.length) {
+    tbody.innerHTML=`<tr><td colspan="9"><div class="empty-state"><div class="big">✈️</div>Nenhum PIREP ${currentPirepFilter==='pending'?'pendente':currentPirepFilter==='approved'?'aprovado':'rejeitado'}.</div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = list.map(p=>{
+    const pilot = allPilots.find(u=>u.id===p.userId);
+    const dt = p.date ? new Date(p.date).toLocaleDateString('pt-BR') : '—';
+    const actions = p.status==='pending'
+      ? `<button class="btn-sm approve" onclick="approvePirep('${p.id}','${p.userId}','${p.dur}')">Aprovar</button>
+         <button class="btn-sm reject"  onclick="rejectPirep('${p.id}')">Recusar</button>`
+      : `<span style="font-size:12px;color:var(--text-dim);">${p.status==='approved'?'Aprovado':'Recusado'}</span>`;
+    return `<tr>
+      <td class="td-main">${pilot?pilot.name:'—'}</td>
+      <td>${p.dep}→${p.arr}</td>
+      <td>${p.ac}</td>
+      <td>${p.dur}</td>
+      <td>FL${p.fl||'—'}</td>
+      <td>${dt}</td>
+      <td style="font-size:11px;">${p.sim||'—'}</td>
+      <td><span class="badge ${p.status}">${p.status==='pending'?'Pendente':p.status==='approved'?'Aprovado':'Recusado'}</span></td>
+      <td style="display:flex;gap:6px;">${actions}</td>
+    </tr>`;}).join('');
+}
+
+function filterPireps(status, el) {
+  currentPirepFilter = status;
+  document.querySelectorAll('#page-pireps .tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  renderPireps();
+}
+
+function durToHours(dur) {
+  const [h,m] = (dur||'0:0').split(':').map(Number);
+  return (h||0) + (m||0)/60;
+}
+
+async function approvePirep(pirepId, userId, dur) {
+  if (!confirm('Aprovar este PIREP?')) return;
+  const hours = durToHours(dur);
+  const pilot = allPilots.find(p=>p.id===userId);
+  const newHours   = ((pilot?.hours||0) + hours);
+  const newFlights = ((pilot?.flights||0) + 1);
+  await Promise.all([
+    db.collection('pireps').doc(pirepId).update({ status: 'approved' }),
+    userId ? db.collection('users').doc(userId).update({ hours: newHours, flights: newFlights }) : Promise.resolve()
+  ]);
+  const pirep = allPireps.find(p=>p.id===pirepId);
+  if (pirep) pirep.status = 'approved';
+  if (pilot) { pilot.hours = newHours; pilot.flights = newFlights; }
+  updateBadges(); renderOverview(); renderPireps(); renderPilots();
+  alert('✓ PIREP aprovado! Horas atualizadas.');
+}
+
+async function rejectPirep(pirepId) {
+  if (!confirm('Recusar este PIREP?')) return;
+  await db.collection('pireps').doc(pirepId).update({ status: 'rejected' });
+  const pirep = allPireps.find(p=>p.id===pirepId);
+  if (pirep) pirep.status = 'rejected';
+  updateBadges(); renderOverview(); renderPireps();
+}
+
+/* ── NAV ── */
+const PAGE_TITLES = { overview:'Visão Geral', applications:'Candidaturas', pilots:'Pilotos', pireps:'PIREPs' };
+function goTo(id, el) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  if (el) el.classList.add('active');
+  else document.querySelectorAll('.nav-item').forEach(n=>{
+    if(n.getAttribute('onclick')&&n.getAttribute('onclick').includes("'"+id+"'")) n.classList.add('active');
+  });
+  document.getElementById('topbar-title').textContent = PAGE_TITLES[id]||'';
+}
+
+document.getElementById('topbar-date').textContent = new Date().toLocaleDateString('pt-BR',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+</script>
+</body>
+</html>
