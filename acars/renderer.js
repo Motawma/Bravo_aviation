@@ -55,6 +55,10 @@
   let aircraftTitle = null;
   let flightActive  = false;
 
+  // Log de voo
+  let logPrevState  = null;
+  let logLastPhase  = null;
+
   // Dados de voo
   let flightStart   = null;
   let timerInterval = null;
@@ -111,6 +115,66 @@
     if (alt > 8000 && Math.abs(vs) <= 200) return 'CRUZEIRO';
     if (alt <= 8000 && !onGround) return 'APROXIMAÇÃO';
     return 'VOO';
+  }
+
+  // ── Log de voo ────────────────────────────────────────────────────────────
+  function logTs() {
+    return new Date().toTimeString().slice(0, 8);
+  }
+
+  function addLogEntry(icon, msg, dim = false) {
+    const el = $('flight-log');
+    if (!el) return;
+    const entry = document.createElement('div');
+    entry.className = 'log-entry';
+    entry.innerHTML = `<span class="log-ts">${logTs()}</span><span class="log-icon">${icon}</span><span class="log-msg${dim ? ' dim' : ''}">${msg}</span>`;
+    el.appendChild(entry);
+    el.scrollTop = el.scrollHeight;
+  }
+
+  window.clearLog = () => {
+    const el = $('flight-log');
+    if (el) el.innerHTML = '';
+  };
+
+  function detectLogEvents(d) {
+    const p = logPrevState;
+
+    if (!p) {
+      logPrevState = { ...d };
+      return;
+    }
+
+    const changed = (key) => p[key] !== d[key];
+
+    if (changed('eng1')) addLogEntry(d.eng1 ? '🔴' : '⭕', d.eng1 ? 'Motor 1 acionado' : 'Motor 1 desligado');
+    if (changed('eng2')) addLogEntry(d.eng2 ? '🔴' : '⭕', d.eng2 ? 'Motor 2 acionado' : 'Motor 2 desligado');
+
+    if (changed('beaconLight')) addLogEntry('🔆', d.beaconLight ? 'Beacon ligado' : 'Beacon desligado', !d.beaconLight);
+    if (changed('navLight'))    addLogEntry('🟢', d.navLight    ? 'Luzes de navegação ligadas' : 'Luzes de navegação desligadas', !d.navLight);
+    if (changed('taxiLight'))   addLogEntry('💡', d.taxiLight   ? 'Luzes de taxi ligadas' : 'Luzes de taxi desligadas', !d.taxiLight);
+    if (changed('strobeLight')) addLogEntry('✦',  d.strobeLight ? 'Strobes ligados' : 'Strobes desligados', !d.strobeLight);
+    if (changed('landingLights')) addLogEntry('💡', d.landingLights ? 'Luzes de pouso ligadas' : 'Luzes de pouso desligadas', !d.landingLights);
+
+    if (changed('flapsIndex')) {
+      if (d.flapsIndex === 0) addLogEntry('🛫', 'Flaps recolhidos');
+      else if (d.flapsIndex > (p.flapsIndex || 0)) addLogEntry('🛬', `Flaps posição ${d.flapsIndex}`);
+      else addLogEntry('🛫', `Flaps reduzidos para posição ${d.flapsIndex}`);
+    }
+
+    if (changed('gearDown')) addLogEntry(d.gearDown ? '⬇️' : '⬆️', d.gearDown ? 'Trem de pouso extendido' : 'Trem de pouso recolhido');
+
+    if (changed('onGround') && !d.onGround) addLogEntry('✈️', 'Decolagem detectada');
+    if (changed('onGround') &&  d.onGround && d.spd > 10) addLogEntry('🛬', `Pouso — ${Math.round(d.spd)} kts`);
+
+    const phase = flightPhase(d.spd, d.alt, d.vs, d.onGround);
+    if (phase !== logLastPhase) {
+      const icons = { 'SOLO':'🅿️', 'DECOLAGEM':'🛫', 'SUBIDA':'📈', 'CRUZEIRO':'✈️', 'DESCIDA':'📉', 'APROXIMAÇÃO':'🛬', 'VOO':'✈️' };
+      if (logLastPhase !== null) addLogEntry(icons[phase] || '📋', `Fase: ${phase}`, true);
+      logLastPhase = phase;
+    }
+
+    logPrevState = { ...d };
   }
 
   function updateStartBtn() {
@@ -231,6 +295,10 @@
         $('btn-connect-msfs').style.display   = 'none';
         $('btn-connect-xp').style.display     = 'none';
         $('btn-disconnect-sim').style.display = '';
+        $('panel-log').style.display = '';
+        logPrevState = null;
+        logLastPhase = null;
+        addLogEntry('🔌', `Simulador conectado (${type === 'msfs' ? 'MSFS' : 'X-Plane'})`);
       } else {
         dot.className   = 'dot';
         label.textContent = 'Desconectado';
@@ -239,6 +307,7 @@
         $('btn-connect-msfs').style.display   = '';
         $('btn-connect-xp').style.display     = '';
         $('btn-disconnect-sim').style.display = 'none';
+        $('panel-log').style.display = 'none';
       }
       updateStartBtn();
     });
@@ -250,8 +319,11 @@
       if (data.aircraft && data.aircraft !== aircraftTitle) {
         aircraftTitle = data.aircraft;
         $('ac-title').textContent = aircraftTitle;
+        addLogEntry('✈️', `Aeronave: ${aircraftTitle}`, true);
         updateStartBtn();
       }
+
+      detectLogEvents(data);
 
       if (!flightActive) return;
       processTelemetry(data);
@@ -292,6 +364,7 @@
     $('panel-tele').style.display  = '';
     $('panel-viols').style.display = '';
     updateStartBtn();
+    addLogEntry('▶', `Voo iniciado — ${$('inp-dep').value} → ${$('inp-arr').value}`);
 
     // Timer
     timerInterval = setInterval(() => {
@@ -392,6 +465,7 @@
   async function onLanding() {
     if (!flightActive) return;
     flightActive = false;
+    addLogEntry('🛬', `Pouso detectado — ${Math.round(lastSimData?.spd || 0)} kts, ${Math.round(landingRate)} FPM`);
     clearInterval(timerInterval);
     clearInterval(liveInterval);
 

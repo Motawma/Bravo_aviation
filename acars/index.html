@@ -146,6 +146,22 @@
   .viol-err { display: flex; align-items: flex-start; gap: 6px; color: var(--amber); font-size: 12px; margin-bottom: 4px; }
   .viol-err .vi { font-size: 14px; }
 
+  /* ── FLIGHT LOG ─────────────────────── */
+  #panel-log { display: none; }
+  #flight-log {
+    max-height: 140px; overflow-y: auto;
+    font-family: 'Courier New', monospace; font-size: 11px;
+    display: flex; flex-direction: column; gap: 3px;
+  }
+  #flight-log::-webkit-scrollbar { width: 4px; }
+  #flight-log::-webkit-scrollbar-track { background: transparent; }
+  #flight-log::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  .log-entry { display: flex; gap: 8px; align-items: baseline; }
+  .log-ts    { color: var(--muted); font-size: 10px; flex-shrink: 0; }
+  .log-icon  { font-size: 12px; flex-shrink: 0; }
+  .log-msg   { color: var(--text); font-size: 11px; }
+  .log-msg.dim { color: var(--muted); }
+
   /* ── ACTION BUTTONS ─────────────────── */
   #btn-start, #btn-stop {
     flex: 1; padding: 13px; font-size: 14px; font-weight: 700;
@@ -295,6 +311,15 @@
     <div class="panel" id="panel-viols" style="display:none">
       <div class="panel-title">Violações</div>
       <div id="violations-list"><span class="viol-ok">✓ Nenhuma violação detectada</span></div>
+    </div>
+
+    <!-- Log de voo -->
+    <div class="panel" id="panel-log">
+      <div class="panel-title" style="display:flex;align-items:center;justify-content:space-between;">
+        Log de Voo
+        <button onclick="clearLog()" style="background:none;border:none;color:var(--muted);font-size:10px;cursor:pointer;font-family:inherit;">limpar</button>
+      </div>
+      <div id="flight-log"></div>
     </div>
 
     <!-- Botões de ação -->

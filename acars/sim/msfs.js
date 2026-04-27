@@ -12,6 +12,17 @@ const SIM_VARS = [
   { name: 'LIGHT LANDING',                   unit: 'bool',            type: SimConnectDataType.INT32   },
   { name: 'TRANSPONDER CODE:1',              unit: 'number',          type: SimConnectDataType.INT32   },
   { name: 'PLANE TOUCHDOWN NORMAL VELOCITY', unit: 'feet per minute', type: SimConnectDataType.FLOAT64 },
+  // Motores
+  { name: 'ENGINE COMBUSTION:1',             unit: 'bool',            type: SimConnectDataType.INT32   },
+  { name: 'ENGINE COMBUSTION:2',             unit: 'bool',            type: SimConnectDataType.INT32   },
+  // Luzes
+  { name: 'LIGHT BEACON',                    unit: 'bool',            type: SimConnectDataType.INT32   },
+  { name: 'LIGHT STROBE',                    unit: 'bool',            type: SimConnectDataType.INT32   },
+  { name: 'LIGHT NAV',                       unit: 'bool',            type: SimConnectDataType.INT32   },
+  { name: 'LIGHT TAXI',                      unit: 'bool',            type: SimConnectDataType.INT32   },
+  // Flaps e trem
+  { name: 'FLAPS HANDLE INDEX',              unit: 'number',          type: SimConnectDataType.INT32   },
+  { name: 'GEAR HANDLE POSITION',            unit: 'bool',            type: SimConnectDataType.INT32   },
 ];
 
 const DEF_ID = 1;
@@ -34,7 +45,7 @@ class MSFSHandler {
         const conn  = result.handle;
         this.connection = conn;
 
-        SIM_VARS.forEach((v, i) => {
+        SIM_VARS.forEach((v) => {
           conn.addToDataDefinition(DEF_ID, v.name, v.unit, v.type);
         });
 
@@ -43,17 +54,25 @@ class MSFSHandler {
         conn.on('simObjectData', (packet) => {
           try {
             const d = packet.data;
-            const lat     = d.readFloat64();
-            const lon     = d.readFloat64();
-            const alt     = d.readFloat64();
-            const spd     = d.readFloat64();
-            const vs      = d.readFloat64();
-            const hdg     = d.readFloat64();
-            const fuel    = d.readFloat64();
-            const onGround= d.readInt32() !== 0;
-            const lights  = d.readInt32() !== 0;
-            const xpdr    = d.readInt32();
-            const touchVS = Math.abs(d.readFloat64());
+            const lat      = d.readFloat64();
+            const lon      = d.readFloat64();
+            const alt      = d.readFloat64();
+            const spd      = d.readFloat64();
+            const vs       = d.readFloat64();
+            const hdg      = d.readFloat64();
+            const fuel     = d.readFloat64();
+            const onGround = d.readInt32() !== 0;
+            const lights   = d.readInt32() !== 0;
+            const xpdr     = d.readInt32();
+            const touchVS  = Math.abs(d.readFloat64());
+            const eng1     = d.readInt32() !== 0;
+            const eng2     = d.readInt32() !== 0;
+            const beacon   = d.readInt32() !== 0;
+            const strobe   = d.readInt32() !== 0;
+            const nav      = d.readInt32() !== 0;
+            const taxi     = d.readInt32() !== 0;
+            const flapsIdx = d.readInt32();
+            const gearDown = d.readInt32() !== 0;
 
             if (touchVS > 10) this._lastTouchdownVS = touchVS;
 
@@ -61,23 +80,26 @@ class MSFSHandler {
               lat, lon, alt, spd, vs, hdg, fuel,
               onGround,
               landingLights:   lights,
-              transponderMode: xpdr,  // 4096 = mode C (squawk 1200), state varies
+              transponderMode: xpdr,
               touchdownVS:     this._lastTouchdownVS,
-              aircraft:        'MSFS Aircraft'
+              aircraft:        this._aircraftTitle || 'MSFS Aircraft',
+              eng1, eng2,
+              beaconLight: beacon,
+              strobeLight: strobe,
+              navLight:    nav,
+              taxiLight:   taxi,
+              flapsIndex:  flapsIdx,
+              gearDown
             });
           } catch (_) {}
         });
 
-        // Tenta obter o título da aeronave separadamente
         conn.addToDataDefinition(2, 'TITLE', null, SimConnectDataType.STRING256);
         conn.requestDataOnSimObject(2, 2, 0, SimConnectPeriod.ONCE, 0, 0, 0, 0);
         conn.on('simObjectDataByType', (packet) => {
           try {
             const title = packet.data.readString256();
-            if (title && this.onData) {
-              this.onData({ ...(this._last || {}), aircraft: title });
-              this._aircraftTitle = title;
-            }
+            if (title) this._aircraftTitle = title;
           } catch (_) {}
         });
 
