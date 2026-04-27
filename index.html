@@ -966,16 +966,54 @@
   }
 
   /* ── FORMS ── */
-  function handleJoin(e) {
+  async function handleJoin(e) {
     e.preventDefault();
-    document.getElementById('joinForm').style.display = 'none';
-    document.getElementById('joinSuccess').classList.add('show');
+    const inputs   = e.target.querySelectorAll('input, select');
+    const firstName = inputs[0].value.trim();
+    const lastName  = inputs[1].value.trim();
+    const vid       = inputs[2].value.trim();
+    const email     = inputs[3].value.trim();
+    const aircraft  = inputs[4].value;
+
+    const btn = e.target.querySelector('.btn-submit');
+    const origText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = '...';
+
+    try {
+      await firebase.firestore().collection('applications').add({
+        name:      firstName + ' ' + lastName,
+        vid, email, aircraft,
+        status:    'pending',
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      e.target.style.display = 'none';
+      document.getElementById('joinSuccess').classList.add('show');
+    } catch(err) {
+      btn.disabled = false;
+      btn.textContent = origText;
+      alert('Erro ao enviar a candidatura. Tente novamente.\n' + err.message);
+    }
   }
+
   function handleContact(e) {
     e.preventDefault();
     document.getElementById('contactSuccess').classList.add('show');
     e.target.reset();
   }
+</script>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+  firebase.initializeApp({
+    apiKey: 'AIzaSyC2dDGhKjzHSclyFwUFNGA60DtXAjLEJ6I',
+    authDomain: 'bravo-aviation.firebaseapp.com',
+    projectId: 'bravo-aviation',
+    storageBucket: 'bravo-aviation.firebasestorage.app',
+    messagingSenderId: '712016002234',
+    appId: '1:712016002234:web:ce7a8e39c28bc6d8ca5683'
+  });
 </script>
 
 </body>
