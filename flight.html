@@ -8,7 +8,7 @@
 <meta http-equiv="Expires" content="0" />
 <title>Voos — Bravo Virtual Airline</title>
 <script>
-  const PAGE_VERSION = '1';
+  const PAGE_VERSION = '2';
   const key = 'brv_v_flight';
   if (sessionStorage.getItem(key) !== PAGE_VERSION) {
     sessionStorage.setItem(key, PAGE_VERSION);
@@ -335,8 +335,10 @@ function logout() { auth.signOut().then(()=>{ window.location.href='login.html';
 /* ── LOAD ROUTES ── */
 async function loadRoutes() {
   try {
-    const snap = await db.collection('routes').where('active','==',true).orderBy('flightNumber').get();
-    allRoutes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const snap = await db.collection('routes').where('active','==',true).get();
+    allRoutes = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .sort((a,b) => (a.flightNumber||'').localeCompare(b.flightNumber||''));
   } catch(e) {
     allRoutes = [];
     console.error('Erro ao carregar rotas:', e);
