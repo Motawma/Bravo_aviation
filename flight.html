@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
+<title>Voos — Bravo Virtual Airline</title>
+<script>
+  const PAGE_VERSION = '1';
+  const key = 'brv_v_flight';
+  if (sessionStorage.getItem(key) !== PAGE_VERSION) {
+    sessionStorage.setItem(key, PAGE_VERSION);
+    location.reload(true);
+  }
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<style>
+:root {
+  --bg: #080612;
+  --surface: #0E0B1E;
+  --surface2: #130F27;
+  --border: #1E1840;
+  --gold: #00EEFF;
+  --gold-light: #60F5FF;
+  --gold-dim: #007A99;
+  --pink: #FF2080;
+  --text: #F0EAF8;
+  --text-sec: #9A8FB8;
+  --text-dim: #4A4068;
+  --radius: 4px;
+  --success: #3db07a;
+  --danger: #e05555;
+  --info: #3a7fd4;
+  --sidebar: 220px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; font-size: 14px; display: flex; overflow: hidden; }
+
+/* SIDEBAR */
+aside { width: var(--sidebar); min-height: 100vh; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; position: relative; z-index: 10; }
+.sidebar-logo { padding: 24px 20px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: center; }
+.sidebar-logo img { height: 80px; mix-blend-mode: screen; }
+.sidebar-nav { flex: 1; padding: 12px 0; overflow-y: auto; }
+.nav-section-label { font-size: 9px; font-weight: 700; letter-spacing: 0.25em; text-transform: uppercase; color: var(--text-dim); padding: 14px 20px 6px; }
+.nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 20px; cursor: pointer; font-size: 13px; font-weight: 500; color: var(--text-sec); border-left: 2px solid transparent; transition: color 0.2s, background 0.2s, border-color 0.2s; text-decoration: none; user-select: none; }
+.nav-item:hover { color: var(--text); background: rgba(255,255,255,0.03); }
+.nav-item.active { color: var(--gold); background: rgba(0,238,255,0.07); border-left-color: var(--gold); }
+.nav-icon { font-size: 16px; width: 20px; text-align: center; }
+.sidebar-user { padding: 16px 20px; border-top: 1px solid var(--border); display: flex; align-items: center; gap: 12px; }
+.user-avatar { width: 36px; height: 36px; border-radius: 50%; background: rgba(0,238,255,0.12); border: 1px solid rgba(0,238,255,0.3); display: flex; align-items: center; justify-content: center; font-family: 'Barlow Condensed', sans-serif; font-size: 14px; font-weight: 700; color: var(--gold); flex-shrink: 0; }
+.user-info { flex: 1; min-width: 0; }
+.user-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.user-rank { font-size: 10px; color: var(--gold); font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; }
+.logout-btn { background: none; border: none; cursor: pointer; color: var(--text-dim); font-size: 16px; transition: color 0.2s; flex-shrink: 0; }
+.logout-btn:hover { color: var(--danger); }
+
+/* MAIN */
+main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.topbar { height: 60px; background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 32px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+.topbar-title { font-family: 'Barlow Condensed', sans-serif; font-size: 20px; font-weight: 700; }
+.topbar-right { display: flex; align-items: center; gap: 16px; }
+.content { flex: 1; overflow-y: auto; padding: 32px; }
+
+/* FILTER BAR */
+.filter-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
+.filter-tabs { display: flex; gap: 6px; }
+.filter-tab { padding: 7px 16px; border-radius: 20px; border: 1px solid var(--border); background: transparent; color: var(--text-sec); font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; letter-spacing: 0.05em; transition: all 0.2s; }
+.filter-tab:hover { border-color: var(--gold-dim); color: var(--text); }
+.filter-tab.active { background: rgba(0,238,255,0.12); border-color: var(--gold); color: var(--gold); }
+.filter-search { flex: 1; max-width: 260px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 14px; color: var(--text); font-family: 'Inter', sans-serif; font-size: 13px; transition: border-color 0.2s; }
+.filter-search:focus { outline: none; border-color: var(--gold-dim); }
+.filter-search::placeholder { color: var(--text-dim); }
+.routes-count { font-size: 12px; color: var(--text-dim); margin-left: auto; white-space: nowrap; }
+
+/* ROUTE CARDS */
+.routes-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.route-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 20px; display: flex; flex-direction: column; gap: 0;
+  transition: border-color 0.25s, transform 0.25s;
+}
+.route-card:hover { border-color: rgba(0,238,255,0.25); transform: translateY(-2px); }
+.rc-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 14px; }
+.rc-flight { font-family: 'Barlow Condensed', sans-serif; font-size: 18px; font-weight: 700; color: var(--text); letter-spacing: 0.05em; }
+.rc-ac { display: inline-block; background: rgba(0,238,255,0.08); border: 1px solid rgba(0,238,255,0.2); color: var(--gold); font-size: 9px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; padding: 3px 9px; border-radius: 2px; }
+.rc-airports { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+.rc-icao { font-family: 'Barlow Condensed', sans-serif; font-size: 28px; font-weight: 800; color: var(--text); line-height: 1; }
+.rc-arrow { flex: 1; text-align: center; color: var(--gold); font-size: 13px; letter-spacing: -2px; }
+.rc-meta { display: flex; gap: 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 10px 0; margin-bottom: 14px; }
+.rc-meta-item { flex: 1; text-align: center; display: flex; flex-direction: column; gap: 2px; border-right: 1px solid var(--border); padding: 0 8px; }
+.rc-meta-item:last-child { border-right: none; }
+.rc-meta-label { font-size: 9px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-dim); }
+.rc-meta-value { font-family: 'Barlow Condensed', sans-serif; font-size: 15px; font-weight: 700; color: var(--text); }
+.btn-fly {
+  width: 100%; padding: 10px; border-radius: var(--radius); cursor: pointer;
+  border: 1px solid rgba(0,238,255,0.3); background: rgba(0,238,255,0.08);
+  color: var(--gold); font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  transition: background 0.2s, border-color 0.2s; margin-top: auto;
+}
+.btn-fly:hover { background: rgba(0,238,255,0.18); border-color: var(--gold); }
+.btn-fly.selected { background: var(--gold); color: #000; border-color: var(--gold); }
+
+/* EMPTY / LOADING */
+.empty-state { grid-column: 1 / -1; text-align: center; padding: 60px 24px; color: var(--text-dim); font-size: 14px; }
+.empty-state .icon { font-size: 40px; margin-bottom: 12px; }
+.loading-state { grid-column: 1 / -1; text-align: center; padding: 60px; }
+.spinner { display: inline-block; width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* MODAL */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 200; align-items: center; justify-content: center; }
+.modal-overlay.open { display: flex; }
+.modal { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 32px; width: 440px; max-width: 90vw; }
+.modal-title { font-family: 'Barlow Condensed', sans-serif; font-size: 22px; font-weight: 700; color: var(--gold); margin-bottom: 6px; }
+.modal-sub { font-size: 12px; color: var(--text-dim); margin-bottom: 20px; }
+.modal-route-preview { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 20px; }
+.mrp-airports { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.mrp-icao { font-family: 'Barlow Condensed', sans-serif; font-size: 26px; font-weight: 800; }
+.mrp-arrow { flex: 1; text-align: center; color: var(--gold); }
+.mrp-meta { display: flex; gap: 20px; font-size: 12px; color: var(--text-sec); flex-wrap: wrap; }
+.mrp-meta span { display: flex; align-items: center; gap: 4px; }
+.mrp-meta strong { color: var(--text); }
+.modal-ac-sel { margin-bottom: 20px; }
+.modal-ac-sel label { display: block; font-size: 10px; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 7px; }
+.modal-ac-sel select { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 10px 12px; border-radius: var(--radius); font-family: 'Inter', sans-serif; font-size: 13px; }
+.modal-ac-sel select:focus { outline: none; border-color: var(--gold-dim); }
+.modal-obs { margin-bottom: 20px; }
+.modal-obs label { display: block; font-size: 10px; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 7px; }
+.modal-obs input { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 10px 12px; border-radius: var(--radius); font-family: 'Inter', sans-serif; font-size: 13px; }
+.modal-obs input:focus { outline: none; border-color: var(--gold-dim); }
+.modal-obs input::placeholder { color: var(--text-dim); }
+.modal-actions { display: flex; gap: 10px; }
+.btn-confirm { flex: 1; padding: 12px; background: var(--gold); color: #000; border: none; border-radius: var(--radius); font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; transition: background 0.2s; }
+.btn-confirm:hover { background: var(--gold-light); }
+.btn-confirm:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-cancel { padding: 12px 20px; background: transparent; border: 1px solid var(--border); color: var(--text-sec); border-radius: var(--radius); font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; transition: border-color 0.2s, color 0.2s; }
+.btn-cancel:hover { border-color: var(--gold-dim); color: var(--gold); }
+.modal-success { display: none; text-align: center; padding: 12px; background: rgba(61,176,122,0.1); border: 1px solid rgba(61,176,122,0.25); border-radius: var(--radius); color: var(--success); font-size: 13px; margin-top: 16px; }
+.modal-success.show { display: block; }
+
+/* TOAST */
+.toast-wrap { position: fixed; bottom: 24px; right: 24px; z-index: 999; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+.toast { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 13px 18px; font-size: 13px; color: var(--text); min-width: 260px; display: flex; align-items: center; gap: 10px; animation: toastIn 0.3s ease; box-shadow: 0 4px 20px rgba(0,0,0,0.4); }
+.toast.ok  { border-left: 3px solid var(--success); }
+.toast.err { border-left: 3px solid var(--danger); }
+@keyframes toastIn { from { transform: translateX(110%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* RESPONSIVE */
+@media (max-width: 1100px) { .routes-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 700px) { .routes-grid { grid-template-columns: 1fr; } :root { --sidebar: 0px; } aside { display: none; } }
+</style>
+</head>
+<body>
+
+<aside>
+  <div class="sidebar-logo">
+    <img src="assets/logo.png" alt="BRV" />
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">Principal</div>
+    <a class="nav-item" href="dashboard.html">
+      <span class="nav-icon">🏠</span> Visão Geral
+    </a>
+    <div class="nav-section-label">Operações</div>
+    <a class="nav-item active" href="flight.html">
+      <span class="nav-icon">✈️</span> Voos Disponíveis
+    </a>
+    <a class="nav-item" href="dashboard.html" onclick="sessionStorage.setItem('brv_goto','pirep')">
+      <span class="nav-icon">📝</span> Registrar Voo
+    </a>
+    <a class="nav-item" href="dashboard.html" onclick="sessionStorage.setItem('brv_goto','flights')">
+      <span class="nav-icon">📋</span> Meus Voos
+    </a>
+    <div class="nav-section-label">Comunidade</div>
+    <a class="nav-item" href="dashboard.html" onclick="sessionStorage.setItem('brv_goto','ranking')">
+      <span class="nav-icon">🏆</span> Ranking
+    </a>
+    <a class="nav-item" href="dashboard.html" onclick="sessionStorage.setItem('brv_goto','downloads')">
+      <span class="nav-icon">📦</span> Downloads
+    </a>
+  </nav>
+  <div class="sidebar-user">
+    <div class="user-avatar" id="sidebar-avatar">—</div>
+    <div class="user-info">
+      <div class="user-name" id="sidebar-name">—</div>
+      <div class="user-rank" id="sidebar-rank">—</div>
+    </div>
+    <button class="logout-btn" onclick="logout()" title="Sair">⏏</button>
+  </div>
+</aside>
+
+<main>
+  <div class="topbar">
+    <div class="topbar-title">Voos Disponíveis</div>
+    <div class="topbar-right">
+      <a href="dashboard.html" style="font-size:12px;color:var(--text-dim);text-decoration:none;">← Dashboard</a>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- FILTER BAR -->
+    <div class="filter-bar">
+      <div class="filter-tabs" id="filter-tabs">
+        <button class="filter-tab active" data-filter="ALL" onclick="setFilter('ALL',this)">ALL</button>
+      </div>
+      <input class="filter-search" type="text" id="search-input" placeholder="Buscar por ICAO, voo..." oninput="renderRoutes()" />
+      <div class="routes-count" id="routes-count">— rotas</div>
+    </div>
+
+    <!-- ROUTES GRID -->
+    <div class="routes-grid" id="routes-grid">
+      <div class="loading-state"><div class="spinner"></div></div>
+    </div>
+
+  </div>
+</main>
+
+<!-- CONFIRM MODAL -->
+<div class="modal-overlay" id="modal-confirm">
+  <div class="modal">
+    <div class="modal-title">Confirmar rota</div>
+    <div class="modal-sub">A rota será salva e carregada automaticamente ao abrir o ACARS Bravo.</div>
+    <div class="modal-route-preview" id="modal-preview">
+      <div class="mrp-airports">
+        <div class="mrp-icao" id="mp-dep">—</div>
+        <div class="mrp-arrow">────✈────</div>
+        <div class="mrp-icao" id="mp-arr">—</div>
+      </div>
+      <div class="mrp-meta">
+        <span><strong id="mp-flight">—</strong></span>
+        <span>FL <strong id="mp-fl">—</strong></span>
+        <span>EET <strong id="mp-eet">—</strong></span>
+        <span><strong id="mp-nm">—</strong> NM</span>
+      </div>
+    </div>
+    <div class="modal-ac-sel">
+      <label>Aeronave que vai usar</label>
+      <select id="modal-aircraft">
+        <option value="Airbus A320">Airbus A320</option>
+        <option value="Boeing 737-800">Boeing 737-800</option>
+      </select>
+    </div>
+    <div class="modal-obs">
+      <label>Observações (opcional)</label>
+      <input type="text" id="modal-obs" placeholder="Ex: voo noturno, treinamento..." />
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+      <button class="btn-confirm" id="btn-confirm" onclick="confirmRoute()">✔ Confirmar</button>
+    </div>
+    <div class="modal-success" id="modal-success">✓ Rota salva! Abra o ACARS Bravo para iniciar.</div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+firebase.initializeApp({
+  apiKey: 'AIzaSyC2dDGhKjzHSclyFwUFNGA60DtXAjLEJ6I',
+  authDomain: 'bravo-aviation.firebaseapp.com',
+  projectId: 'bravo-aviation',
+  storageBucket: 'bravo-aviation.firebasestorage.app',
+  messagingSenderId: '712016002234',
+  appId: '1:712016002234:web:ce7a8e39c28bc6d8ca5683'
+});
+const auth = firebase.auth();
+const db   = firebase.firestore();
+
+let currentUser = null;
+let allRoutes   = [];
+let activeFilter = 'ALL';
+let selectedRoute = null;
+
+const RANKS = [
+  { name:'Cadete',           min:0,    max:50    },
+  { name:'2º Oficial',       min:50,   max:150   },
+  { name:'1º Oficial',       min:150,  max:350   },
+  { name:'Comandante',       min:350,  max:800   },
+  { name:'Comandante Sênior',min:800,  max:99999 }
+];
+function getRank(h) { return RANKS.find(r=>h>=r.min&&h<r.max)||RANKS[RANKS.length-1]; }
+
+document.body.style.visibility = 'hidden';
+
+auth.onAuthStateChanged(async (fbUser) => {
+  if (!fbUser) {
+    await new Promise(r => setTimeout(r, 800));
+    if (auth.currentUser) return;
+    window.location.href = 'login.html';
+    return;
+  }
+  try {
+    const snap = await db.collection('users').doc(fbUser.uid).get();
+    if (!snap.exists) { window.location.href = 'login.html'; return; }
+    const data = snap.data();
+    if (data.role === 'admin') { window.location.href = 'admin.html'; return; }
+    currentUser = { uid: fbUser.uid, ...data };
+
+    const av = (currentUser.name || '?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    document.getElementById('sidebar-avatar').textContent = av;
+    document.getElementById('sidebar-name').textContent  = currentUser.name || fbUser.email;
+    document.getElementById('sidebar-rank').textContent  = getRank(currentUser.hours||0).name;
+
+    if (currentUser.aircraft) {
+      const sel = document.getElementById('modal-aircraft');
+      for (let i=0; i<sel.options.length; i++) {
+        if (sel.options[i].value === currentUser.aircraft) { sel.selectedIndex = i; break; }
+      }
+    }
+
+    document.body.style.visibility = '';
+    await loadRoutes();
+  } catch(e) {
+    document.body.style.visibility = '';
+    console.error(e);
+  }
+});
+
+function logout() { auth.signOut().then(()=>{ window.location.href='login.html'; }); }
+
+/* ── LOAD ROUTES ── */
+async function loadRoutes() {
+  try {
+    const snap = await db.collection('routes').where('active','==',true).orderBy('flightNumber').get();
+    allRoutes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch(e) {
+    allRoutes = [];
+    console.error('Erro ao carregar rotas:', e);
+  }
+  buildFilters();
+  renderRoutes();
+}
+
+/* ── BUILD DYNAMIC FILTERS ── */
+function buildFilters() {
+  const types = [...new Set(allRoutes.map(r => r.aircraft).filter(Boolean))].sort();
+  const container = document.getElementById('filter-tabs');
+  container.innerHTML = `<button class="filter-tab active" data-filter="ALL" onclick="setFilter('ALL',this)">ALL</button>`;
+  types.forEach(t => {
+    const btn = document.createElement('button');
+    btn.className = 'filter-tab';
+    btn.dataset.filter = t;
+    btn.textContent = t;
+    btn.onclick = function() { setFilter(t, this); };
+    container.appendChild(btn);
+  });
+}
+
+/* ── FILTER ── */
+function setFilter(val, el) {
+  activeFilter = val;
+  document.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
+  if (el) el.classList.add('active');
+  renderRoutes();
+}
+
+/* ── RENDER ── */
+function renderRoutes() {
+  const q = (document.getElementById('search-input').value || '').trim().toUpperCase();
+  const grid = document.getElementById('routes-grid');
+
+  let filtered = allRoutes;
+  if (activeFilter !== 'ALL') filtered = filtered.filter(r => r.aircraft === activeFilter);
+  if (q) filtered = filtered.filter(r =>
+    (r.dep||'').includes(q) || (r.arr||'').includes(q) ||
+    (r.flightNumber||'').toUpperCase().includes(q)
+  );
+
+  document.getElementById('routes-count').textContent = filtered.length + ' rota' + (filtered.length !== 1 ? 's' : '');
+
+  if (!filtered.length) {
+    grid.innerHTML = `<div class="empty-state"><div class="icon">🗺️</div>${allRoutes.length === 0 ? 'Nenhuma rota cadastrada ainda.' : 'Nenhuma rota encontrada para o filtro selecionado.'}</div>`;
+    return;
+  }
+
+  grid.innerHTML = filtered.map(r => `
+    <div class="route-card" style="animation:fadeIn 0.3s ease">
+      <div class="rc-top">
+        <div class="rc-flight">${r.flightNumber || '—'}</div>
+        <span class="rc-ac">${r.aircraft || '—'}</span>
+      </div>
+      <div class="rc-airports">
+        <div class="rc-icao">${r.dep || '—'}</div>
+        <div class="rc-arrow">────✈────</div>
+        <div class="rc-icao">${r.arr || '—'}</div>
+      </div>
+      <div class="rc-meta">
+        <div class="rc-meta-item">
+          <div class="rc-meta-label">FL</div>
+          <div class="rc-meta-value">${r.plannedFL || '—'}</div>
+        </div>
+        <div class="rc-meta-item">
+          <div class="rc-meta-label">EET</div>
+          <div class="rc-meta-value">${r.eet || '—'}</div>
+        </div>
+        <div class="rc-meta-item">
+          <div class="rc-meta-label">Distância</div>
+          <div class="rc-meta-value">${r.distance ? r.distance + ' NM' : '—'}</div>
+        </div>
+      </div>
+      <button class="btn-fly" onclick="openModal(${JSON.stringify(r).split('"').join("'")})" >▶ Voar esta rota</button>
+    </div>`).join('');
+}
+
+/* ── MODAL ── */
+function openModal(r) {
+  if (typeof r === 'string') {
+    r = JSON.parse(r.replace(/'/g, '"'));
+  }
+  selectedRoute = r;
+  document.getElementById('mp-dep').textContent    = r.dep || '—';
+  document.getElementById('mp-arr').textContent    = r.arr || '—';
+  document.getElementById('mp-flight').textContent = r.flightNumber || '—';
+  document.getElementById('mp-fl').textContent     = r.plannedFL || '—';
+  document.getElementById('mp-eet').textContent    = r.eet || '—';
+  document.getElementById('mp-nm').textContent     = r.distance ? r.distance : '—';
+  document.getElementById('modal-obs').value       = '';
+  document.getElementById('modal-success').classList.remove('show');
+  document.getElementById('btn-confirm').disabled  = false;
+  document.getElementById('modal-confirm').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modal-confirm').classList.remove('open');
+  selectedRoute = null;
+}
+
+async function confirmRoute() {
+  if (!selectedRoute || !currentUser) return;
+  const btn = document.getElementById('btn-confirm');
+  btn.disabled = true;
+  btn.textContent = 'Salvando...';
+
+  const aircraft = document.getElementById('modal-aircraft').value;
+  const obs      = document.getElementById('modal-obs').value.trim();
+
+  try {
+    await db.collection('users').doc(currentUser.uid).update({
+      pendingFlight: {
+        dep:       selectedRoute.dep,
+        arr:       selectedRoute.arr,
+        plannedFL: selectedRoute.plannedFL,
+        aircraft:  aircraft,
+        routeId:   selectedRoute.id,
+        flightNumber: selectedRoute.flightNumber,
+        eet:       selectedRoute.eet,
+        distance:  selectedRoute.distance || null,
+        obs:       obs,
+        savedAt:   firebase.firestore.FieldValue.serverTimestamp()
+      }
+    });
+    document.getElementById('modal-success').classList.add('show');
+    btn.textContent = '✔ Confirmado';
+    toast('Rota salva! Abra o ACARS para iniciar.', 'ok');
+    setTimeout(() => closeModal(), 3000);
+  } catch(e) {
+    console.error(e);
+    toast('Erro ao salvar rota.', 'err');
+    btn.disabled = false;
+    btn.textContent = '✔ Confirmar';
+  }
+}
+
+/* ── TOAST ── */
+function toast(msg, type='ok') {
+  const w = document.getElementById('toast-wrap');
+  const t = document.createElement('div');
+  t.className = 'toast ' + type;
+  t.textContent = msg;
+  w.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+</script>
+</body>
+</html>

@@ -7,7 +7,7 @@
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
 <script>
-  const PAGE_VERSION = '3';
+  const PAGE_VERSION = '4';
   const key = 'brv_v_admin';
   if (sessionStorage.getItem(key) !== PAGE_VERSION) {
     sessionStorage.setItem(key, PAGE_VERSION);
@@ -139,10 +139,20 @@ tr:hover td{background:rgba(255,255,255,.02);}
 .toast.err{border-left:3px solid var(--danger);}
 @keyframes toastIn{from{transform:translateX(110%);opacity:0}to{transform:translateX(0);opacity:1}}
 
+/* ROUTES ADMIN */
+.route-form-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:24px;}
+.route-form-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;align-items:end;}
+.route-form-grid .form-group{margin-bottom:0;}
+.route-tag-ac{display:inline-block;background:rgba(58,127,212,.1);border:1px solid rgba(58,127,212,.2);color:var(--info);font-size:9px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;padding:2px 8px;border-radius:2px;}
+.btn-danger{background:none;border:1px solid rgba(224,85,85,.3);color:var(--danger);padding:5px 12px;border-radius:var(--radius);font-size:11px;font-weight:600;cursor:pointer;transition:all .2s;font-family:'Inter',sans-serif;}
+.btn-danger:hover{background:rgba(224,85,85,.1);}
+.toggle-active{background:none;border:1px solid rgba(61,176,122,.3);color:var(--success);padding:5px 12px;border-radius:var(--radius);font-size:11px;font-weight:600;cursor:pointer;transition:all .2s;font-family:'Inter',sans-serif;}
+.toggle-active.off{border-color:rgba(224,85,85,.3);color:var(--danger);}
 @media(max-width:900px){
   :root{--sidebar:200px;}
   .cards-row{grid-template-columns:repeat(2,1fr);}
   .two-col{grid-template-columns:1fr;}
+  .route-form-grid{grid-template-columns:repeat(2,1fr);}
 }
 </style>
 </head>
@@ -169,6 +179,9 @@ tr:hover td{background:rgba(255,255,255,.02);}
     <a class="nav-item" onclick="goTo('pireps',this)" id="nav-pireps">
       <span class="nav-icon">✈️</span> PIREPs
       <span class="nav-badge" id="pirep-badge" style="display:none">0</span>
+    </a>
+    <a class="nav-item" onclick="goTo('routes',this)" id="nav-routes">
+      <span class="nav-icon">🗺️</span> Rotas
     </a>
   </nav>
   <div class="sidebar-user">
@@ -306,6 +319,78 @@ tr:hover td{background:rgba(255,255,255,.02);}
         <table>
           <thead><tr><th>Piloto</th><th>Rota</th><th>Aeronave</th><th>Duração</th><th>FL</th><th>Data</th><th>Sim</th><th>Status</th><th>Ações</th></tr></thead>
           <tbody id="pireps-table"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ROUTES -->
+    <div class="page" id="page-routes">
+      <div class="sec-header gap-b">
+        <div class="sec-title">Gerenciar Rotas</div>
+        <span id="routes-total-label" style="font-size:12px;color:var(--text-dim);"></span>
+      </div>
+
+      <!-- ADD FORM -->
+      <div class="route-form-card">
+        <div style="font-size:13px;font-weight:600;margin-bottom:16px;color:var(--text-sec);">➕ Adicionar nova rota</div>
+        <div class="route-form-grid">
+          <div class="form-group">
+            <label>Nº do voo</label>
+            <input id="rf-flight" type="text" placeholder="TAM9106" style="text-transform:uppercase" />
+          </div>
+          <div class="form-group">
+            <label>Aeronave</label>
+            <select id="rf-aircraft">
+              <option value="A320">A320</option>
+              <option value="B737-800">B737-800</option>
+              <option value="A319">A319</option>
+              <option value="A321">A321</option>
+              <option value="B777-300ER">B777-300ER</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Partida (ICAO)</label>
+            <input id="rf-dep" type="text" placeholder="SBGR" maxlength="4" style="text-transform:uppercase" />
+          </div>
+          <div class="form-group">
+            <label>Destino (ICAO)</label>
+            <input id="rf-arr" type="text" placeholder="SBBR" maxlength="4" style="text-transform:uppercase" />
+          </div>
+          <div class="form-group">
+            <label>Nível de voo (FL)</label>
+            <input id="rf-fl" type="text" placeholder="350" maxlength="4" />
+          </div>
+          <div class="form-group">
+            <label>EET (hh:mm)</label>
+            <input id="rf-eet" type="text" placeholder="01:30" maxlength="5" />
+          </div>
+          <div class="form-group">
+            <label>Distância (NM)</label>
+            <input id="rf-dist" type="number" placeholder="467" min="1" />
+          </div>
+          <div class="form-group" style="display:flex;align-items:flex-end;">
+            <button class="btn-gold" onclick="addRoute()" style="width:100%;padding:10px 0;font-size:11px;">Adicionar</button>
+          </div>
+        </div>
+        <div id="rf-error" style="display:none;color:var(--danger);font-size:12px;margin-top:10px;"></div>
+      </div>
+
+      <!-- ROUTES TABLE -->
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Voo</th>
+              <th>Aeronave</th>
+              <th>Rota</th>
+              <th>FL</th>
+              <th>EET</th>
+              <th>NM</th>
+              <th>Status</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="routes-table"></tbody>
         </table>
       </div>
     </div>
@@ -500,6 +585,118 @@ async function loadAll() {
   renderApps();
   renderPilots();
   renderPireps();
+}
+
+/* ── ROUTES ── */
+let allRoutes = [];
+
+async function loadRoutes() {
+  try {
+    const snap = await db.collection('routes').orderBy('flightNumber').get();
+    allRoutes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderRoutes();
+  } catch(e) {
+    console.error('Erro ao carregar rotas:', e);
+    document.getElementById('routes-table').innerHTML =
+      '<tr><td colspan="8" class="empty-state">Erro ao carregar rotas.</td></tr>';
+  }
+}
+
+function renderRoutes() {
+  const label = document.getElementById('routes-total-label');
+  if (label) label.textContent = allRoutes.length + ' rota' + (allRoutes.length !== 1 ? 's' : '') + ' cadastrada' + (allRoutes.length !== 1 ? 's' : '');
+
+  const tbody = document.getElementById('routes-table');
+  if (!allRoutes.length) {
+    tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Nenhuma rota cadastrada ainda.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = allRoutes.map(r => `
+    <tr>
+      <td class="td-main">${r.flightNumber || '—'}</td>
+      <td><span class="route-tag-ac">${r.aircraft || '—'}</span></td>
+      <td>${r.dep || '?'} → ${r.arr || '?'}</td>
+      <td>FL${r.plannedFL || '—'}</td>
+      <td>${r.eet || '—'}</td>
+      <td>${r.distance ? r.distance + ' NM' : '—'}</td>
+      <td>
+        <span class="badge ${r.active !== false ? 'approved' : 'rejected'}">
+          ${r.active !== false ? 'Ativa' : 'Inativa'}
+        </span>
+      </td>
+      <td style="display:flex;gap:6px;flex-wrap:wrap;">
+        <button class="toggle-active ${r.active !== false ? '' : 'off'}" onclick="toggleRoute('${r.id}',${r.active !== false})">
+          ${r.active !== false ? 'Desativar' : 'Ativar'}
+        </button>
+        <button class="btn-danger" onclick="deleteRoute('${r.id}','${r.flightNumber}')">Excluir</button>
+      </td>
+    </tr>`).join('');
+}
+
+async function addRoute() {
+  const flight   = document.getElementById('rf-flight').value.trim().toUpperCase();
+  const aircraft = document.getElementById('rf-aircraft').value;
+  const dep      = document.getElementById('rf-dep').value.trim().toUpperCase();
+  const arr      = document.getElementById('rf-arr').value.trim().toUpperCase();
+  const fl       = document.getElementById('rf-fl').value.trim();
+  const eet      = document.getElementById('rf-eet').value.trim();
+  const dist     = parseInt(document.getElementById('rf-dist').value) || null;
+  const errEl    = document.getElementById('rf-error');
+
+  errEl.style.display = 'none';
+  if (!flight || !dep || !arr || !fl || !eet) {
+    errEl.textContent = 'Preencha todos os campos obrigatórios (voo, ICAO, FL, EET).';
+    errEl.style.display = 'block';
+    return;
+  }
+  if (dep.length !== 4 || arr.length !== 4) {
+    errEl.textContent = 'Os ICAOs devem ter exatamente 4 letras.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  try {
+    await db.collection('routes').add({
+      flightNumber: flight,
+      aircraft,
+      dep, arr,
+      plannedFL: fl,
+      eet,
+      distance: dist,
+      active: true,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    ['rf-flight','rf-dep','rf-arr','rf-fl','rf-eet','rf-dist'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    toast('Rota ' + flight + ' adicionada!', 'ok');
+    await loadRoutes();
+  } catch(e) {
+    console.error(e);
+    toast('Erro ao adicionar rota.', 'err');
+  }
+}
+
+async function toggleRoute(id, currentlyActive) {
+  try {
+    await db.collection('routes').doc(id).update({ active: !currentlyActive });
+    await loadRoutes();
+    toast('Rota ' + (currentlyActive ? 'desativada' : 'ativada') + '.', 'ok');
+  } catch(e) {
+    toast('Erro ao alterar status.', 'err');
+  }
+}
+
+async function deleteRoute(id, flightNum) {
+  if (!confirm('Excluir a rota ' + flightNum + '? Esta ação não pode ser desfeita.')) return;
+  try {
+    await db.collection('routes').doc(id).delete();
+    toast('Rota ' + flightNum + ' excluída.', 'ok');
+    await loadRoutes();
+  } catch(e) {
+    toast('Erro ao excluir rota.', 'err');
+  }
 }
 
 function updateBadges() {
@@ -909,7 +1106,7 @@ async function rejectPirep(pirepId) {
 }
 
 /* ── NAV ── */
-const PAGE_TITLES = { overview:'Visão Geral', applications:'Candidaturas', pilots:'Pilotos', pireps:'PIREPs' };
+const PAGE_TITLES = { overview:'Visão Geral', applications:'Candidaturas', pilots:'Pilotos', pireps:'PIREPs', routes:'Rotas' };
 function goTo(id, el) {
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-'+id).classList.add('active');
@@ -919,6 +1116,7 @@ function goTo(id, el) {
     if(n.getAttribute('onclick')&&n.getAttribute('onclick').includes("'"+id+"'")) n.classList.add('active');
   });
   document.getElementById('topbar-title').textContent = PAGE_TITLES[id]||'';
+  if (id === 'routes') loadRoutes();
 }
 
 document.getElementById('topbar-date').textContent = new Date().toLocaleDateString('pt-BR',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
