@@ -6,27 +6,33 @@
 <style>
   body { background:#080612; color:#F0EAF8; font-family:monospace; padding:40px; max-width:700px; }
   h2 { color:#00EEFF; margin-bottom:8px; }
-  p { color:#9A8FB8; margin-bottom:24px; }
-  .log { margin:5px 0; font-size:13px; line-height:1.5; }
+  p  { color:#9A8FB8; margin-bottom:24px; }
+  .log { margin:5px 0; font-size:13px; line-height:1.6; }
   .ok   { color:#3db07a; }
   .err  { color:#e05555; }
   .info { color:#00EEFF; }
   .warn { color:#f0a500; }
+  .dim  { color:#4A4068; }
+  .btns { display:flex; gap:12px; flex-wrap:wrap; margin-top:24px; }
   button {
-    margin-top:24px; background:#00EEFF; color:#000;
-    border:none; padding:14px 36px; font-size:14px;
-    font-weight:700; cursor:pointer; border-radius:4px;
-    letter-spacing:0.05em;
+    background:#00EEFF; color:#000; border:none;
+    padding:12px 28px; font-size:13px; font-weight:700;
+    cursor:pointer; border-radius:4px; letter-spacing:0.05em;
   }
+  button.sec { background:#1E1840; color:#9A8FB8; }
   button:disabled { opacity:0.4; cursor:not-allowed; }
   #log { margin-top:28px; border-top:1px solid #1E1840; padding-top:20px; }
 </style>
 </head>
 <body>
-<h2>Bravo Aviation — Setup do Admin</h2>
-<p>Cria a conta <strong>admin@bravo.aero</strong> no Firebase Auth e o documento no Firestore.<br/>
-Se a conta já existir, apenas atualiza o documento.</p>
-<button id="btn" onclick="runSetup()">▶ Executar setup</button>
+<h2>Bravo Aviation — Setup Admin</h2>
+<p>Use os botões abaixo para diagnosticar e corrigir o acesso admin.</p>
+
+<div class="btns">
+  <button id="btn-diag" onclick="runDiag()">🔍 Diagnosticar</button>
+  <button id="btn-fix"  onclick="runFix()" class="sec">⚙ Forçar role admin</button>
+  <button id="btn-create" onclick="runCreate()" class="sec">➕ Criar conta admin</button>
+</div>
 <div id="log"></div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -45,17 +51,90 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db   = firebase.firestore();
 
-function log(msg, type = 'info') {
+const ADMIN_EMAIL    = 'admin@bravo.aero';
+const ADMIN_PASSWORD = 'admin2024';
+
+function log(msg, type='info') {
   document.getElementById('log').innerHTML +=
     `<div class="log ${type}">${msg}</div>`;
 }
+function sep() { log('─────────────────────────────────', 'dim'); }
 
-const ADMIN = {
-  email:    'admin@bravo.aero',
-  password: 'admin2024',
-  doc: {
+/* ── DIAGNÓSTICO ── */
+async function runDiag() {
+  document.getElementById('log').innerHTML = '';
+  log('Iniciando diagnóstico...', 'info');
+  sep();
+
+  // Passo 1: verificar sessão atual
+  const current = auth.currentUser;
+  if (current) {
+    log(`✓ Sessão ativa: ${current.email}`, 'ok');
+    log(`  UID atual: <strong>${current.uid}</strong>`, 'info');
+  } else {
+    log('⚠ Nenhuma sessão ativa. Fazendo login...', 'warn');
+    try {
+      await auth.signInWithEmailAndPassword(ADMIN_EMAIL, ADMIN_PASSWORD);
+      log(`✓ Login OK: ${auth.currentUser.email}`, 'ok');
+      log(`  UID: <strong>${auth.currentUser.uid}</strong>`, 'info');
+    } catch(e) {
+      log(`✗ Erro no login: ${e.message}`, 'err');
+      if (e.code === 'auth/user-not-found') {
+        log('→ Conta não existe. Use "Criar conta admin".', 'warn');
+      }
+      return;
+    }
+  }
+
+  const uid = auth.currentUser.uid;
+  sep();
+
+  // Passo 2: verificar documento Firestore
+  log(`Verificando users/${uid} no Firestore...`, 'info');
+  try {
+    const snap = await db.collection('users').doc(uid).get();
+    if (!snap.exists) {
+      log('✗ Documento NÃO existe no Firestore!', 'err');
+      log('→ Use "Forçar role admin" para criar.', 'warn');
+    } else {
+      const data = snap.data();
+      log(`✓ Documento encontrado`, 'ok');
+      log(`  name: ${data.name || '(vazio)'}`, 'info');
+      log(`  role: <strong style="color:${data.role==='admin'?'#3db07a':'#e05555'}">${data.role || '(sem role!)'}</strong>`, 'info');
+      log(`  email: ${data.email || '(vazio)'}`, 'info');
+      if (data.role === 'admin') {
+        log('✓ Role admin OK! Tente fazer logout e login novamente.', 'ok');
+      } else {
+        log('✗ Role NÃO é admin. Use "Forçar role admin".', 'err');
+      }
+    }
+  } catch(e) {
+    log(`✗ Erro ao ler Firestore: ${e.message}`, 'err');
+  }
+}
+
+/* ── FORÇAR ROLE ADMIN ── */
+async function runFix() {
+  document.getElementById('log').innerHTML = '';
+  log('Forçando role admin...', 'info');
+  sep();
+
+  // Login se necessário
+  if (!auth.currentUser) {
+    try {
+      await auth.signInWithEmailAndPassword(ADMIN_EMAIL, ADMIN_PASSWORD);
+    } catch(e) {
+      log(`✗ Erro no login: ${e.message}`, 'err');
+      return;
+    }
+  }
+
+  const uid = auth.currentUser.uid;
+  log(`UID: ${uid}`, 'info');
+
+  const adminDoc = {
     name:     'Willian Mota',
-    email:    'admin@bravo.aero',
+    email:    ADMIN_EMAIL,
     vid:      '000000',
     role:     'admin',
     hours:    0,
@@ -64,63 +143,41 @@ const ADMIN = {
     joinDate: '2024-01-01',
     status:   'active',
     permissions: {
-      pirep: true, flights: true, routes: true,
-      ranking: true, downloads: true, notifications: true
+      pirep:true, flights:true, routes:true,
+      ranking:true, downloads:true, notifications:true
     }
-  }
-};
+  };
 
-async function runSetup() {
-  document.getElementById('btn').disabled = true;
-  log('Iniciando setup do admin...', 'info');
-
-  let uid = null;
-
-  // Tenta criar a conta. Se já existir, faz login.
-  log(`Tentando criar conta: ${ADMIN.email}`, 'info');
   try {
-    const cred = await auth.createUserWithEmailAndPassword(ADMIN.email, ADMIN.password);
-    uid = cred.user.uid;
-    log(`✓ Conta criada — UID: ${uid}`, 'ok');
-  } catch (err) {
-    if (err.code === 'auth/email-already-in-use') {
-      log('Conta já existe. Fazendo login...', 'warn');
-      try {
-        const cred = await auth.signInWithEmailAndPassword(ADMIN.email, ADMIN.password);
-        uid = cred.user.uid;
-        log(`✓ Login OK — UID: ${uid}`, 'ok');
-      } catch (loginErr) {
-        log(`✗ Erro no login: ${loginErr.message}`, 'err');
-        document.getElementById('btn').disabled = false;
-        return;
-      }
+    await db.collection('users').doc(uid).set(adminDoc);
+    log('✓ Documento salvo com role: admin', 'ok');
+    sep();
+    log('✓ Pronto! Agora:', 'ok');
+    log('1. Faça <a href="login.html" style="color:#00EEFF">logout e login</a> novamente', 'ok');
+    log('2. Será redirecionado para o painel admin automaticamente', 'ok');
+  } catch(e) {
+    log(`✗ Erro ao salvar: ${e.message}`, 'err');
+    log('Verifique as regras do Firestore no console do Firebase.', 'warn');
+  }
+}
+
+/* ── CRIAR CONTA ── */
+async function runCreate() {
+  document.getElementById('log').innerHTML = '';
+  log('Criando conta admin...', 'info');
+  sep();
+
+  try {
+    const cred = await auth.createUserWithEmailAndPassword(ADMIN_EMAIL, ADMIN_PASSWORD);
+    log(`✓ Conta criada! UID: ${cred.user.uid}`, 'ok');
+    log('Agora clique em "Forçar role admin".', 'warn');
+  } catch(e) {
+    if (e.code === 'auth/email-already-in-use') {
+      log('Conta já existe. Clique em "Forçar role admin".', 'warn');
     } else {
-      log(`✗ Erro ao criar conta: ${err.message}`, 'err');
-      document.getElementById('btn').disabled = false;
-      return;
+      log(`✗ Erro: ${e.message}`, 'err');
     }
   }
-
-  // Salva documento no Firestore com o UID real
-  log(`Salvando documento users/${uid}...`, 'info');
-  try {
-    await db.collection('users').doc(uid).set({ ...ADMIN.doc, email: ADMIN.email });
-    log(`✓ Documento salvo para Willian Mota (admin)`, 'ok');
-  } catch (err) {
-    log(`✗ Erro no Firestore: ${err.message}`, 'err');
-    await auth.signOut().catch(() => {});
-    document.getElementById('btn').disabled = false;
-    return;
-  }
-
-  await auth.signOut();
-  log('', 'info');
-  log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'info');
-  log('✓ Setup concluído com sucesso!', 'ok');
-  log(`📧 E-mail: <strong>${ADMIN.email}</strong>`, 'ok');
-  log(`🔑 Senha:  <strong>${ADMIN.password}</strong>`, 'ok');
-  log('', 'info');
-  log('👉 <a href="login.html" style="color:#00EEFF">Ir para o login →</a>', 'ok');
 }
 </script>
 </body>
