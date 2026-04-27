@@ -204,6 +204,10 @@
         badge.style.display = '';
       }
       updateStartBtn();
+      // Apaga do Firestore para não reaparecer numa próxima abertura
+      await db.collection('users').doc(currentUser.uid).update({
+        pendingFlight: firebase.firestore.FieldValue.delete()
+      });
     } catch (_) {}
   }
 
