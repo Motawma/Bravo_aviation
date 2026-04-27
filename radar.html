@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
+<title>Radar — Bravo Virtual Airline</title>
+<script>
+  const PAGE_VERSION = '1';
+  const key = 'brv_v_radar';
+  if (sessionStorage.getItem(key) !== PAGE_VERSION) {
+    sessionStorage.setItem(key, PAGE_VERSION);
+    location.reload(true);
+  }
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+:root {
+  --bg: #080612;
+  --surface: #0E0B1E;
+  --surface2: #130F27;
+  --border: #1E1840;
+  --gold: #00EEFF;
+  --gold-light: #60F5FF;
+  --gold-dim: #007A99;
+  --text: #F0EAF8;
+  --text-sec: #9A8FB8;
+  --text-dim: #4A4068;
+  --success: #3db07a;
+  --danger: #e05555;
+  --warning: #f0a500;
+  --pink: #FF2080;
+  --panel: 300px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; font-size: 14px; display: flex; flex-direction: column; }
+
+/* TOPBAR */
+.topbar {
+  height: 56px; background: var(--surface); border-bottom: 1px solid var(--border);
+  padding: 0 20px; display: flex; align-items: center; gap: 20px; flex-shrink: 0; z-index: 1001; position: relative;
+}
+.topbar-logo { display: flex; align-items: center; gap: 12px; }
+.topbar-logo img { height: 36px; mix-blend-mode: screen; }
+.topbar-title { font-family: 'Barlow Condensed', sans-serif; font-size: 18px; font-weight: 700; letter-spacing: 0.05em; }
+.topbar-sep { width: 1px; height: 24px; background: var(--border); }
+.live-badge {
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(61,176,122,0.1); border: 1px solid rgba(61,176,122,0.25);
+  border-radius: 20px; padding: 4px 14px;
+  font-size: 12px; font-weight: 600; color: var(--success);
+}
+.live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--success); box-shadow: 0 0 6px var(--success); animation: pulse 1.5s infinite; flex-shrink: 0; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.zulu-clock { font-family: 'Barlow Condensed', sans-serif; font-size: 16px; font-weight: 700; color: var(--text-sec); letter-spacing: 0.08em; }
+.zulu-label { font-size: 9px; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-dim); }
+.topbar-right { margin-left: auto; display: flex; align-items: center; gap: 14px; }
+.btn-back { background: none; border: 1px solid var(--border); color: var(--text-sec); padding: 6px 16px; border-radius: 4px; font-size: 12px; font-weight: 600; cursor: pointer; text-decoration: none; transition: border-color 0.2s, color 0.2s; font-family: 'Inter', sans-serif; }
+.btn-back:hover { border-color: var(--gold-dim); color: var(--gold); }
+
+/* BODY LAYOUT */
+.radar-body { flex: 1; display: flex; overflow: hidden; }
+
+/* SIDE PANEL */
+.side-panel {
+  width: var(--panel); background: var(--surface); border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; flex-shrink: 0; z-index: 500;
+}
+.panel-header {
+  padding: 16px 18px 12px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.panel-title { font-family: 'Barlow Condensed', sans-serif; font-size: 14px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 6px; }
+.panel-stats { display: flex; gap: 16px; }
+.panel-stat { text-align: center; }
+.panel-stat-val { font-family: 'Barlow Condensed', sans-serif; font-size: 24px; font-weight: 800; color: var(--text); line-height: 1; }
+.panel-stat-sub { font-size: 10px; color: var(--text-dim); margin-top: 2px; }
+.flight-list { flex: 1; overflow-y: auto; padding: 8px 0; }
+.flight-list::-webkit-scrollbar { width: 4px; }
+.flight-list::-webkit-scrollbar-track { background: transparent; }
+.flight-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+.flight-item {
+  padding: 12px 18px; cursor: pointer; border-left: 2px solid transparent;
+  transition: background 0.2s, border-color 0.2s;
+  border-bottom: 1px solid rgba(30,24,64,0.4);
+}
+.flight-item:hover { background: rgba(255,255,255,0.03); }
+.flight-item.active-item { border-left-color: var(--gold); background: rgba(0,238,255,0.05); }
+.fi-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.fi-pilot { font-size: 13px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 160px; }
+.fi-phase { font-size: 9px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 2px 8px; border-radius: 10px; white-space: nowrap; }
+.fi-route { display: flex; align-items: center; gap: 6px; font-size: 13px; margin-bottom: 5px; }
+.fi-icao { font-family: 'Barlow Condensed', sans-serif; font-size: 15px; font-weight: 700; color: var(--text); }
+.fi-arrow { color: var(--text-dim); font-size: 11px; }
+.fi-meta { display: flex; gap: 10px; font-size: 11px; color: var(--text-dim); }
+.fi-meta span { display: flex; align-items: center; gap: 3px; }
+.fi-meta strong { color: var(--text-sec); }
+.empty-panel { text-align: center; padding: 48px 20px; color: var(--text-dim); }
+.empty-panel .icon { font-size: 36px; margin-bottom: 10px; }
+
+/* PHASE COLORS */
+.phase-taxi     { background: rgba(154,143,184,0.15); color: #9A8FB8; border: 1px solid rgba(154,143,184,0.25); }
+.phase-climb    { background: rgba(0,238,255,0.1);    color: #00EEFF;  border: 1px solid rgba(0,238,255,0.25); }
+.phase-cruise   { background: rgba(61,176,122,0.12);  color: #3db07a;  border: 1px solid rgba(61,176,122,0.25); }
+.phase-descent  { background: rgba(240,165,0,0.12);   color: #f0a500;  border: 1px solid rgba(240,165,0,0.25); }
+.phase-approach { background: rgba(255,32,128,0.12);  color: #FF2080;  border: 1px solid rgba(255,32,128,0.25); }
+
+/* MAP */
+#map { flex: 1; z-index: 1; }
+
+/* LEAFLET OVERRIDES */
+.leaflet-container { background: #080612; font-family: 'Inter', sans-serif; }
+.leaflet-tile-pane { filter: brightness(0.92) contrast(1.05); }
+
+/* CUSTOM POPUP */
+.leaflet-popup-content-wrapper {
+  background: #0E0B1E; border: 1px solid #1E1840;
+  border-radius: 4px; box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+  padding: 0; overflow: hidden;
+}
+.leaflet-popup-tip { background: #0E0B1E; }
+.leaflet-popup-content { margin: 0; width: auto !important; }
+.popup-inner { padding: 16px; min-width: 220px; }
+.popup-pilot { font-size: 14px; font-weight: 700; color: #F0EAF8; margin-bottom: 3px; }
+.popup-route { font-family: 'Barlow Condensed', sans-serif; font-size: 20px; font-weight: 700; color: #00EEFF; margin-bottom: 10px; }
+.popup-row { display: flex; gap: 6px; align-items: center; font-size: 12px; color: #9A8FB8; margin-bottom: 3px; }
+.popup-row strong { color: #F0EAF8; }
+.popup-sep { height: 1px; background: #1E1840; margin: 8px 0; }
+
+/* AIRCRAFT MARKER */
+.plane-marker {
+  display: flex; align-items: center; justify-content: center;
+  pointer-events: none;
+}
+.plane-marker svg { filter: drop-shadow(0 0 6px currentColor); }
+
+/* ZOOM CONTROLS */
+.leaflet-control-zoom a {
+  background: #0E0B1E !important; border-color: #1E1840 !important;
+  color: #9A8FB8 !important;
+}
+.leaflet-control-zoom a:hover { background: #130F27 !important; color: #00EEFF !important; }
+
+/* ATTRIBUTION */
+.leaflet-control-attribution { background: rgba(8,6,18,0.8) !important; color: #4A4068 !important; font-size: 9px !important; }
+.leaflet-control-attribution a { color: #4A4068 !important; }
+
+@media (max-width: 700px) {
+  :root { --panel: 0px; }
+  .side-panel { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="topbar-logo">
+    <img src="assets/logo.png" alt="BRV" />
+    <div class="topbar-sep"></div>
+    <div class="topbar-title">RADAR</div>
+  </div>
+  <div class="live-badge">
+    <div class="live-dot"></div>
+    <span id="live-count-badge">0 online</span>
+  </div>
+  <div style="display:flex;flex-direction:column;align-items:center;gap:0;">
+    <div class="zulu-clock" id="zulu-clock">00:00:00</div>
+    <div class="zulu-label">ZULU</div>
+  </div>
+  <div class="topbar-right">
+    <a href="dashboard.html" class="btn-back">← Dashboard</a>
+  </div>
+</div>
+
+<!-- BODY -->
+<div class="radar-body">
+
+  <!-- SIDE PANEL -->
+  <div class="side-panel">
+    <div class="panel-header">
+      <div class="panel-title">Pilotos Ativos</div>
+      <div class="panel-stats">
+        <div class="panel-stat">
+          <div class="panel-stat-val" id="stat-online">0</div>
+          <div class="panel-stat-sub">Voando</div>
+        </div>
+        <div class="panel-stat">
+          <div class="panel-stat-val" id="stat-cruise">0</div>
+          <div class="panel-stat-sub">Em cruzeiro</div>
+        </div>
+        <div class="panel-stat">
+          <div class="panel-stat-val" id="stat-climb">0</div>
+          <div class="panel-stat-sub">Subindo</div>
+        </div>
+      </div>
+    </div>
+    <div class="flight-list" id="flight-list">
+      <div class="empty-panel">
+        <div class="icon">✈️</div>
+        <div>Nenhum piloto<br>voando no momento.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAP -->
+  <div id="map"></div>
+
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+firebase.initializeApp({
+  apiKey: 'AIzaSyC2dDGhKjzHSclyFwUFNGA60DtXAjLEJ6I',
+  authDomain: 'bravo-aviation.firebaseapp.com',
+  projectId: 'bravo-aviation',
+  storageBucket: 'bravo-aviation.firebasestorage.app',
+  messagingSenderId: '712016002234',
+  appId: '1:712016002234:web:ce7a8e39c28bc6d8ca5683'
+});
+const auth = firebase.auth();
+const db   = firebase.firestore();
+
+/* ── ZULU CLOCK ── */
+function updateClock() {
+  const now = new Date();
+  const h = String(now.getUTCHours()).padStart(2,'0');
+  const m = String(now.getUTCMinutes()).padStart(2,'0');
+  const s = String(now.getUTCSeconds()).padStart(2,'0');
+  document.getElementById('zulu-clock').textContent = h + ':' + m + ':' + s;
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+/* ── MAP INIT ── */
+const map = L.map('map', {
+  center: [-14, -52],
+  zoom: 4,
+  zoomControl: true,
+  attributionControl: true
+});
+
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> © <a href="https://carto.com/">CARTO</a>',
+  subdomains: 'abcd',
+  maxZoom: 14
+}).addTo(map);
+
+/* ── PHASE CONFIG ── */
+const PHASE_LABELS = {
+  taxi: 'Táxi', climb: 'Subida', cruise: 'Cruzeiro',
+  descent: 'Descida', approach: 'Aprox.'
+};
+const PHASE_COLORS = {
+  taxi: '#9A8FB8', climb: '#00EEFF', cruise: '#3db07a',
+  descent: '#f0a500', approach: '#FF2080'
+};
+const PHASE_CSS = {
+  taxi: 'phase-taxi', climb: 'phase-climb', cruise: 'phase-cruise',
+  descent: 'phase-descent', approach: 'phase-approach'
+};
+
+/* ── AIRCRAFT SVG ICON ── */
+function planeIcon(heading, phase) {
+  const color = PHASE_COLORS[phase] || '#00EEFF';
+  const hdg = (heading || 0) - 90;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="36" height="36">
+    <g transform="rotate(${hdg},24,24)">
+      <path fill="${color}" d="
+        M24 4
+        C22 4 20 6 20 8
+        L20 24
+        L4 32 L4 36 L20 31
+        L20 42 L15 44 L15 47 L24 45 L33 47 L33 44 L28 42
+        L28 31 L44 36 L44 32
+        L28 24 L28 8
+        C28 6 26 4 24 4 Z
+      "/>
+    </g>
+  </svg>`;
+  return L.divIcon({
+    html: `<div class="plane-marker" style="color:${color}">${svg}</div>`,
+    iconSize: [36, 36],
+    iconAnchor: [18, 18],
+    popupAnchor: [0, -20],
+    className: ''
+  });
+}
+
+/* ── STATE ── */
+const markers = {};   // uid → Leaflet marker
+let activeItemUid = null;
+let currentUser = null;
+
+/* ── AUTH ── */
+document.body.style.visibility = 'hidden';
+auth.onAuthStateChanged(async (fbUser) => {
+  if (!fbUser) {
+    await new Promise(r => setTimeout(r, 800));
+    if (auth.currentUser) return;
+    window.location.href = 'login.html';
+    return;
+  }
+  document.body.style.visibility = '';
+  currentUser = fbUser;
+  startRadar();
+});
+
+/* ── RADAR ── */
+function startRadar() {
+  db.collection('liveflights').onSnapshot(snap => {
+    const activeUids = new Set(snap.docs.map(d => d.id));
+
+    // Remove markers for pilots who landed
+    Object.keys(markers).forEach(uid => {
+      if (!activeUids.has(uid)) {
+        map.removeLayer(markers[uid]);
+        delete markers[uid];
+      }
+    });
+
+    // Add / update markers
+    snap.docs.forEach(doc => {
+      const uid = doc.id;
+      const d   = doc.data();
+
+      if (!d.lat || !d.lon) return;
+
+      const icon = planeIcon(d.hdg || 0, d.phase);
+      const popupHtml = buildPopup(d);
+
+      if (markers[uid]) {
+        markers[uid].setLatLng([d.lat, d.lon]);
+        markers[uid].setIcon(icon);
+        markers[uid].setPopupContent(popupHtml);
+      } else {
+        const marker = L.marker([d.lat, d.lon], { icon })
+          .addTo(map)
+          .bindPopup(popupHtml, { maxWidth: 280, className: '' });
+        marker.on('click', () => highlightItem(uid));
+        markers[uid] = marker;
+      }
+    });
+
+    updatePanel(snap.docs.map(d => ({ uid: d.id, ...d.data() })));
+  }, err => {
+    console.error('Radar onSnapshot error:', err);
+  });
+}
+
+/* ── POPUP HTML ── */
+function buildPopup(d) {
+  const phase  = PHASE_LABELS[d.phase] || (d.phase || '—');
+  const color  = PHASE_COLORS[d.phase] || '#00EEFF';
+  const vs     = d.vs !== undefined ? (d.vs >= 0 ? '+' : '') + Math.round(d.vs) + ' fpm' : '—';
+  const alt    = d.alt ? Math.round(d.alt).toLocaleString('pt-BR') + ' ft' : '—';
+  const spd    = d.spd ? Math.round(d.spd) + ' kts' : '—';
+  const hdg    = d.hdg ? Math.round(d.hdg) + '°' : '—';
+  const elapsed = d.startedAt ? formatElapsed(d.startedAt.toDate ? d.startedAt.toDate() : new Date(d.startedAt)) : '—';
+
+  return `<div class="popup-inner">
+    <div class="popup-pilot">${d.pilotName || 'Piloto'}</div>
+    <div class="popup-route">${d.dep || '???'} → ${d.arr || '???'}</div>
+    <div style="margin-bottom:8px;">
+      <span style="display:inline-block;padding:2px 10px;border-radius:10px;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;background:${color}22;color:${color};border:1px solid ${color}44;">
+        ${phase}
+      </span>
+    </div>
+    <div class="popup-row">✈ <strong>${d.aircraft || '—'}</strong></div>
+    <div class="popup-sep"></div>
+    <div class="popup-row">🔼 Altitude: <strong>${alt}</strong></div>
+    <div class="popup-row">💨 Vel. IAS: <strong>${spd}</strong></div>
+    <div class="popup-row">↕ VS: <strong>${vs}</strong></div>
+    <div class="popup-row">🧭 HDG: <strong>${hdg}</strong></div>
+    <div class="popup-sep"></div>
+    <div class="popup-row">⏱ Tempo de voo: <strong>${elapsed}</strong></div>
+  </div>`;
+}
+
+/* ── PANEL ── */
+function updatePanel(flights) {
+  const count = flights.length;
+  document.getElementById('live-count-badge').textContent = count + (count === 1 ? ' online' : ' online');
+  document.getElementById('stat-online').textContent = count;
+  document.getElementById('stat-cruise').textContent = flights.filter(f => f.phase === 'cruise').length;
+  document.getElementById('stat-climb').textContent  = flights.filter(f => f.phase === 'climb').length;
+
+  const list = document.getElementById('flight-list');
+  if (!count) {
+    list.innerHTML = `<div class="empty-panel"><div class="icon">✈️</div><div>Nenhum piloto<br>voando no momento.</div></div>`;
+    return;
+  }
+
+  list.innerHTML = flights.map(f => {
+    const phaseLabel = PHASE_LABELS[f.phase] || (f.phase || '?');
+    const phaseCss   = PHASE_CSS[f.phase]   || 'phase-taxi';
+    const alt = f.alt ? Math.round(f.alt / 100) * 100 : 0;
+    const altStr = alt ? 'FL' + String(Math.round(alt/100)).padStart(3,'0') : '—';
+    const spdStr = f.spd ? Math.round(f.spd) + ' kts' : '—';
+    const elapsed = f.startedAt ? formatElapsed(f.startedAt.toDate ? f.startedAt.toDate() : new Date(f.startedAt)) : '—';
+    return `
+    <div class="flight-item ${activeItemUid === f.uid ? 'active-item' : ''}" onclick="focusFlight('${f.uid}')" id="fi-${f.uid}">
+      <div class="fi-top">
+        <div class="fi-pilot">${f.pilotName || '—'}</div>
+        <span class="fi-phase ${phaseCss}">${phaseLabel}</span>
+      </div>
+      <div class="fi-route">
+        <span class="fi-icao">${f.dep || '?'}</span>
+        <span class="fi-arrow">────✈────</span>
+        <span class="fi-icao">${f.arr || '?'}</span>
+      </div>
+      <div class="fi-meta">
+        <span>✈ <strong>${f.aircraft || '—'}</strong></span>
+        <span>🔼 <strong>${altStr}</strong></span>
+        <span>⏱ <strong>${elapsed}</strong></span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ── FOCUS / HIGHLIGHT ── */
+function focusFlight(uid) {
+  activeItemUid = uid;
+  const m = markers[uid];
+  if (m) {
+    map.flyTo(m.getLatLng(), 7, { animate: true, duration: 1.2 });
+    setTimeout(() => m.openPopup(), 1300);
+  }
+  document.querySelectorAll('.flight-item').forEach(el => el.classList.remove('active-item'));
+  const item = document.getElementById('fi-' + uid);
+  if (item) item.classList.add('active-item');
+}
+
+function highlightItem(uid) {
+  activeItemUid = uid;
+  document.querySelectorAll('.flight-item').forEach(el => el.classList.remove('active-item'));
+  const item = document.getElementById('fi-' + uid);
+  if (item) {
+    item.classList.add('active-item');
+    item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+}
+
+/* ── UTILS ── */
+function formatElapsed(startDate) {
+  const diff = Math.max(0, Math.floor((Date.now() - startDate.getTime()) / 1000));
+  const h = Math.floor(diff / 3600);
+  const m = Math.floor((diff % 3600) / 60);
+  const s = diff % 60;
+  return String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+}
+</script>
+</body>
+</html>

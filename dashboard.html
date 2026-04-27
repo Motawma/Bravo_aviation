@@ -8,7 +8,7 @@
 <meta http-equiv="Expires" content="0" />
 <title>Dashboard — Bravo Virtual Airline</title>
 <script>
-  const PAGE_VERSION = '6';
+  const PAGE_VERSION = '7';
   const key = 'brv_v_dashboard';
   if (sessionStorage.getItem(key) !== PAGE_VERSION) {
     sessionStorage.setItem(key, PAGE_VERSION);
@@ -359,6 +359,9 @@ tr:hover td { background: rgba(255,255,255,0.02); }
     </a>
     <a class="nav-item" id="nav-routes" href="flight.html">
       <span class="nav-icon">✈️</span> Voos Disponíveis
+    </a>
+    <a class="nav-item" id="nav-radar" href="radar.html">
+      <span class="nav-icon">🛰️</span> Radar
     </a>
     <div class="nav-section-label" id="nav-label-community">Comunidade</div>
     <a class="nav-item" id="nav-ranking" onclick="goTo('ranking',this)">
