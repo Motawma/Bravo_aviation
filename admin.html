@@ -632,10 +632,39 @@ async function approveApp(appId) {
 
   } catch(e) {
     if (e.code === 'auth/email-already-in-use') {
-      await db.collection('applications').doc(appId).update({ status: 'approved' });
-      app.status = 'approved';
-      updateBadges(); renderOverview(); renderApps();
-      toast(`${app.name} aprovado! (conta já existia no sistema)`);
+      try {
+        // Busca o doc existente no Firestore pelo e-mail
+        const existingSnap = await db.collection('users')
+          .where('email', '==', app.email).limit(1).get();
+
+        await db.collection('applications').doc(appId).update({ status: 'approved' });
+        app.status = 'approved';
+
+        if (!existingSnap.empty) {
+          const existingDoc  = existingSnap.docs[0];
+          const existingData = existingDoc.data();
+
+          // Vincula candidatura ao UID já existente
+          await db.collection('applications').doc(appId).update({ approvedUid: existingDoc.id });
+
+          if (!allPilots.find(p => p.id === existingDoc.id)) {
+            allPilots.push({ id: existingDoc.id, ...existingData });
+          }
+          updateBadges(); renderOverview(); renderApps(); renderPilots();
+
+          if (existingData.role === 'admin') {
+            toast(`${app.name}: este e-mail já é administrador do sistema.`, 'err');
+          } else {
+            toast(`${app.name} aprovado e vinculado ao perfil existente.`);
+          }
+        } else {
+          // Conta Auth existe mas sem doc no Firestore — orienta o admin
+          updateBadges(); renderOverview(); renderApps();
+          toast(`${app.name}: conta existe no Auth mas sem perfil. Use "+ Novo Piloto" para cadastrar manualmente.`, 'err');
+        }
+      } catch(innerErr) {
+        toast('Erro ao vincular conta: ' + innerErr.message, 'err');
+      }
     } else {
       toast('Erro ao aprovar: ' + e.message, 'err');
     }
