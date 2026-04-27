@@ -391,7 +391,10 @@ function renderRoutes() {
     <div class="route-card" style="animation:fadeIn 0.3s ease">
       <div class="rc-top">
         <div class="rc-flight">${r.flightNumber || '—'}</div>
-        <span class="rc-ac">${r.aircraft || '—'}</span>
+        <div style="display:flex;gap:5px;align-items:center;">
+          ${r.category ? `<span style="background:rgba(155,48,255,0.12);border:1px solid rgba(155,48,255,0.3);color:#B070FF;font-size:9px;font-weight:700;letter-spacing:.15em;padding:2px 7px;border-radius:2px;">${r.category}</span>` : ''}
+          <span class="rc-ac">${r.aircraft || '—'}</span>
+        </div>
       </div>
       <div class="rc-airports">
         <div class="rc-icao">${r.dep || '—'}</div>

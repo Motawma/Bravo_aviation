@@ -16,8 +16,8 @@
   }
 
   const ROUTES = [
-    { flightNumber:'TAM9106',  aircraft:'A320', dep:'SBGR', arr:'SBRP', plannedFL:'280', eet:'01:00', distance:155  },
-    { flightNumber:'TAM4726',  aircraft:'A320', dep:'SBGR', arr:'SBJP', plannedFL:'350', eet:'02:50', distance:1365 },
+    { flightNumber:'BRV9106',  aircraft:'A320', category:'M', dep:'SBGR', arr:'SBRP', plannedFL:'280', eet:'01:00', distance:155  },
+    { flightNumber:'BRV4726',  aircraft:'A320', category:'M', dep:'SBGR', arr:'SBJP', plannedFL:'350', eet:'02:50', distance:1365 },
     { flightNumber:'TAM8048',  aircraft:'A320', dep:'SBGR', arr:'SACO', plannedFL:'360', eet:'02:56', distance:1107 },
     { flightNumber:'TAM8050',  aircraft:'A320', dep:'SBGR', arr:'SACO', plannedFL:'360', eet:'02:56', distance:1107 },
     { flightNumber:'TAM3020',  aircraft:'A320', dep:'SBGR', arr:'SBFZ', plannedFL:'350', eet:'03:05', distance:1267 },
