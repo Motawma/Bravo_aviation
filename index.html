@@ -430,7 +430,7 @@
   </ul>
   <div class="nav-right">
     <!-- MEMBER AREA -->
-    <a href="login.html" style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-sec);text-decoration:none;padding:7px 14px;border:1px solid var(--border);border-radius:var(--radius);transition:border-color 0.2s,color 0.2s;" onmouseover="this.style.borderColor='var(--gold-dim)';this.style.color='var(--gold)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-sec)'" data-pt="Área de Membros" data-en="Member Area">👤 Área de Membros</a>
+    <span title="Disponível em breve" style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-dim);text-decoration:none;padding:7px 14px;border:1px solid var(--border);border-radius:var(--radius);cursor:not-allowed;opacity:0.5;user-select:none;" data-pt="Área de Membros" data-en="Member Area">🔒 Área de Membros</span>
     <!-- LANG SWITCHER -->
     <div class="lang-switcher" role="group" aria-label="Idioma / Language">
       <button class="lang-btn active" id="btn-pt" onclick="setLang('pt')" aria-label="Português">
@@ -442,7 +442,7 @@
         <span class="lang-code">EN</span>
       </button>
     </div>
-    <a href="#join" class="nav-cta" data-pt="Junte-se" data-en="Join Us">Junte-se</a>
+    <span class="nav-cta" style="opacity:0.4;cursor:not-allowed;" title="Inscrições em breve" data-pt="Junte-se" data-en="Join Us">Junte-se</span>
     <button class="menu-btn" aria-label="Menu" onclick="toggleMobileMenu()">
       <span></span><span></span><span></span>
     </button>
@@ -456,7 +456,7 @@
   <a href="#news" class="mob-link" onclick="closeMobileMenu()" data-pt="Notícias" data-en="News">Notícias</a>
   <a href="#staff" class="mob-link" onclick="closeMobileMenu()" data-pt="Staff" data-en="Staff">Staff</a>
   <a href="#contact" class="mob-link" onclick="closeMobileMenu()" data-pt="Contato" data-en="Contact">Contato</a>
-  <a href="#join" class="mob-cta" onclick="closeMobileMenu()" data-pt="Junte-se" data-en="Join Us">Junte-se</a>
+  <span class="mob-cta" style="opacity:0.4;cursor:not-allowed;" data-pt="Junte-se" data-en="Join Us">Junte-se</span>
   <div class="lang-switcher" style="margin-top:16px;">
     <button class="lang-btn" id="btn-pt-m" onclick="setLang('pt')" aria-label="Português">
       <span class="flag">🇧🇷</span><span class="lang-code">PT</span>
@@ -478,7 +478,7 @@
       A excelência em aviação virtual no <strong>IVAO</strong>.<br />Hub: São Paulo – Guarulhos (SBGR)
     </p>
     <div class="hero-actions">
-      <a href="#join" class="btn-primary" data-pt="Junte-se" data-en="Join Us">Junte-se</a>
+      <span class="btn-primary" style="opacity:0.4;cursor:not-allowed;" title="Inscrições em breve" data-pt="Junte-se" data-en="Join Us">Junte-se</span>
       <a href="#about" class="btn-outline" data-pt="Saiba mais" data-en="Learn more">Saiba mais</a>
     </div>
   </div>
@@ -706,41 +706,44 @@
           </div>
         </div>
       </div>
-      <div class="join-form-side">
+      <div class="join-form-side" style="position:relative;">
         <h3 data-pt="Candidatura" data-en="Application">Candidatura</h3>
         <p class="sub" data-pt="Preencha os campos abaixo" data-en="Fill in the fields below">Preencha os campos abaixo</p>
-        <form id="joinForm" onsubmit="handleJoin(event)">
+        <form id="joinForm" onsubmit="return false;" style="pointer-events:none;user-select:none;filter:blur(3px);opacity:0.35;">
           <div class="form-row">
             <div class="form-group">
-              <label data-pt="Nome" data-en="First Name">Nome</label>
-              <input type="text" data-placeholder-pt="João" data-placeholder-en="John" placeholder="João" required />
+              <label>Nome</label>
+              <input type="text" placeholder="João" disabled />
             </div>
             <div class="form-group">
-              <label data-pt="Sobrenome" data-en="Last Name">Sobrenome</label>
-              <input type="text" data-placeholder-pt="Silva" data-placeholder-en="Smith" placeholder="Silva" required />
+              <label>Sobrenome</label>
+              <input type="text" placeholder="Silva" disabled />
             </div>
           </div>
           <div class="form-group">
             <label>VID IVAO</label>
-            <input type="text" placeholder="123456" required pattern="[0-9]{5,8}" />
+            <input type="text" placeholder="123456" disabled />
           </div>
           <div class="form-group">
-            <label data-pt="E-mail" data-en="E-mail">E-mail</label>
-            <input type="email" placeholder="email@exemplo.com" required />
+            <label>E-mail</label>
+            <input type="email" placeholder="email@exemplo.com" disabled />
           </div>
           <div class="form-group">
-            <label data-pt="Aeronave preferida" data-en="Preferred aircraft">Aeronave preferida</label>
-            <select>
-              <option value="" data-pt="Selecione" data-en="Select">Selecione</option>
+            <label>Aeronave preferida</label>
+            <select disabled>
+              <option>Selecione</option>
               <option>Boeing 737-800</option>
               <option>Airbus A320</option>
-              <option data-pt="Sem preferência" data-en="No preference">Sem preferência</option>
             </select>
           </div>
-          <button type="submit" class="btn-submit" data-pt="Enviar candidatura" data-en="Submit application">Enviar candidatura</button>
-          <div class="form-note" data-pt="Seu e-mail pessoal não será divulgado publicamente." data-en="Your personal email will not be displayed publicly.">Seu e-mail pessoal não será divulgado publicamente.</div>
+          <button type="button" class="btn-submit" disabled>Enviar candidatura</button>
         </form>
-        <div class="success-msg" id="joinSuccess" data-pt="✓ Candidatura enviada! Entraremos em contato em até 72h." data-en="✓ Application submitted! We'll reach out within 72h.">✓ Candidatura enviada! Entraremos em contato em até 72h.</div>
+        <!-- OVERLAY EM DESENVOLVIMENTO -->
+        <div style="position:absolute;inset:40px 0 0 0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:10;">
+          <div style="font-size:48px;line-height:1;">🔒</div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700;color:var(--gold);text-align:center;" data-pt="Inscrições em breve" data-en="Applications opening soon">Inscrições em breve</div>
+          <div style="font-size:13px;color:var(--text-sec);text-align:center;max-width:260px;line-height:1.6;" data-pt="Estamos finalizando o sistema. As inscrições serão abertas em breve." data-en="We are finalizing our systems. Applications will open soon.">Estamos finalizando o sistema. As inscrições serão abertas em breve.</div>
+        </div>
       </div>
     </div>
   </div>
@@ -870,7 +873,7 @@
     <div class="footer-links">
       <a href="#about" data-pt="Sobre" data-en="About">Sobre</a>
       <a href="#fleet" data-pt="Frota" data-en="Fleet">Frota</a>
-      <a href="#join" data-pt="Junte-se" data-en="Join">Junte-se</a>
+      <span style="opacity:0.35;cursor:not-allowed;" data-pt="Junte-se" data-en="Join">Junte-se</span>
       <a href="https://www.ivao.aero" target="_blank">IVAO</a>
     </div>
   </div>
