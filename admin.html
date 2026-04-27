@@ -572,23 +572,52 @@ function filterApps(status, el) {
   renderApps();
 }
 
-async function approveApp(uid) {
-  if (!confirm('Aprovar esta candidatura?')) return;
-  const app = allApplications.find(a=>a.id===uid);
+async function approveApp(appId) {
+  if (!confirm('Aprovar esta candidatura?\nUm e-mail será enviado ao piloto para definir a senha de acesso.')) return;
+  const app = allApplications.find(a => a.id === appId);
   if (!app) return;
-  await Promise.all([
-    db.collection('users').doc(uid).set({
+
+  try {
+    // Cria conta Firebase Auth via app secundário (não desloga o admin)
+    const secondary = firebase.initializeApp(firebase.app().options, 'approve_' + Date.now());
+    const secAuth   = secondary.auth();
+    const tempPwd   = Math.random().toString(36).slice(-8) + 'Aa1!';
+    const cred      = await secAuth.createUserWithEmailAndPassword(app.email, tempPwd);
+    const newUid    = cred.user.uid;
+    await secAuth.signOut();
+    await secondary.delete();
+
+    // Cria doc no Firestore com o UID real do Firebase Auth
+    await db.collection('users').doc(newUid).set({
       name: app.name, vid: app.vid, email: app.email,
-      aircraft: app.aircraft, hours: 0, flights: 0,
-      joinDate: new Date().toISOString().slice(0,10),
-      role: 'pilot', status: 'active'
-    }),
-    db.collection('applications').doc(uid).update({ status: 'approved' })
-  ]);
-  app.status = 'approved';
-  allPilots.push({ id: uid, name: app.name, vid: app.vid, email: app.email, aircraft: app.aircraft, hours: 0, flights: 0, role: 'pilot' });
-  updateBadges(); renderOverview(); renderApps(); renderPilots();
-  toast(`${app.name} aprovado(a) com sucesso!`);
+      aircraft: app.aircraft || '', hours: 0, flights: 0,
+      joinDate: new Date().toISOString().slice(0, 10),
+      role: 'pilot', status: 'active',
+      permissions: { pirep:true, flights:true, routes:true, ranking:true, downloads:true, notifications:true }
+    });
+
+    // Atualiza candidatura como aprovada
+    await db.collection('applications').doc(appId).update({ status: 'approved', approvedUid: newUid });
+
+    // Envia e-mail para o piloto definir a própria senha
+    await auth.sendPasswordResetEmail(app.email);
+
+    app.status = 'approved';
+    allPilots.push({ id: newUid, name: app.name, vid: app.vid, email: app.email,
+      aircraft: app.aircraft || '', hours: 0, flights: 0, role: 'pilot' });
+    updateBadges(); renderOverview(); renderApps(); renderPilots();
+    toast(`${app.name} aprovado! E-mail enviado para ${app.email} para definir a senha.`);
+  } catch(e) {
+    if (e.code === 'auth/email-already-in-use') {
+      // Conta já existe — só aprova no Firestore
+      await db.collection('applications').doc(appId).update({ status: 'approved' });
+      app.status = 'approved';
+      updateBadges(); renderOverview(); renderApps();
+      toast(`${app.name} aprovado! (conta já existia no sistema)`, 'ok');
+    } else {
+      toast('Erro ao aprovar: ' + e.message, 'err');
+    }
+  }
 }
 
 async function rejectApp(uid) {
