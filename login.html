@@ -254,36 +254,21 @@
   </div>
 </div>
 
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
-  // Demo users
-  const USERS = [
-    {
-      email: 'piloto@bravo.aero',
-      password: 'brv2024',
-      name: 'João Silva',
-      vid: '487231',
-      rank: 'Comandante',
-      rankLevel: 4,
-      hours: 623.5,
-      flights: 87,
-      joinDate: '2024-03-15',
-      aircraft: 'Boeing 737-800',
-      avatar: 'JS'
-    },
-    {
-      email: 'admin@bravo.aero',
-      password: 'admin2024',
-      name: 'Carlos Bravo',
-      vid: '123456',
-      rank: 'Comandante Sênior',
-      rankLevel: 5,
-      hours: 1240,
-      flights: 210,
-      joinDate: '2024-01-01',
-      aircraft: 'Airbus A320',
-      avatar: 'CB'
-    }
-  ];
+  const firebaseConfig = {
+    apiKey: "AIzaSyC2dDGhKjzHSclyFwUFNGA60DtXAjLEJ6I",
+    authDomain: "bravo-aviation.firebaseapp.com",
+    projectId: "bravo-aviation",
+    storageBucket: "bravo-aviation.firebasestorage.app",
+    messagingSenderId: "712016002234",
+    appId: "1:712016002234:web:ce7a8e39c28bc6d8ca5683"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db   = firebase.firestore();
 
   function togglePass() {
     const inp = document.getElementById('password');
@@ -292,9 +277,9 @@
     else { inp.type = 'password'; btn.textContent = '👁'; }
   }
 
-  function handleLogin(e) {
+  async function handleLogin(e) {
     e.preventDefault();
-    const email = document.getElementById('email').value.trim().toLowerCase();
+    const email    = document.getElementById('email').value.trim().toLowerCase();
     const password = document.getElementById('password').value;
     const remember = document.getElementById('remember').checked;
     const btn = document.getElementById('loginBtn');
@@ -303,30 +288,71 @@
     err.classList.remove('show');
     btn.classList.add('loading');
 
-    setTimeout(() => {
-      const user = USERS.find(u => u.email === email && u.password === password);
-      btn.classList.remove('loading');
+    try {
+      const persistence = remember
+        ? firebase.auth.Auth.Persistence.LOCAL
+        : firebase.auth.Auth.Persistence.SESSION;
+      await auth.setPersistence(persistence);
 
-      if (user) {
-        const storage = remember ? localStorage : sessionStorage;
-        storage.setItem('brv_user', JSON.stringify(user));
-        localStorage.setItem('brv_lang', localStorage.getItem('brv_lang') || 'pt');
-        window.location.href = 'dashboard.html';
-      } else {
-        err.classList.add('show');
-        document.getElementById('email').classList.add('error');
-        document.getElementById('password').classList.add('error');
-        setTimeout(() => {
-          document.getElementById('email').classList.remove('error');
-          document.getElementById('password').classList.remove('error');
-        }, 2000);
+      const cred = await auth.signInWithEmailAndPassword(email, password);
+      const uid  = cred.user.uid;
+
+      const [userSnap, appSnap] = await Promise.all([
+        db.collection('users').doc(uid).get(),
+        db.collection('applications').doc(uid).get()
+      ]);
+
+      if (userSnap.exists && userSnap.data().role === 'admin') {
+        window.location.href = 'admin.html'; return;
       }
-    }, 900);
+      if (appSnap.exists && appSnap.data().status === 'pending') {
+        showStatus('pending'); btn.classList.remove('loading'); return;
+      }
+      if (appSnap.exists && appSnap.data().status === 'rejected') {
+        showStatus('rejected'); btn.classList.remove('loading'); return;
+      }
+      window.location.href = 'dashboard.html';
+
+    } catch (error) {
+      btn.classList.remove('loading');
+      err.textContent = 'E-mail ou senha inválidos. Tente novamente.';
+      err.classList.add('show');
+      document.getElementById('email').classList.add('error');
+      document.getElementById('password').classList.add('error');
+      setTimeout(() => {
+        document.getElementById('email').classList.remove('error');
+        document.getElementById('password').classList.remove('error');
+      }, 2000);
+    }
   }
 
-  // Check if already logged in
-  const stored = localStorage.getItem('brv_user') || sessionStorage.getItem('brv_user');
-  if (stored) window.location.href = 'dashboard.html';
+  function showStatus(status) {
+    const card = document.querySelector('.login-card');
+    card.innerHTML = status === 'pending'
+      ? `<div style="text-align:center;padding:20px 0">
+           <div style="font-size:36px;margin-bottom:16px">⏳</div>
+           <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700;margin-bottom:8px">Candidatura em análise</div>
+           <div style="color:var(--text-sec);font-size:13px;line-height:1.6;margin-bottom:24px">Sua candidatura está sendo avaliada pelo staff.<br/>Aguarde até 72 horas.</div>
+           <button onclick="auth.signOut().then(()=>location.reload())" style="background:var(--surface2);border:1px solid var(--border);color:var(--text-sec);padding:10px 24px;border-radius:4px;cursor:pointer;font-size:12px">Sair</button>
+         </div>`
+      : `<div style="text-align:center;padding:20px 0">
+           <div style="font-size:36px;margin-bottom:16px">❌</div>
+           <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700;margin-bottom:8px">Candidatura recusada</div>
+           <div style="color:var(--text-sec);font-size:13px;line-height:1.6;margin-bottom:24px">Sua candidatura não foi aprovada.<br/>Entre em contato com o staff para mais informações.</div>
+           <button onclick="auth.signOut().then(()=>location.reload())" style="background:var(--surface2);border:1px solid var(--border);color:var(--text-sec);padding:10px 24px;border-radius:4px;cursor:pointer;font-size:12px">Sair</button>
+         </div>`;
+  }
+
+  // Se já tiver sessão ativa, redireciona automaticamente
+  auth.onAuthStateChanged(async (fbUser) => {
+    if (!fbUser) return;
+    const snap = await db.collection('users').doc(fbUser.uid).get();
+    if (snap.exists && snap.data().role === 'admin') {
+      window.location.href = 'admin.html';
+    } else {
+      window.location.href = 'dashboard.html';
+    }
+  });
 </script>
 </body>
 </html>
