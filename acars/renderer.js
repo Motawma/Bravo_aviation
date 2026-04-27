@@ -33,6 +33,20 @@
   const auth = firebase.auth();
   const db   = firebase.firestore();
 
+  // ── Auto-update ───────────────────────────────────────────────────────────
+  if (window.acars) {
+    window.acars.onUpdateAvail((info) => {
+      const banner = $('update-banner');
+      if (!banner) return;
+      $('update-version').textContent = 'v' + info.version;
+      banner.classList.add('show');
+    });
+    window.acars.onUpdateReady(() => {
+      const btn = $('btn-install-update');
+      if (btn) { btn.textContent = '↺ Reiniciar e atualizar'; btn.disabled = false; }
+    });
+  }
+
   // ── Estado global ─────────────────────────────────────────────────────────
   let currentUser   = null;
   let userData      = null;

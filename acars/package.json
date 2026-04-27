@@ -1,0 +1,57 @@
+{
+  "name": "bravo-acars",
+  "version": "1.0.0",
+  "description": "ACARS Bravo Aviation",
+  "author": "Bravo Aviation <admin@bravo.aero>",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "postinstall": "electron-builder install-app-deps",
+    "build": "electron-builder --win --x64"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.3",
+    "firebase": "^10.12.2",
+    "node-simconnect": "^4.1.1"
+  },
+  "devDependencies": {
+    "electron": "^29.0.0",
+    "electron-builder": "^24.0.0"
+  },
+  "build": {
+    "appId": "aero.bravo.acars",
+    "productName": "Bravo ACARS",
+    "files": [
+      "main.js",
+      "preload.js",
+      "index.html",
+      "renderer.js",
+      "sim/**/*",
+      "assets/**/*",
+      "node_modules/**/*"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Bravo ACARS"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "Motawma",
+      "repo": "Bravo_aviation",
+      "releaseType": "release"
+    }
+  }
+}

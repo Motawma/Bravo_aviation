@@ -187,9 +187,31 @@
   /* ── SCREENS ────────────────────────── */
   .screen { display: none; }
   .screen.active { display: flex; flex-direction: column; height: 100%; }
+
+  /* ── UPDATE BANNER ──────────────────── */
+  #update-banner {
+    display: none; align-items: center; justify-content: space-between;
+    padding: 8px 16px; background: rgba(0,238,255,0.1);
+    border-bottom: 1px solid rgba(0,238,255,0.25); font-size: 12px;
+  }
+  #update-banner.show { display: flex; }
+  #update-banner .upd-text { color: var(--cyan); }
+  #update-banner .upd-text span { color: var(--muted); font-size: 11px; margin-left: 6px; }
+  #btn-install-update {
+    background: var(--cyan); color: #000; border: none;
+    padding: 4px 14px; border-radius: 3px; font-size: 11px;
+    font-weight: 700; cursor: pointer;
+  }
+  #btn-install-update:disabled { opacity: 0.5; cursor: not-allowed; }
 </style>
 </head>
 <body>
+
+<!-- ─── UPDATE BANNER ───────────────────────────────────── -->
+<div id="update-banner">
+  <div class="upd-text">🔄 Atualização disponível <span id="update-version"></span></div>
+  <button id="btn-install-update" disabled onclick="window.acars.installUpdate()">Baixando...</button>
+</div>
 
 <!-- ─── TOPBAR ───────────────────────────────────────────── -->
 <div id="topbar" style="display:none">
