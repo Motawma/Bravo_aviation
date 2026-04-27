@@ -753,12 +753,18 @@ function toast(msg, type='ok') {
 
 /* ── DELETE PILOT ── */
 async function deletePilot(uid, name) {
-  if (!confirm(`Excluir o piloto "${name}"?\n\nIsso remove os dados do Firestore. O acesso ao site será bloqueado mas a conta de e-mail não será excluída.`)) return;
+  const pilot = allPilots.find(p => p.id === uid);
+  const email = pilot?.email || '';
+  if (!confirm(`Excluir o piloto "${name}"?\n\nO perfil será removido e o acesso bloqueado.\n\nATENÇÃO: para reutilizar o e-mail "${email}" em nova conta, exclua também em:\nFirebase Console → Authentication → usuários`)) return;
   try {
     await db.collection('users').doc(uid).delete();
     allPilots = allPilots.filter(p => p.id !== uid);
     renderPilots(); renderOverview(); updateBadges();
-    toast(`${name} excluído com sucesso.`);
+    if (email) {
+      toast(`${name} excluído. Para reutilizar o e-mail, remova também em Firebase Console → Authentication.`, 'err');
+    } else {
+      toast(`${name} excluído com sucesso.`);
+    }
   } catch(e) {
     toast('Erro ao excluir: ' + e.message, 'err');
   }
