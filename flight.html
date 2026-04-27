@@ -8,7 +8,7 @@
 <meta http-equiv="Expires" content="0" />
 <title>Voos — Bravo Virtual Airline</title>
 <script>
-  const PAGE_VERSION = '2';
+  const PAGE_VERSION = '3';
   const key = 'brv_v_flight';
   if (sessionStorage.getItem(key) !== PAGE_VERSION) {
     sessionStorage.setItem(key, PAGE_VERSION);
@@ -171,6 +171,9 @@ main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
     <div class="nav-section-label">Operações</div>
     <a class="nav-item active" href="flight.html">
       <span class="nav-icon">✈️</span> Voos Disponíveis
+    </a>
+    <a class="nav-item" href="brief.html">
+      <span class="nav-icon">📋</span> Brief
     </a>
     <a class="nav-item" href="dashboard.html" onclick="sessionStorage.setItem('brv_goto','pirep')">
       <span class="nav-icon">📝</span> Registrar Voo
@@ -468,10 +471,8 @@ async function confirmRoute() {
         savedAt:   firebase.firestore.FieldValue.serverTimestamp()
       }
     });
-    document.getElementById('modal-success').classList.add('show');
     btn.textContent = '✔ Confirmado';
-    toast('Rota salva! Abra o ACARS para iniciar.', 'ok');
-    setTimeout(() => closeModal(), 3000);
+    setTimeout(() => { window.location.href = 'brief.html'; }, 800);
   } catch(e) {
     console.error(e);
     toast('Erro ao salvar rota.', 'err');

@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<title>Brief — Bravo Virtual Airline</title>
+<script>
+  const PAGE_VERSION = '1';
+  const key = 'brv_v_brief';
+  if (sessionStorage.getItem(key) !== PAGE_VERSION) {
+    sessionStorage.setItem(key, PAGE_VERSION);
+    location.reload(true);
+  }
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+:root {
+  --bg: #080612; --surface: #0E0B1E; --surface2: #130F27;
+  --border: #1E1840; --gold: #00EEFF; --gold-light: #60F5FF;
+  --gold-dim: #007A99; --text: #F0EAF8; --text-sec: #9A8FB8;
+  --text-dim: #4A4068; --radius: 4px;
+  --success: #3db07a; --danger: #e05555; --sidebar: 220px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { min-height: 100%; }
+body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; font-size: 14px; display: flex; flex-direction: column; }
+
+/* TOPBAR */
+.topbar { height: 56px; background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 28px; display: flex; align-items: center; gap: 16px; flex-shrink: 0; }
+.topbar-logo img { height: 36px; mix-blend-mode: screen; }
+.topbar-title { font-family: 'Barlow Condensed', sans-serif; font-size: 18px; font-weight: 700; }
+.topbar-sep { width: 1px; height: 22px; background: var(--border); }
+.topbar-flight { font-family: 'Barlow Condensed', sans-serif; font-size: 20px; font-weight: 800; color: var(--gold); letter-spacing: 0.05em; }
+.topbar-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+.btn-back { background: none; border: 1px solid var(--border); color: var(--text-sec); padding: 6px 16px; border-radius: 4px; font-size: 12px; font-weight: 600; cursor: pointer; text-decoration: none; transition: all 0.2s; font-family: 'Inter', sans-serif; }
+.btn-back:hover { border-color: var(--gold-dim); color: var(--gold); }
+
+/* CONTENT */
+.content { flex: 1; padding: 28px; max-width: 1280px; width: 100%; margin: 0 auto; }
+
+/* AIRPORT CARDS */
+.ac-cards { display: flex; gap: 12px; margin-bottom: 24px; overflow-x: auto; }
+.ac-card {
+  flex: 1; min-width: 200px; border-radius: 6px; overflow: hidden;
+  border: 1px solid var(--border); background: var(--surface); position: relative;
+}
+.ac-card-img { width: 100%; height: 110px; object-fit: cover; background: var(--surface2); display: flex; align-items: center; justify-content: center; font-size: 36px; }
+.ac-card-img img { width: 100%; height: 110px; object-fit: cover; }
+.ac-card-badge {
+  position: absolute; top: 82px; left: 50%; transform: translateX(-50%);
+  background: var(--surface); border: 2px solid var(--border); border-radius: 50%;
+  width: 56px; height: 56px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  font-size: 8px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-sec);
+  text-align: center;
+}
+.ac-card-body { padding: 36px 14px 14px; text-align: center; }
+.ac-card-icao { font-family: 'Barlow Condensed', sans-serif; font-size: 20px; font-weight: 800; margin-bottom: 2px; }
+.ac-card-name { font-size: 11px; color: var(--text-dim); margin-bottom: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ac-card-btns { display: flex; gap: 5px; flex-wrap: wrap; justify-content: center; }
+.ac-btn { background: none; border: 1px solid var(--border); color: var(--text-sec); padding: 3px 9px; border-radius: 3px; font-size: 10px; font-weight: 600; cursor: pointer; text-decoration: none; transition: all 0.15s; font-family: 'Inter', sans-serif; letter-spacing: 0.05em; display: inline-block; }
+.ac-btn:hover { border-color: var(--gold-dim); color: var(--gold); }
+
+/* MAIN GRID */
+.main-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+/* SUMMARY CARD */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 20px; }
+.card-title { font-size: 13px; font-weight: 600; color: var(--text-sec); margin-bottom: 16px; text-align: center; letter-spacing: 0.05em; }
+.summary-table { width: 100%; border-collapse: collapse; }
+.summary-table td { padding: 7px 10px; font-size: 12px; border-bottom: 1px solid rgba(30,24,64,0.5); }
+.summary-table tr:last-child td { border-bottom: none; }
+.summary-table .k { color: var(--text-dim); font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; }
+.summary-table .v { color: var(--text); font-weight: 600; font-family: 'Barlow Condensed', sans-serif; font-size: 15px; text-align: right; }
+
+/* INTEGRATION BUTTONS */
+.int-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 20px; }
+.int-btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 11px; border-radius: var(--radius); font-family: 'Inter', sans-serif;
+  font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+  cursor: pointer; text-decoration: none; transition: all 0.2s; border: 1px solid;
+}
+.int-btn.simbrief { background: rgba(58,127,212,0.12); border-color: rgba(58,127,212,0.35); color: #5BA8FF; }
+.int-btn.simbrief:hover { background: rgba(58,127,212,0.22); }
+.int-btn.skyvector { background: rgba(61,176,122,0.1); border-color: rgba(61,176,122,0.3); color: #3db07a; }
+.int-btn.skyvector:hover { background: rgba(61,176,122,0.2); }
+.int-btn.vatsim { background: rgba(0,238,255,0.08); border-color: rgba(0,238,255,0.25); color: var(--gold); }
+.int-btn.vatsim:hover { background: rgba(0,238,255,0.15); }
+.int-btn.ivao { background: rgba(155,48,255,0.1); border-color: rgba(155,48,255,0.3); color: #B070FF; }
+.int-btn.ivao:hover { background: rgba(155,48,255,0.2); }
+
+/* METAR */
+.metar-section { margin-bottom: 20px; }
+.metar-dep, .metar-arr { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; margin-bottom: 10px; }
+.metar-label { font-size: 9px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 6px; }
+.metar-icao-lbl { font-family: 'Barlow Condensed', sans-serif; font-size: 16px; font-weight: 700; color: var(--gold); margin-bottom: 6px; }
+.metar-rows { display: flex; flex-wrap: wrap; gap: 10px; }
+.metar-item { font-size: 12px; color: var(--text-sec); display: flex; align-items: center; gap: 5px; }
+.metar-item strong { color: var(--text); }
+.metar-raw-text { font-family: monospace; font-size: 10px; color: var(--text-dim); margin-top: 8px; word-break: break-all; background: var(--bg); border-radius: 2px; padding: 6px; }
+
+/* MAP */
+.map-wrap { border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); }
+#brief-map { height: 420px; }
+.leaflet-container { background: #080612; }
+.leaflet-control-zoom a { background: #0E0B1E !important; border-color: #1E1840 !important; color: #9A8FB8 !important; }
+.leaflet-control-zoom a:hover { background: #130F27 !important; color: #00EEFF !important; }
+.leaflet-control-attribution { background: rgba(8,6,18,0.8) !important; color: #4A4068 !important; font-size: 9px !important; }
+.leaflet-control-attribution a { color: #4A4068 !important; }
+
+/* AIRPORT MARKER */
+.apt-marker { width: 12px; height: 12px; border-radius: 50%; border: 2px solid #00EEFF; background: #00EEFF; box-shadow: 0 0 8px #00EEFF; }
+.apt-marker.arr { border-color: #3db07a; background: #3db07a; box-shadow: 0 0 8px #3db07a; }
+
+/* LOADING */
+.loading { text-align: center; padding: 60px; color: var(--text-dim); }
+.spinner { display: inline-block; width: 28px; height: 28px; border: 3px solid var(--border); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 900px) { .main-grid { grid-template-columns: 1fr; } #brief-map { height: 280px; } }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-logo"><img src="assets/logo.png" alt="BRV" /></div>
+  <div class="topbar-sep"></div>
+  <div class="topbar-title">BRIEF</div>
+  <div class="topbar-flight" id="tb-flight">—</div>
+  <div class="topbar-right">
+    <a href="flight.html" class="btn-back">← Voos</a>
+    <a href="dashboard.html" class="btn-back">Dashboard</a>
+  </div>
+</div>
+
+<div class="content" id="main-content">
+  <div class="loading"><div class="spinner"></div></div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+firebase.initializeApp({
+  apiKey: 'AIzaSyC2dDGhKjzHSclyFwUFNGA60DtXAjLEJ6I',
+  authDomain: 'bravo-aviation.firebaseapp.com',
+  projectId: 'bravo-aviation',
+  storageBucket: 'bravo-aviation.firebasestorage.app',
+  messagingSenderId: '712016002234',
+  appId: '1:712016002234:web:ce7a8e39c28bc6d8ca5683'
+});
+const auth = firebase.auth();
+const db   = firebase.firestore();
+
+/* ── Coordenadas dos aeroportos ── */
+const AIRPORTS = {
+  SBGR:{name:'São Paulo - Guarulhos',    lat:-23.4356, lon:-46.4731},
+  SBBR:{name:'Brasília',                 lat:-15.8711, lon:-47.9186},
+  SBCF:{name:'BH - Confins (CNF)',       lat:-19.6244, lon:-43.9719},
+  SBSV:{name:'Salvador (SSA)',           lat:-12.9086, lon:-38.3225},
+  SBRF:{name:'Recife (REC)',             lat:-8.1265,  lon:-34.9239},
+  SBPA:{name:'Porto Alegre (POA)',       lat:-29.9944, lon:-51.1714},
+  SBGL:{name:'Rio de Janeiro (GIG)',     lat:-22.8099, lon:-43.2505},
+  SBCT:{name:'Curitiba (CWB)',           lat:-25.5285, lon:-49.1758},
+  SBFZ:{name:'Fortaleza (FOR)',          lat:-3.7762,  lon:-38.5326},
+  SBSL:{name:'São Luís (SLZ)',           lat:-2.5854,  lon:-44.2341},
+  SBBE:{name:'Belém (BEL)',              lat:-1.3792,  lon:-48.4763},
+  SBGO:{name:'Goiânia (GYN)',            lat:-16.6321, lon:-49.2207},
+  SBMO:{name:'Maceió (MCZ)',             lat:-9.5108,  lon:-35.7917},
+  SBMG:{name:'Maringá (MGF)',            lat:-23.4791, lon:-52.0161},
+  SBAR:{name:'Aracaju (AJU)',            lat:-10.9847, lon:-37.0703},
+  SBCG:{name:'Campo Grande (CGR)',       lat:-20.4687, lon:-54.6725},
+  SBEG:{name:'Manaus (MAO)',             lat:-3.0386,  lon:-60.0497},
+  SBBV:{name:'Boa Vista (BVB)',          lat:2.8413,   lon:-60.6924},
+  SBFL:{name:'Florianópolis (FLN)',      lat:-27.6701, lon:-48.5526},
+  SBPS:{name:'Porto Seguro (BPS)',       lat:-16.4387, lon:-39.0808},
+  SBVT:{name:'Vitória (VIX)',            lat:-20.2581, lon:-40.2862},
+  SBCH:{name:'Chapecó (XAP)',            lat:-27.1342, lon:-52.6564},
+  SBIL:{name:'Ilhéus (IOS)',             lat:-14.8159, lon:-39.0336},
+  SBUL:{name:'Uberlândia (UDI)',         lat:-18.8835, lon:-48.2252},
+  SBTE:{name:'Teresina (THE)',           lat:-5.0600,  lon:-42.8237},
+  SBFI:{name:'Foz do Iguaçu (IGU)',      lat:-25.5983, lon:-54.4869},
+  SBRP:{name:'Ribeirão Preto (RAO)',     lat:-21.1364, lon:-47.7766},
+  SBJP:{name:'João Pessoa (JPA)',        lat:-7.1459,  lon:-34.9502},
+  SBNF:{name:'Navegantes (NVT)',         lat:-26.8799, lon:-48.6513},
+  SBCY:{name:'Cuiabá (CGB)',             lat:-15.6528, lon:-56.1166},
+  SBJV:{name:'Joinville (JOI)',          lat:-26.2245, lon:-48.7972},
+  SBPL:{name:'Petrolina (PNZ)',          lat:-9.3623,  lon:-40.5691},
+  SBPJ:{name:'Palmas (PMW)',             lat:-10.2914, lon:-48.3568},
+  SBJA:{name:'Jacareí',                  lat:-23.2133, lon:-45.9650},
+  SBCA:{name:'Cascavel (CAC)',           lat:-25.0003, lon:-53.5008},
+  SBDB:{name:'Bonito (BYO)',             lat:-21.2473, lon:-56.4524},
+  SBMK:{name:'Montes Claros (MOC)',      lat:-16.7068, lon:-43.8188},
+  SBLO:{name:'Londrina (LDB)',           lat:-23.3336, lon:-51.1301},
+  SBSI:{name:'S.J. Rio Preto (SJP)',     lat:-20.8165, lon:-49.3945},
+  SBPF:{name:'Passo Fundo (PFB)',        lat:-28.2439, lon:-52.3265},
+  SBDO:{name:'Dourados (DOU)',           lat:-22.2019, lon:-54.9262},
+  SBVC:{name:'Vitória da Conquista(VDC)',lat:-14.8623, lon:-40.8637},
+  SBPV:{name:'Porto Velho (PVH)',        lat:-8.7092,  lon:-63.9023},
+  SBRB:{name:'Rio Branco (RBR)',         lat:-9.8690,  lon:-67.8981},
+  SBJU:{name:'Juazeiro do Norte (JDO)',  lat:-7.2189,  lon:-39.2701},
+  SBSG:{name:'Natal (NAT)',              lat:-5.9114,  lon:-35.3774},
+  SBSR:{name:'S.J. Rio Preto (SJP)',     lat:-20.8165, lon:-49.3945},
+  SBCX:{name:'Caxias do Sul (CXJ)',      lat:-29.1971, lon:-51.1875},
+  SBMQ:{name:'Macapá (MCP)',             lat:0.0503,   lon:-51.0723},
+  SBIZ:{name:'Imperatriz (IMP)',         lat:-5.5313,  lon:-47.4599},
+  SBJE:{name:'Jeremoabo',                lat:-10.0736, lon:-38.3337},
+  SBUR:{name:'Uberaba (UBA)',            lat:-19.7648, lon:-47.9662},
+  SBPG:{name:'Paranaguá',               lat:-25.5400, lon:-48.5310},
+  SACO: {name:'Córdoba - Argentina',     lat:-31.3236, lon:-64.2082},
+};
+
+function getApt(icao){ return AIRPORTS[icao] || { name: icao, lat: -15, lon: -52 }; }
+
+/* ── AUTH ── */
+document.body.style.visibility = 'hidden';
+auth.onAuthStateChanged(async (fbUser) => {
+  if (!fbUser) {
+    await new Promise(r => setTimeout(r, 800));
+    if (auth.currentUser) return;
+    window.location.href = 'login.html';
+    return;
+  }
+  try {
+    const snap = await db.collection('users').doc(fbUser.uid).get();
+    if (!snap.exists) { window.location.href = 'login.html'; return; }
+    const data = snap.data();
+    if (data.role === 'admin') { window.location.href = 'admin.html'; return; }
+
+    document.body.style.visibility = '';
+    const pf = data.pendingFlight;
+    if (!pf) {
+      document.getElementById('main-content').innerHTML = `
+        <div class="loading" style="padding:80px">
+          <div style="font-size:36px;margin-bottom:16px">✈️</div>
+          <div style="font-size:16px;margin-bottom:10px">Nenhuma rota selecionada.</div>
+          <a href="flight.html" style="color:var(--gold);font-size:13px;">← Escolher uma rota</a>
+        </div>`;
+      return;
+    }
+    renderBrief(pf, data);
+  } catch(e) {
+    document.body.style.visibility = '';
+    console.error(e);
+  }
+});
+
+/* ── RENDER ── */
+function renderBrief(pf, userData) {
+  const dep = pf.dep || '????';
+  const arr = pf.arr || '????';
+  const fl  = pf.plannedFL || '—';
+  const eet = pf.eet || '—';
+  const nm  = pf.distance ? pf.distance + ' NM' : '—';
+  const ac  = pf.aircraft || userData.aircraft || 'A320';
+  const fn  = pf.flightNumber || 'BRV';
+  const depApt = getApt(dep);
+  const arrApt = getApt(arr);
+
+  document.getElementById('tb-flight').textContent = fn;
+
+  document.getElementById('main-content').innerHTML = `
+    <!-- AIRPORT CARDS -->
+    <div class="ac-cards">
+      <!-- Aircraft -->
+      <div class="ac-card" style="min-width:180px;max-width:220px">
+        <div class="ac-card-img" style="background:var(--surface2);">
+          <span style="font-size:42px">✈</span>
+        </div>
+        <div class="ac-card-badge" style="font-size:9px;color:var(--gold)">AIRCRAFT</div>
+        <div class="ac-card-body">
+          <div class="ac-card-icao">${ac}</div>
+          <div class="ac-card-name">Categoria M — Narrowbody</div>
+          <div class="ac-card-btns">
+            <span class="ac-btn" style="background:rgba(155,48,255,0.1);border-color:rgba(155,48,255,0.3);color:#B070FF">M</span>
+          </div>
+        </div>
+      </div>
+      <!-- Departure -->
+      <div class="ac-card">
+        <div class="ac-card-img">
+          <span style="font-size:42px">🛫</span>
+        </div>
+        <div class="ac-card-badge">DEPART</div>
+        <div class="ac-card-body">
+          <div class="ac-card-icao">${dep}</div>
+          <div class="ac-card-name">${depApt.name}</div>
+          <div class="ac-card-btns">
+            <a class="ac-btn" href="https://metar.vatsim.net/metar.php?id=${dep}" target="_blank">METAR</a>
+            <a class="ac-btn" href="https://chartfox.org/${dep}" target="_blank">Charts</a>
+            <a class="ac-btn" href="https://skyvector.com/airport/${dep}" target="_blank">Info</a>
+          </div>
+        </div>
+      </div>
+      <!-- Arrival -->
+      <div class="ac-card">
+        <div class="ac-card-img">
+          <span style="font-size:42px">🛬</span>
+        </div>
+        <div class="ac-card-badge" style="color:var(--success)">ARRIVAL</div>
+        <div class="ac-card-body">
+          <div class="ac-card-icao" style="color:var(--success)">${arr}</div>
+          <div class="ac-card-name">${arrApt.name}</div>
+          <div class="ac-card-btns">
+            <a class="ac-btn" href="https://metar.vatsim.net/metar.php?id=${arr}" target="_blank">METAR</a>
+            <a class="ac-btn" href="https://chartfox.org/${arr}" target="_blank">Charts</a>
+            <a class="ac-btn" href="https://skyvector.com/airport/${arr}" target="_blank">Info</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MAIN GRID -->
+    <div class="main-grid">
+      <!-- LEFT -->
+      <div>
+        <!-- Flight Summary -->
+        <div class="card">
+          <div class="card-title">Flight Summary</div>
+          <table class="summary-table">
+            <tr><td class="k">Flight Number</td><td class="v">${fn}</td></tr>
+            <tr><td class="k">Departure</td><td class="v">${dep} — ${depApt.name}</td></tr>
+            <tr><td class="k">Arrival</td><td class="v">${arr} — ${arrApt.name}</td></tr>
+            <tr><td class="k">Flight Level</td><td class="v">FL${fl}</td></tr>
+            <tr><td class="k">EET</td><td class="v">${eet}</td></tr>
+            <tr><td class="k">Distância</td><td class="v">${nm}</td></tr>
+            <tr><td class="k">Aeronave</td><td class="v">${ac}</td></tr>
+          </table>
+        </div>
+
+        <!-- Integration Buttons -->
+        <div class="int-btns">
+          <a class="int-btn simbrief" href="${buildSimBriefUrl(dep,arr,fl,fn,ac)}" target="_blank">
+            ✈ SimBrief
+          </a>
+          <a class="int-btn skyvector" href="https://skyvector.com/?fpl=${dep}%20${arr}" target="_blank">
+            🗺 SkyVector
+          </a>
+          <a class="int-btn vatsim" href="https://my.vatsim.net/pilots/flightplan/create?callsign=${fn}&dep=${dep}&arr=${arr}&aircraft=${encodeURIComponent(ac)}&altitude=${fl}00&route=DCT" target="_blank">
+            🔵 VATSIM Prefile
+          </a>
+          <a class="int-btn ivao" href="https://fpl.ivao.aero/?callsign=${fn}&adep=${dep}&ades=${arr}&actype=${toICAOType(ac)}&altitude=${fl}00" target="_blank">
+            🟣 IVAO Prefile
+          </a>
+        </div>
+
+        <!-- METAR -->
+        <div class="metar-section">
+          <div class="metar-dep" id="metar-dep">
+            <div class="metar-label">METAR — Partida</div>
+            <div class="metar-icao-lbl">${dep}</div>
+            <div style="color:var(--text-dim);font-size:12px">Carregando...</div>
+          </div>
+          <div class="metar-arr" id="metar-arr">
+            <div class="metar-label">METAR — Destino</div>
+            <div class="metar-icao-lbl" style="color:var(--success)">${arr}</div>
+            <div style="color:var(--text-dim);font-size:12px">Carregando...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: MAP -->
+      <div>
+        <div class="map-wrap">
+          <div id="brief-map"></div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  initMap(dep, arr, depApt, arrApt);
+  fetchMetarBrief(dep, 'metar-dep');
+  fetchMetarBrief(arr, 'metar-arr');
+}
+
+/* ── MAP ── */
+function initMap(dep, arr, depApt, arrApt) {
+  const midLat = (depApt.lat + arrApt.lat) / 2;
+  const midLon = (depApt.lon + arrApt.lon) / 2;
+  const dist   = Math.sqrt(Math.pow(depApt.lat - arrApt.lat, 2) + Math.pow(depApt.lon - arrApt.lon, 2));
+  const zoom   = dist > 20 ? 5 : dist > 10 ? 6 : 7;
+
+  const map = L.map('brief-map', { center: [midLat, midLon], zoom, zoomControl: true, attributionControl: true });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '© OpenStreetMap © CARTO', subdomains: 'abcd', maxZoom: 14
+  }).addTo(map);
+
+  // Route line
+  L.polyline([[depApt.lat, depApt.lon],[arrApt.lat, arrApt.lon]], {
+    color: '#00EEFF', weight: 2, dashArray: '6 4', opacity: 0.7
+  }).addTo(map);
+
+  // Departure marker
+  L.marker([depApt.lat, depApt.lon], {
+    icon: L.divIcon({ html: '<div class="apt-marker"></div>', iconSize:[12,12], iconAnchor:[6,6], className:'' })
+  }).addTo(map).bindPopup(`<b style="color:#00EEFF">${dep}</b><br>${depApt.name}`);
+
+  // Arrival marker
+  L.marker([arrApt.lat, arrApt.lon], {
+    icon: L.divIcon({ html: '<div class="apt-marker arr"></div>', iconSize:[12,12], iconAnchor:[6,6], className:'' })
+  }).addTo(map).bindPopup(`<b style="color:#3db07a">${arr}</b><br>${arrApt.name}`);
+
+  // Labels
+  L.marker([depApt.lat, depApt.lon], {
+    icon: L.divIcon({ html: `<div style="color:#00EEFF;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;white-space:nowrap;text-shadow:0 1px 3px #000">${dep}</div>`, iconSize:[40,16], iconAnchor:[-8,2], className:'' })
+  }).addTo(map);
+  L.marker([arrApt.lat, arrApt.lon], {
+    icon: L.divIcon({ html: `<div style="color:#3db07a;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;white-space:nowrap;text-shadow:0 1px 3px #000">${arr}</div>`, iconSize:[40,16], iconAnchor:[-8,2], className:'' })
+  }).addTo(map);
+}
+
+/* ── METAR ── */
+async function fetchMetarBrief(icao, elementId) {
+  const el = document.getElementById(elementId);
+  if (!el) return;
+  try {
+    const res = await fetch(`https://metar.vatsim.net/metar.php?id=${icao}`);
+    const raw = (await res.text()).trim();
+    if (!raw || raw.includes('No METAR')) {
+      el.querySelector('div:last-child').textContent = 'METAR não disponível no momento.';
+      return;
+    }
+    const wind  = parseWind(raw);
+    const vis   = parseVis(raw);
+    const cloud = parseCloud(raw);
+    const temp  = parseTemp(raw);
+    const qnh   = parseQNH(raw);
+    const time  = parseTime(raw);
+    el.innerHTML = el.innerHTML.split('<div style')[0] + `
+      <div class="metar-rows">
+        <div class="metar-item">💨 <strong>${wind}</strong></div>
+        <div class="metar-item">👁 <strong>${vis}</strong></div>
+        <div class="metar-item">☁️ <strong>${cloud}</strong></div>
+        <div class="metar-item">🌡 <strong>${temp}</strong></div>
+        <div class="metar-item">📊 <strong>${qnh}</strong></div>
+        ${time ? `<div class="metar-item" style="color:var(--text-dim);font-size:10px">ATT ${time}Z</div>` : ''}
+      </div>
+      <div class="metar-raw-text">${raw}</div>`;
+  } catch(_) {
+    el.querySelector('div:last-child').textContent = 'Erro ao carregar METAR.';
+  }
+}
+
+/* METAR parsers */
+function parseWind(r){
+  const m = r.match(/(\d{3}|VRB)(\d{2,3})(G(\d{2,3}))?KT/);
+  if (!m) return 'CALM';
+  return `${m[1]}° ${m[2]}${m[4]?'G'+m[4]:''}kt`;
+}
+function parseVis(r){
+  if (/CAVOK/.test(r)) return 'CAVOK';
+  const m = r.match(/(?:^|\s)(\d{4})(?:\s|$)/);
+  return m ? (parseInt(m[1])>=9999?'+10km':m[1]+'m') : '—';
+}
+function parseCloud(r){
+  const m=[...r.matchAll(/(FEW|SCT|BKN|OVC)(\d{3})/g)];
+  if(!m.length) return /NSC|NCD|CLR/.test(r)?'Clear':'—';
+  return m.map(x=>x[1]+' '+parseInt(x[2])*100+'ft').join(' · ');
+}
+function parseTemp(r){
+  const m=r.match(/\s(M?\d{2})\/(M?\d{2})\s/);
+  if(!m) return '—';
+  const t=m[1].replace('M','-'), d=m[2].replace('M','-');
+  return `${t}°C / DP ${d}°C`;
+}
+function parseQNH(r){
+  const m=r.match(/Q(\d{4})/);
+  return m?m[1]+' hPa':'—';
+}
+function parseTime(r){
+  const m=r.match(/\d{6}Z/);
+  return m?m[0].slice(2,6):'';
+}
+
+/* ── HELPERS ── */
+function buildSimBriefUrl(dep, arr, fl, fn, ac) {
+  const type = toICAOType(ac);
+  return `https://www.simbrief.com/system/dispatch.php?orig=${dep}&dest=${arr}&type=${type}&airline=BRV&fltnum=${fn.replace('BRV','')}&fl=${fl}&units=kgs&navlog=1&etops=0&stepclimbs=0`;
+}
+
+function toICAOType(ac) {
+  const map = {
+    'a320':'A320','airbus a320':'A320','a319':'A319','airbus a319':'A319',
+    'a321':'A321','airbus a321':'A321',
+    'b737-800':'B738','b737800':'B738','boeing 737-800':'B738',
+    'b737-700':'B737','boeing 737-700':'B737',
+    'b777':'B77W','boeing 777':'B77W',
+    'b747':'B744','boeing 747':'B744',
+  };
+  return map[(ac||'').toLowerCase()] || 'A320';
+}
+</script>
+</body>
+</html>
