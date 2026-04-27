@@ -3,6 +3,17 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
+<script>
+  const PAGE_VERSION = '3';
+  const key = 'brv_v_admin';
+  if (sessionStorage.getItem(key) !== PAGE_VERSION) {
+    sessionStorage.setItem(key, PAGE_VERSION);
+    location.reload(true);
+  }
+</script>
 <title>Admin — Bravo Virtual Airline</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
 <style>
@@ -49,6 +60,7 @@ main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
 .page{display:none;animation:fadeIn .3s ease;}
 .page.active{display:block;}
 @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 
 /* CARDS */
 .cards-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;}
@@ -230,6 +242,25 @@ tr:hover td{background:rgba(255,255,255,.02);}
           </div>
         </div>
       </div>
+
+      <!-- Pilotos voando agora -->
+      <div id="ov-live-section" class="gap-b" style="margin-top:24px;display:none">
+        <div class="sec-header">
+          <div class="sec-title" style="display:flex;align-items:center;gap:8px;">
+            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#3db07a;box-shadow:0 0 6px #3db07a;animation:pulse 1.5s infinite;flex-shrink:0;"></span>
+            Pilotos voando agora
+            <span id="live-count" style="font-size:12px;font-weight:400;color:var(--text-sec);"></span>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Piloto</th><th>Rota</th><th>Aeronave</th><th>Fase</th><th>ALT</th><th>IAS</th><th>VS</th></tr></thead>
+            <tbody id="ov-live-table">
+              <tr><td colspan="7" class="empty-row">Nenhum piloto voando no momento.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
 
     <!-- APPLICATIONS -->
@@ -390,9 +421,46 @@ auth.onAuthStateChanged(async (u) => {
   document.getElementById('admin-avatar').textContent = av;
   document.getElementById('admin-name').textContent = adminUser.name || 'Admin';
   await loadAll();
+  setupLiveFlights();
 });
 
 function logout(){ auth.signOut().then(()=>{ window.location.href='login.html'; }); }
+
+/* ── LIVE FLIGHTS ── */
+function setupLiveFlights() {
+  db.collection('liveflights').onSnapshot(snap => {
+    const section = document.getElementById('ov-live-section');
+    const tbody   = document.getElementById('ov-live-table');
+    const count   = document.getElementById('live-count');
+    if (!section || !tbody) return;
+
+    if (snap.empty) {
+      section.style.display = 'none';
+      tbody.innerHTML = '<tr><td colspan="7" class="empty-row">Nenhum piloto voando no momento.</td></tr>';
+      if (count) count.textContent = '';
+      return;
+    }
+
+    section.style.display = '';
+    if (count) count.textContent = '(' + snap.size + ' online)';
+
+    const phases = { taxi:'Solo', climb:'Subida', cruise:'Cruzeiro', descent:'Descida', approach:'Aproximacao', SOLO:'Solo', SUBIDA:'Subida', CRUZEIRO:'Cruzeiro', DESCIDA:'Descida', DECOLAGEM:'Decolagem' };
+
+    tbody.innerHTML = snap.docs.map(doc => {
+      const d = doc.data();
+      const vsStr = d.vs !== undefined ? (d.vs >= 0 ? '+' : '') + Math.round(d.vs) + ' fpm' : '—';
+      return `<tr>
+        <td class="td-main">${d.pilotName || '—'}</td>
+        <td>${d.dep || '?'} → ${d.arr || '?'}</td>
+        <td>${d.aircraft || '—'}</td>
+        <td>${phases[d.phase] || d.phase || '—'}</td>
+        <td>${d.alt ? Math.round(d.alt).toLocaleString('pt-BR') + ' ft' : '—'}</td>
+        <td>${d.spd ? Math.round(d.spd) + ' kts' : '—'}</td>
+        <td style="color:${(d.vs||0) < -200 ? '#3db07a' : (d.vs||0) > 200 ? '#f0a500' : 'inherit'}">${vsStr}</td>
+      </tr>`;
+    }).join('');
+  });
+}
 
 /* ── LOAD DATA ── */
 async function loadAll() {

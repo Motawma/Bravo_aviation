@@ -3,7 +3,18 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
 <title>Dashboard — Bravo Virtual Airline</title>
+<script>
+  const PAGE_VERSION = '3';
+  const key = 'brv_v_dashboard';
+  if (sessionStorage.getItem(key) !== PAGE_VERSION) {
+    sessionStorage.setItem(key, PAGE_VERSION);
+    location.reload(true);
+  }
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
@@ -244,6 +255,23 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 .empty-state { text-align: center; padding: 48px 24px; color: var(--text-dim); font-size: 13px; }
 .empty-state .big { font-size: 36px; margin-bottom: 12px; }
 
+/* ── ROUTE FLY BUTTON ── */
+.btn-fly-route {
+  width: 100%; margin-top: 12px;
+  padding: 8px; background: rgba(0,238,255,0.1);
+  border: 1px solid rgba(0,238,255,0.3); color: var(--gold);
+  font-size: 12px; font-weight: 700; letter-spacing: 0.08em;
+  border-radius: var(--radius); cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+  text-transform: uppercase;
+}
+.btn-fly-route:hover { background: rgba(0,238,255,0.2); border-color: var(--gold); }
+.btn-fly-route.selected { background: var(--gold); color: #000; border-color: var(--gold); }
+
+/* ── LIVE FLIGHTS ── */
+.live-dot { display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--green,#3db07a); box-shadow:0 0 6px var(--green,#3db07a); margin-right:6px; animation: pulse 1.5s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
 /* ── RESPONSIVE ── */
 @media (max-width: 1100px) {
   :root { --sidebar: 200px; }
@@ -276,21 +304,21 @@ tr:hover td { background: rgba(255,255,255,0.02); }
     <a class="nav-item" onclick="goTo('profile',this)">
       <span class="nav-icon">👤</span> Meu Perfil
     </a>
-    <div class="nav-section-label">Operações</div>
-    <a class="nav-item" onclick="goTo('pirep',this)">
+    <div class="nav-section-label" id="nav-label-ops">Operações</div>
+    <a class="nav-item" id="nav-pirep" onclick="goTo('pirep',this)">
       <span class="nav-icon">✈️</span> Registrar Voo
     </a>
-    <a class="nav-item" onclick="goTo('flights',this)">
+    <a class="nav-item" id="nav-flights" onclick="goTo('flights',this)">
       <span class="nav-icon">📋</span> Meus Voos
     </a>
-    <a class="nav-item" onclick="goTo('routes',this)">
+    <a class="nav-item" id="nav-routes" onclick="goTo('routes',this)">
       <span class="nav-icon">🗺️</span> Rotas
     </a>
-    <div class="nav-section-label">Comunidade</div>
-    <a class="nav-item" onclick="goTo('ranking',this)">
+    <div class="nav-section-label" id="nav-label-community">Comunidade</div>
+    <a class="nav-item" id="nav-ranking" onclick="goTo('ranking',this)">
       <span class="nav-icon">🏆</span> Ranking
     </a>
-    <a class="nav-item" onclick="goTo('downloads',this)">
+    <a class="nav-item" id="nav-downloads" onclick="goTo('downloads',this)">
       <span class="nav-icon">📦</span> Downloads
     </a>
     <a class="nav-item" onclick="goTo('notifs',this)" id="nav-notifs">
@@ -381,6 +409,21 @@ tr:hover td { background: rgba(255,255,255,0.02); }
         <div class="progress-meta">
           <span id="ov-prog-cur">—</span>
           <span id="ov-prog-next">—</span>
+        </div>
+      </div>
+
+      <!-- Pilotos voando agora -->
+      <div id="ov-live-section" class="gap-b" style="display:none">
+        <div class="sec-header">
+          <div class="sec-title"><span class="live-dot"></span>Pilotos voando agora</div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Piloto</th><th>Rota</th><th>Aeronave</th><th>Fase</th><th>ALT</th><th>IAS</th></tr></thead>
+            <tbody id="ov-live-table">
+              <tr><td colspan="6" class="empty-state">Nenhum piloto voando no momento.</td></tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -527,15 +570,121 @@ tr:hover td { background: rgba(255,255,255,0.02); }
   </div>
 </main>
 
+<!-- Modal: confirmar rota para o ACARS -->
+<div id="modal-route" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:#100E25;border:1px solid #1E1840;border-radius:6px;padding:32px;max-width:380px;width:90%;">
+    <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700;color:#00EEFF;margin-bottom:4px">Confirmar rota</div>
+    <div id="modal-route-info" style="color:#9A8FB8;font-size:13px;margin-bottom:20px;line-height:1.6"></div>
+    <p style="font-size:12px;color:#6A5F8A;margin-bottom:20px">A rota sera salva e carregada automaticamente ao abrir o ACARS Bravo.</p>
+    <div style="display:flex;gap:10px">
+      <button onclick="confirmRoute()" style="flex:1;padding:11px;background:#00EEFF;color:#000;border:none;font-weight:700;font-size:13px;border-radius:4px;cursor:pointer">Confirmar</button>
+      <button onclick="closeRouteModal()" style="flex:1;padding:11px;background:transparent;color:#9A8FB8;border:1px solid #1E1840;font-size:13px;border-radius:4px;cursor:pointer">Cancelar</button>
+    </div>
+    <div id="modal-route-ok" style="display:none;margin-top:12px;color:#3db07a;font-size:13px;text-align:center">Rota salva! Abra o ACARS para iniciar.</div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
+/* ── FIREBASE ── */
+const firebaseConfig = {
+  apiKey: 'AIzaSyC2dDGhKjzHSclyFwUFNGA60DtXAjLEJ6I',
+  authDomain: 'bravo-aviation.firebaseapp.com',
+  projectId: 'bravo-aviation',
+  storageBucket: 'bravo-aviation.firebasestorage.app',
+  messagingSenderId: '712016002234',
+  appId: '1:712016002234:web:ce7a8e39c28bc6d8ca5683'
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db   = firebase.firestore();
+
 /* ── AUTH ── */
-const user = JSON.parse(localStorage.getItem('brv_user') || sessionStorage.getItem('brv_user') || 'null');
-if (!user) { window.location.href = 'login.html'; throw new Error('Not authenticated'); }
+let user = null;
+let flights = [];
+
+// Oculta tudo até confirmar auth
+document.body.style.visibility = 'hidden';
+
+// Flag para evitar double-redirect caso onAuthStateChanged dispare mais de uma vez
+let _authHandled = false;
+
+auth.onAuthStateChanged(async (fbUser) => {
+  if (_authHandled) return;
+
+  if (!fbUser) {
+    // Aguarda 800ms para dar tempo ao Firebase restaurar sessão persistida
+    // antes de redirecionar (evita loop por disparo prematuro com null)
+    await new Promise(r => setTimeout(r, 800));
+    if (auth.currentUser) return; // sessão foi restaurada nesse intervalo
+    _authHandled = true;
+    window.location.href = 'login.html';
+    return;
+  }
+
+  _authHandled = true;
+
+  try {
+    const snap = await db.collection('users').doc(fbUser.uid).get();
+
+    if (!snap.exists) {
+      // Usuário no Auth mas sem doc no Firestore — volta pro login sem signOut
+      window.location.href = 'login.html';
+      return;
+    }
+
+    const data = snap.data();
+    if (data.role === 'admin') { window.location.href = 'admin.html'; return; }
+
+    user = {
+      uid:         fbUser.uid,
+      name:        data.name        || fbUser.email,
+      email:       data.email       || fbUser.email,
+      vid:         data.vid         || '000000',
+      hours:       data.hours       || 0,
+      flights:     data.flights     || 0,
+      aircraft:    data.aircraft    || '',
+      joinDate:    data.joinDate    || '',
+      role:        data.role        || 'pilot',
+      permissions: data.permissions || {}
+    };
+
+    // Carrega PIREPs do Firestore
+    try {
+      const pirepSnap = await db.collection('pireps')
+        .where('pilotId', '==', fbUser.uid)
+        .orderBy('createdAt', 'desc')
+        .get();
+      flights = pirepSnap.docs.map(doc => ({
+        id:     doc.id,
+        dep:    doc.data().dep,
+        arr:    doc.data().arr,
+        ac:     doc.data().ac,
+        dur:    doc.data().dur,
+        fl:     doc.data().fl,
+        date:   doc.data().date,
+        sim:    doc.data().sim,
+        obs:    doc.data().obs || '',
+        status: doc.data().status
+      }));
+    } catch(_) { flights = []; }
+
+    document.body.style.visibility = '';
+    initUserUI();
+    applyPermissions(user.permissions);
+    setupLiveFlights();
+
+  } catch(err) {
+    // Erro de rede ou permissão — mostra a página mesmo assim para não prender o usuário
+    console.error('Dashboard auth error:', err);
+    document.body.style.visibility = '';
+  }
+});
 
 function logout() {
-  localStorage.removeItem('brv_user');
-  sessionStorage.removeItem('brv_user');
-  window.location.href = 'login.html';
+  auth.signOut().then(() => window.location.href = 'login.html');
 }
 
 /* ── RANK SYSTEM ── */
@@ -551,29 +700,10 @@ function getRank(hours) {
   return RANKS.find(r => hours >= r.min && hours < r.max) || RANKS[RANKS.length-1];
 }
 
-/* ── SAMPLE DATA ── */
-const FLIGHTS_KEY = 'brv_flights_' + user.vid;
-let flights = JSON.parse(localStorage.getItem(FLIGHTS_KEY) || '[]');
-if (!flights.length) {
-  flights = [
-    { id:1, dep:'SBGR', arr:'SBBR', ac:'Boeing 737-800', dur:'01:45', fl:'330', date:'2025-04-10T08:00', sim:'MSFS 2024', obs:'', status:'approved' },
-    { id:2, dep:'SBBR', arr:'SBGR', ac:'Boeing 737-800', dur:'01:50', fl:'320', date:'2025-04-08T14:30', sim:'MSFS 2024', obs:'Boas condições.', status:'approved' },
-    { id:3, dep:'SBGR', arr:'SBGL', ac:'Airbus A320', dur:'00:55', fl:'280', date:'2025-04-05T10:00', sim:'X-Plane 12', obs:'', status:'approved' },
-    { id:4, dep:'SBGL', arr:'SBSP', ac:'Airbus A320', dur:'00:45', fl:'200', date:'2025-04-02T16:00', sim:'MSFS 2020', obs:'', status:'approved' },
-    { id:5, dep:'SBGR', arr:'SBCF', ac:'Boeing 737-800', dur:'01:10', fl:'310', date:'2025-03-28T09:00', sim:'MSFS 2024', obs:'', status:'pending' },
-  ];
-  localStorage.setItem(FLIGHTS_KEY, JSON.stringify(flights));
-}
+/* ── SAMPLE DATA (flights é carregado do Firestore no onAuthStateChanged) ── */
 
-const PILOTS = [
-  { name:'Carlos Bravo', vid:'123456', rank:'Comandante Sênior', flights:210, hours:1240, aircraft:'Airbus A320' },
-  { name:'Ana Ferreira', vid:'334421', rank:'Comandante', flights:120, hours:780, aircraft:'Boeing 737-800' },
-  { name: user.name, vid: user.vid, rank: getRank(user.hours).name, flights: user.flights, hours: user.hours, aircraft: user.aircraft },
-  { name:'Rafael Costa', vid:'567890', rank:'1º Oficial', flights:60, hours:310, aircraft:'Airbus A320' },
-  { name:'Mariana Lima', vid:'112233', rank:'1º Oficial', flights:45, hours:260, aircraft:'Boeing 737-800' },
-  { name:'Pedro Souza', vid:'998877', rank:'2º Oficial', flights:22, hours:130, aircraft:'Airbus A320' },
-  { name:'Lucas Alves', vid:'445566', rank:'Cadete', flights:8, hours:38, aircraft:'Boeing 737-800' },
-].sort((a,b) => b.hours - a.hours);
+// PILOTS é montado dinamicamente em initUserUI (após carregar user do Firestore)
+let PILOTS = [];
 
 const ROUTES = [
   { dep:'SBGR', arr:'SBBR', city1:'São Paulo', city2:'Brasília', dur:'1h45', dist:'1070km', freq:'Diário', ac:'B737-800' },
@@ -585,6 +715,7 @@ const ROUTES = [
 ];
 
 const DOWNLOADS = [
+  { type:'ACARS — Windows', name:'Bravo ACARS v1.0', desc:'App oficial da Bravo Aviation para registrar voos automaticamente. Conecta ao MSFS 2020/2024 e X-Plane 11/12. Registra PIREPs com telemetria completa.', ver:'v1.0', size:'88 MB', date:'Abr 2026' },
   { type:'Livery — MSFS 2024', name:'BRV Boeing 737-800', desc:'Livery oficial Bravo Aviation para Boeing 737-800 no MSFS 2024.', ver:'v1.2', size:'28 MB', date:'Abr 2025' },
   { type:'Livery — MSFS 2024', name:'BRV Airbus A320', desc:'Livery oficial Bravo Aviation para Airbus A320 no MSFS 2024.', ver:'v1.1', size:'22 MB', date:'Mar 2025' },
   { type:'Livery — X-Plane 12', name:'BRV Boeing 737-800 XP12', desc:'Livery oficial para o Boeing 737-800 Zibo no X-Plane 12.', ver:'v1.0', size:'18 MB', date:'Mar 2025' },
@@ -620,6 +751,21 @@ function goTo(id, el) {
   }
   document.getElementById('topbar-title').textContent = PAGE_TITLES[id] || '';
   if (id === 'notifs') renderNotifs();
+}
+
+function applyPermissions(perms) {
+  if (!perms) return;
+  const map = { pirep:'nav-pirep', flights:'nav-flights', routes:'nav-routes', ranking:'nav-ranking', downloads:'nav-downloads', notifications:'nav-notifs' };
+  Object.entries(map).forEach(([key, elId]) => {
+    const el = document.getElementById(elId);
+    if (el) el.style.display = perms[key] === false ? 'none' : '';
+  });
+  const opsHidden = ['pirep','flights','routes'].every(k => perms[k] === false);
+  const comHidden = ['ranking','downloads'].every(k => perms[k] === false);
+  const opsLabel = document.getElementById('nav-label-ops');
+  const comLabel = document.getElementById('nav-label-community');
+  if (opsLabel) opsLabel.style.display = opsHidden ? 'none' : '';
+  if (comLabel) comLabel.style.display = comHidden ? 'none' : '';
 }
 
 /* ── INIT USER UI ── */
@@ -709,8 +855,8 @@ function initUserUI() {
   }
 
   // Routes
-  document.getElementById('routes-grid').innerHTML = ROUTES.map(r => `
-    <div class="route-card">
+  document.getElementById('routes-grid').innerHTML = ROUTES.map((r,i) => `
+    <div class="route-card" id="route-card-${i}">
       <div class="route-airports">
         <div class="route-icao">${r.dep}</div>
         <div class="route-arrow">──✈──</div>
@@ -723,19 +869,17 @@ function initUserUI() {
         <span>📅 ${r.freq}</span>
       </div>
       <span class="route-tag">${r.ac}</span>
+      <button class="btn-fly-route" id="btn-fly-${i}" onclick="openRouteModal(${i})">Voar esta rota</button>
     </div>`).join('');
 
-  // Ranking
-  const rtbody = document.getElementById('ranking-table');
-  rtbody.innerHTML = PILOTS.map((p,i) => `
-    <tr class="${p.vid === user.vid ? 'rank-me' : ''}">
-      <td><span class="rank-position ${i===0?'top1':i===1?'top2':i===2?'top3':''}">${i===0?'🥇':i===1?'🥈':i===2?'🥉':'#'+(i+1)}</span></td>
-      <td class="td-main">${p.name}${p.vid===user.vid?' <span style="font-size:10px;color:var(--gold)">(você)</span>':''}</td>
-      <td>${p.rank}</td>
-      <td>${p.flights}</td>
-      <td><strong style="color:var(--gold)">${p.hours.toFixed(1)}h</strong></td>
-      <td>${p.aircraft}</td>
-    </tr>`).join('');
+  // Ranking — carrega do Firestore
+  loadRanking();
+
+  // Prefill PIREP com aeronave do piloto
+  if (user.aircraft) {
+    const pirepAc = document.getElementById('pirep-ac');
+    if (pirepAc) pirepAc.value = user.aircraft;
+  }
 
   // Downloads
   document.getElementById('downloads-grid').innerHTML = DOWNLOADS.map(d => `
@@ -748,9 +892,10 @@ function initUserUI() {
         <span>${d.size}</span>
         <span>${d.date}</span>
       </div>
-      <button class="btn-dl" onclick="fakeDownload(this, '${d.name}')">
-        <span>⬇</span> Download
-      </button>
+      ${d.url
+        ? `<a class="btn-dl" href="${d.url}" download style="display:flex;align-items:center;justify-content:center;gap:6px;text-decoration:none;"><span>⬇</span> Download</a>`
+        : `<button class="btn-dl" onclick="fakeDownload(this, '${d.name}')"><span>⬇</span> Download</button>`
+      }
     </div>`).join('');
 
   // Notification badge
@@ -794,43 +939,135 @@ function markAllRead() {
 }
 
 /* ── PIREP SUBMIT ── */
-function submitPirep(e) {
+async function submitPirep(e) {
   e.preventDefault();
-  const newFlight = {
-    id: flights.length + 1,
-    dep: document.getElementById('dep').value.toUpperCase(),
-    arr: document.getElementById('arr').value.toUpperCase(),
-    ac: document.getElementById('pirep-ac').value,
-    dur: document.getElementById('pirep-dur').value,
-    fl: document.getElementById('pirep-fl').value,
-    date: document.getElementById('pirep-date').value,
-    sim: document.getElementById('pirep-sim').value,
-    obs: document.getElementById('pirep-obs').value,
-    status: 'pending'
+  const pirep = {
+    pilotId:   user.uid,
+    pilotName: user.name,
+    pilotVid:  user.vid,
+    dep:    document.getElementById('dep').value.toUpperCase(),
+    arr:    document.getElementById('arr').value.toUpperCase(),
+    ac:     document.getElementById('pirep-ac').value,
+    dur:    document.getElementById('pirep-dur').value,
+    fl:     document.getElementById('pirep-fl').value,
+    date:   document.getElementById('pirep-date').value,
+    sim:    document.getElementById('pirep-sim').value,
+    obs:    document.getElementById('pirep-obs').value,
+    status: 'pending',
+    source: 'manual',
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
   };
-  flights.unshift(newFlight);
-  localStorage.setItem(FLIGHTS_KEY, JSON.stringify(flights));
-  document.getElementById('pirep-success').classList.add('show');
-  document.getElementById('pirepForm').reset();
-  setTimeout(() => document.getElementById('pirep-success').classList.remove('show'), 5000);
-  // Add notif
-  NOTIFS.unshift({ id: Date.now(), title: 'PIREP enviado: ' + newFlight.dep + '→' + newFlight.arr, text: 'Seu voo está aguardando aprovação do staff.', date: new Date().toLocaleDateString('pt-BR'), read: false });
-  updateNotifBadge();
+  try {
+    const docRef = await db.collection('pireps').add(pirep);
+    flights.unshift({ id: docRef.id, ...pirep, status:'pending' });
+    document.getElementById('pirep-success').classList.add('show');
+    document.getElementById('pirepForm').reset();
+    setTimeout(() => document.getElementById('pirep-success').classList.remove('show'), 5000);
+    NOTIFS.unshift({ id: Date.now(), title: 'PIREP enviado: ' + pirep.dep + '→' + pirep.arr, text: 'Seu voo esta aguardando aprovacao do staff.', date: new Date().toLocaleDateString('pt-BR'), read: false });
+    updateNotifBadge();
+  } catch(err) {
+    alert('Erro ao enviar PIREP: ' + err.message);
+  }
 }
 
 /* ── PROFILE SAVE ── */
-function saveProfile(e) {
+async function saveProfile(e) {
   e.preventDefault();
-  user.name = document.getElementById('edit-name').value;
-  user.email = document.getElementById('edit-email').value;
+  user.name     = document.getElementById('edit-name').value;
+  user.email    = document.getElementById('edit-email').value;
   user.aircraft = document.getElementById('edit-aircraft').value;
-  localStorage.setItem('brv_user', JSON.stringify(user));
+  try {
+    await db.collection('users').doc(user.uid).update({
+      name: user.name, email: user.email, aircraft: user.aircraft
+    });
+  } catch(_) {}
   document.getElementById('profile-success').classList.add('show');
-  document.getElementById('pf-name').textContent = user.name;
-  document.getElementById('pf-email').textContent = user.email;
-  document.getElementById('pf-aircraft').textContent = user.aircraft;
+  document.getElementById('pf-name').textContent    = user.name;
+  document.getElementById('pf-email').textContent   = user.email;
+  document.getElementById('pf-aircraft').textContent= user.aircraft;
   document.getElementById('sidebar-name').textContent = user.name;
   setTimeout(() => document.getElementById('profile-success').classList.remove('show'), 4000);
+}
+
+/* ── RANKING ── */
+async function loadRanking() {
+  try {
+    const snap = await db.collection('users').where('role','!=','admin').get();
+    PILOTS = snap.docs.map(doc => {
+      const d = doc.data();
+      return { name: d.name || '', vid: d.vid || '', rank: getRank(d.hours||0).name, flights: d.flights||0, hours: d.hours||0, aircraft: d.aircraft||'' };
+    }).sort((a,b) => b.hours - a.hours);
+  } catch(_) {
+    PILOTS = [{ name: user.name, vid: user.vid, rank: getRank(user.hours).name, flights: user.flights, hours: user.hours, aircraft: user.aircraft }];
+  }
+  const rtbody = document.getElementById('ranking-table');
+  if (!rtbody) return;
+  rtbody.innerHTML = PILOTS.map((p,i) => `
+    <tr class="${p.vid === user.vid ? 'rank-me' : ''}">
+      <td><span class="rank-position ${i===0?'top1':i===1?'top2':i===2?'top3':''}">${i===0?'🥇':i===1?'🥈':i===2?'🥉':'#'+(i+1)}</span></td>
+      <td class="td-main">${p.name}${p.vid===user.vid?' <span style="font-size:10px;color:var(--gold)">(você)</span>':''}</td>
+      <td>${p.rank}</td>
+      <td>${p.flights}</td>
+      <td><strong style="color:var(--gold)">${p.hours.toFixed(1)}h</strong></td>
+      <td>${p.aircraft}</td>
+    </tr>`).join('');
+  const pos = PILOTS.findIndex(p => p.vid === user.vid) + 1;
+  if (pos > 0) document.getElementById('ov-rank-pos').textContent = '#' + pos;
+}
+
+/* ── ROTA → ACARS ── */
+let _pendingRoute = null;
+function openRouteModal(idx) {
+  const r = ROUTES[idx];
+  _pendingRoute = { dep: r.dep, arr: r.arr, plannedFL: '', aircraft: user.aircraft || r.ac, routeIdx: idx };
+  document.getElementById('modal-route-info').innerHTML =
+    `<strong style="color:#F0EAF8;font-size:16px">${r.dep} → ${r.arr}</strong><br/>
+     ${r.city1} → ${r.city2} &nbsp;·&nbsp; ${r.dur} &nbsp;·&nbsp; ${r.dist}<br/>
+     Aeronave: ${r.ac}`;
+  document.getElementById('modal-route-ok').style.display = 'none';
+  const modal = document.getElementById('modal-route');
+  modal.style.display = 'flex';
+}
+function closeRouteModal() {
+  document.getElementById('modal-route').style.display = 'none';
+  _pendingRoute = null;
+}
+async function confirmRoute() {
+  if (!_pendingRoute) return;
+  await db.collection('users').doc(user.uid).update({ pendingFlight: _pendingRoute });
+  document.getElementById('modal-route-ok').style.display = 'block';
+  // Destaca o botão selecionado
+  document.querySelectorAll('.btn-fly-route').forEach(b => b.classList.remove('selected'));
+  const btn = document.getElementById('btn-fly-' + _pendingRoute.routeIdx);
+  if (btn) { btn.textContent = '✓ Selecionada'; btn.classList.add('selected'); }
+  setTimeout(closeRouteModal, 2000);
+}
+
+/* ── LIVE FLIGHTS ── */
+function setupLiveFlights() {
+  db.collection('liveflights').onSnapshot(snap => {
+    const section = document.getElementById('ov-live-section');
+    const tbody   = document.getElementById('ov-live-table');
+    if (!section || !tbody) return;
+    if (snap.empty) {
+      section.style.display = 'none';
+      tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Nenhum piloto voando no momento.</td></tr>';
+      return;
+    }
+    section.style.display = '';
+    tbody.innerHTML = snap.docs.map(doc => {
+      const d = doc.data();
+      const phases = { taxi:'Solo', climb:'Subida', cruise:'Cruzeiro', descent:'Descida', approach:'Aproximação', SOLO:'Solo', SUBIDA:'Subida', CRUZEIRO:'Cruzeiro', DESCIDA:'Descida' };
+      return `<tr>
+        <td class="td-main">${d.pilotName || '—'}</td>
+        <td>${d.dep || '?'} → ${d.arr || '?'}</td>
+        <td>${d.aircraft || '—'}</td>
+        <td>${phases[d.phase] || d.phase || '—'}</td>
+        <td>${d.alt ? Math.round(d.alt).toLocaleString('pt-BR') + ' ft' : '—'}</td>
+        <td>${d.spd ? Math.round(d.spd) + ' kts' : '—'}</td>
+      </tr>`;
+    }).join('');
+  });
 }
 
 /* ── DOWNLOAD FAKE ── */
@@ -864,8 +1101,6 @@ window.addEventListener('click', e => {
     sidebar.classList.remove('open');
   }
 });
-
-initUserUI();
 </script>
 </body>
 </html>
