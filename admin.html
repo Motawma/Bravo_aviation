@@ -120,6 +120,13 @@ tr:hover td{background:rgba(255,255,255,.02);}
 .gap-b{margin-bottom:24px;}
 .two-col{display:grid;grid-template-columns:1fr 1fr;gap:24px;}
 
+/* TOAST */
+.toast-wrap{position:fixed;bottom:24px;right:24px;z-index:999;display:flex;flex-direction:column;gap:10px;pointer-events:none;}
+.toast{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:13px 18px;font-size:13px;color:var(--text);min-width:260px;display:flex;align-items:center;gap:10px;animation:toastIn .3s ease;box-shadow:0 4px 20px rgba(0,0,0,.4);}
+.toast.ok {border-left:3px solid var(--success);}
+.toast.err{border-left:3px solid var(--danger);}
+@keyframes toastIn{from{transform:translateX(110%);opacity:0}to{transform:translateX(0);opacity:1}}
+
 @media(max-width:900px){
   :root{--sidebar:200px;}
   .cards-row{grid-template-columns:repeat(2,1fr);}
@@ -244,7 +251,10 @@ tr:hover td{background:rgba(255,255,255,.02);}
     <div class="page" id="page-pilots">
       <div class="sec-header gap-b">
         <div class="sec-title">Pilotos cadastrados</div>
-        <span id="pilots-count" style="font-size:12px;color:var(--text-dim);"></span>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <span id="pilots-count" style="font-size:12px;color:var(--text-dim);"></span>
+          <button class="btn-gold" onclick="openAddModal()" style="padding:8px 18px;font-size:11px;">+ Novo piloto</button>
+        </div>
       </div>
       <div class="table-wrap">
         <table>
@@ -272,6 +282,9 @@ tr:hover td{background:rgba(255,255,255,.02);}
   </div>
 </main>
 
+<!-- TOAST CONTAINER -->
+<div class="toast-wrap" id="toast-wrap"></div>
+
 <!-- EDIT PILOT MODAL -->
 <div class="modal-overlay" id="editModal">
   <div class="modal">
@@ -290,12 +303,46 @@ tr:hover td{background:rgba(255,255,255,.02);}
     <div class="form-group"><label>Role</label>
       <select id="edit-role">
         <option value="pilot">Pilot</option>
+        <option value="staff">Staff</option>
         <option value="admin">Admin</option>
       </select>
     </div>
     <div class="modal-actions">
       <button class="btn-ghost" onclick="closeModal()">Cancelar</button>
       <button class="btn-gold" onclick="savePilot()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD PILOT MODAL -->
+<div class="modal-overlay" id="addModal">
+  <div class="modal">
+    <div class="modal-title">Cadastrar novo piloto</div>
+    <div class="form-group"><label>Nome completo</label><input id="add-name" type="text" placeholder="João Silva" /></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="form-group"><label>E-mail</label><input id="add-email" type="email" placeholder="piloto@email.com" /></div>
+      <div class="form-group"><label>Senha inicial</label><input id="add-password" type="password" placeholder="mínimo 6 caracteres" /></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="form-group"><label>VID IVAO</label><input id="add-vid" type="text" placeholder="123456" /></div>
+      <div class="form-group"><label>Aeronave</label>
+        <select id="add-aircraft">
+          <option>Boeing 737-800</option>
+          <option>Airbus A320</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group"><label>Role</label>
+      <select id="add-role">
+        <option value="pilot">Piloto</option>
+        <option value="staff">Staff</option>
+        <option value="admin">Admin</option>
+      </select>
+    </div>
+    <div id="add-error" style="display:none;color:var(--danger);font-size:12px;margin-top:4px;"></div>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeAddModal()">Cancelar</button>
+      <button class="btn-gold" id="add-btn" onclick="createPilot()">Criar conta</button>
     </div>
   </div>
 </div>
@@ -473,7 +520,7 @@ async function approveApp(uid) {
   app.status = 'approved';
   allPilots.push({ id: uid, name: app.name, vid: app.vid, email: app.email, aircraft: app.aircraft, hours: 0, flights: 0, role: 'pilot' });
   updateBadges(); renderOverview(); renderApps(); renderPilots();
-  alert(`✓ ${app.name} aprovado(a)!`);
+  toast(`${app.name} aprovado(a) com sucesso!`);
 }
 
 async function rejectApp(uid) {
@@ -503,6 +550,7 @@ function renderPilots() {
       <td><span class="badge ${p.role==='admin'?'admin':'pilot'}">${p.role==='admin'?'Admin':'Pilot'}</span></td>
       <td style="display:flex;gap:6px;">
         <button class="btn-sm" onclick="openEditModal('${p.id}')">Editar</button>
+        <button class="btn-sm reject" onclick="deletePilot('${p.id}','${(p.name||'').replace(/'/g,'')}')">Excluir</button>
       </td>
     </tr>`).join('');
 }
@@ -520,7 +568,87 @@ function openEditModal(uid) {
   document.getElementById('editModal').classList.add('open');
 }
 
-function closeModal() { document.getElementById('editModal').classList.remove('open'); }
+function closeModal()    { document.getElementById('editModal').classList.remove('open'); }
+function openAddModal() { document.getElementById('addModal').classList.add('open'); document.getElementById('add-error').style.display='none'; }
+function closeAddModal(){ document.getElementById('addModal').classList.remove('open'); }
+
+/* ── TOAST ── */
+function toast(msg, type='ok') {
+  const wrap = document.getElementById('toast-wrap');
+  const el = document.createElement('div');
+  el.className = 'toast ' + type;
+  el.innerHTML = (type==='ok' ? '✓ ' : '✗ ') + msg;
+  wrap.appendChild(el);
+  setTimeout(() => el.remove(), 4000);
+}
+
+/* ── DELETE PILOT ── */
+async function deletePilot(uid, name) {
+  if (!confirm(`Excluir o piloto "${name}"?\n\nIsso remove os dados do Firestore. O acesso ao site será bloqueado mas a conta de e-mail não será excluída.`)) return;
+  try {
+    await db.collection('users').doc(uid).delete();
+    allPilots = allPilots.filter(p => p.id !== uid);
+    renderPilots(); renderOverview(); updateBadges();
+    toast(`${name} excluído com sucesso.`);
+  } catch(e) {
+    toast('Erro ao excluir: ' + e.message, 'err');
+  }
+}
+
+/* ── ADD PILOT ── */
+async function createPilot() {
+  const name     = document.getElementById('add-name').value.trim();
+  const email    = document.getElementById('add-email').value.trim();
+  const password = document.getElementById('add-password').value;
+  const vid      = document.getElementById('add-vid').value.trim();
+  const aircraft = document.getElementById('add-aircraft').value;
+  const role     = document.getElementById('add-role').value;
+  const errEl    = document.getElementById('add-error');
+
+  errEl.style.display = 'none';
+  if (!name || !email || !password || !vid) {
+    errEl.textContent = 'Preencha todos os campos obrigatórios.';
+    errEl.style.display = 'block'; return;
+  }
+  if (password.length < 6) {
+    errEl.textContent = 'A senha deve ter pelo menos 6 caracteres.';
+    errEl.style.display = 'block'; return;
+  }
+
+  const btn = document.getElementById('add-btn');
+  btn.disabled = true; btn.textContent = 'Criando...';
+
+  try {
+    // Usa app secundário para não deslogar o admin
+    const secondary = firebase.initializeApp(firebase.app().options, 'tmp_' + Date.now());
+    const secAuth   = secondary.auth();
+    const cred      = await secAuth.createUserWithEmailAndPassword(email, password);
+    const newUid    = cred.user.uid;
+    await secAuth.signOut();
+    await secondary.delete();
+
+    const doc = {
+      name, email, vid, aircraft, role,
+      hours: 0, flights: 0,
+      joinDate: new Date().toISOString().slice(0,10),
+      status: 'active',
+      permissions: { pirep:true, flights:true, routes:true, ranking:true, downloads:true, notifications:true }
+    };
+    await db.collection('users').doc(newUid).set(doc);
+    allPilots.push({ id: newUid, ...doc });
+    renderPilots(); renderOverview();
+    closeAddModal();
+    document.getElementById('addModal').querySelectorAll('input').forEach(i=>i.value='');
+    toast(`${name} cadastrado com sucesso!`);
+  } catch(e) {
+    errEl.textContent = e.code === 'auth/email-already-in-use'
+      ? 'Este e-mail já está em uso.'
+      : 'Erro: ' + e.message;
+    errEl.style.display = 'block';
+  }
+
+  btn.disabled = false; btn.textContent = 'Criar conta';
+}
 
 async function savePilot() {
   const uid = document.getElementById('edit-uid').value;
@@ -536,7 +664,7 @@ async function savePilot() {
   const idx = allPilots.findIndex(p=>p.id===uid);
   if (idx>=0) Object.assign(allPilots[idx], data);
   closeModal(); renderPilots(); renderOverview();
-  alert('✓ Piloto atualizado!');
+  toast('Piloto atualizado com sucesso!');
 }
 
 /* ── PIREPS ── */
@@ -593,7 +721,7 @@ async function approvePirep(pirepId, userId, dur) {
   if (pirep) pirep.status = 'approved';
   if (pilot) { pilot.hours = newHours; pilot.flights = newFlights; }
   updateBadges(); renderOverview(); renderPireps(); renderPilots();
-  alert('✓ PIREP aprovado! Horas atualizadas.');
+  toast('PIREP aprovado! Horas atualizadas.');
 }
 
 async function rejectPirep(pirepId) {
