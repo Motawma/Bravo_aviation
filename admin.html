@@ -729,6 +729,7 @@ async function createPilot() {
       hours: 0, flights: 0,
       joinDate: new Date().toISOString().slice(0,10),
       status: 'active',
+      mustChangePassword: true,
       permissions: { pirep:true, flights:true, routes:true, ranking:true, downloads:true, notifications:true }
     };
     await db.collection('users').doc(newUid).set(doc);

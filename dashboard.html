@@ -8,7 +8,7 @@
 <meta http-equiv="Expires" content="0" />
 <title>Dashboard — Bravo Virtual Airline</title>
 <script>
-  const PAGE_VERSION = '4';
+  const PAGE_VERSION = '5';
   const key = 'brv_v_dashboard';
   if (sessionStorage.getItem(key) !== PAGE_VERSION) {
     sessionStorage.setItem(key, PAGE_VERSION);
@@ -676,6 +676,24 @@ tr:hover td { background: rgba(255,255,255,0.02); }
   </div>
 </main>
 
+<!-- Modal: primeiro acesso — troca de senha obrigatória -->
+<div id="modal-first-pwd" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:99999;align-items:center;justify-content:center;">
+  <div style="background:#100E25;border:1px solid #1E1840;border-radius:6px;padding:36px;max-width:380px;width:90%;">
+    <div style="font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:700;color:#00EEFF;margin-bottom:6px">Primeiro acesso</div>
+    <p style="color:#9A8FB8;font-size:13px;margin-bottom:24px;line-height:1.6">Por segurança, defina uma nova senha pessoal antes de continuar. A senha fornecida pelo staff será substituída.</p>
+    <div style="margin-bottom:16px">
+      <label style="display:block;font-size:10px;font-weight:600;letter-spacing:0.15em;text-transform:uppercase;color:#4A4068;margin-bottom:7px">Nova senha</label>
+      <input type="password" id="fpwd-new" placeholder="Mínimo 6 caracteres" style="width:100%;background:#080612;border:1px solid #1E1840;color:#F0EAF8;padding:11px 14px;border-radius:4px;font-size:13px;font-family:'Inter',sans-serif;" />
+    </div>
+    <div style="margin-bottom:16px">
+      <label style="display:block;font-size:10px;font-weight:600;letter-spacing:0.15em;text-transform:uppercase;color:#4A4068;margin-bottom:7px">Confirmar nova senha</label>
+      <input type="password" id="fpwd-confirm" placeholder="Repita a nova senha" style="width:100%;background:#080612;border:1px solid #1E1840;color:#F0EAF8;padding:11px 14px;border-radius:4px;font-size:13px;font-family:'Inter',sans-serif;" />
+    </div>
+    <div id="fpwd-error" style="display:none;color:#e05555;font-size:12px;margin-bottom:14px;"></div>
+    <button id="fpwd-btn" onclick="changeFirstPassword()" style="width:100%;padding:12px;background:#00EEFF;color:#000;border:none;font-weight:700;font-size:13px;border-radius:4px;cursor:pointer;font-family:'Inter',sans-serif;">Definir senha e entrar</button>
+  </div>
+</div>
+
 <!-- Modal: confirmar rota para o ACARS -->
 <div id="modal-route" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center;">
   <div style="background:#100E25;border:1px solid #1E1840;border-radius:6px;padding:32px;max-width:380px;width:90%;">
@@ -761,6 +779,13 @@ auth.onAuthStateChanged(async (fbUser) => {
       role:        data.role        || 'pilot',
       permissions: data.permissions || {}
     };
+
+    // Primeiro acesso: força troca de senha
+    if (data.mustChangePassword) {
+      document.body.style.visibility = '';
+      document.getElementById('modal-first-pwd').style.display = 'flex';
+      return;
+    }
 
     // Carrega PIREPs do Firestore
     try {
@@ -1185,6 +1210,41 @@ function setupLiveFlights() {
       </tr>`;
     }).join('');
   });
+}
+
+/* ── PRIMEIRO ACESSO ── */
+async function changeFirstPassword() {
+  const newPwd  = document.getElementById('fpwd-new').value;
+  const confirm = document.getElementById('fpwd-confirm').value;
+  const errEl   = document.getElementById('fpwd-error');
+  const btn     = document.getElementById('fpwd-btn');
+  errEl.style.display = 'none';
+
+  if (newPwd.length < 6) {
+    errEl.textContent = 'A senha deve ter pelo menos 6 caracteres.';
+    errEl.style.display = 'block'; return;
+  }
+  if (newPwd !== confirm) {
+    errEl.textContent = 'As senhas não coincidem.';
+    errEl.style.display = 'block'; return;
+  }
+
+  btn.disabled = true; btn.textContent = 'Salvando...';
+  try {
+    await firebase.auth().currentUser.updatePassword(newPwd);
+    await db.collection('users').doc(user.uid).update({ mustChangePassword: false });
+    document.getElementById('modal-first-pwd').style.display = 'none';
+    // Continua carregando o dashboard normalmente
+    initUserUI();
+    applyPermissions(user.permissions);
+    setupLiveFlights();
+  } catch(e) {
+    btn.disabled = false; btn.textContent = 'Definir senha e entrar';
+    errEl.textContent = e.code === 'auth/requires-recent-login'
+      ? 'Sessão expirada. Faça login novamente.'
+      : 'Erro: ' + e.message;
+    errEl.style.display = 'block';
+  }
 }
 
 /* ── PILOT STATS ── */
