@@ -1269,27 +1269,54 @@ function calcPilotStats() {
 /* ── METAR ── */
 async function fetchMETAR() {
   try {
-    const res = await fetch('https://aviationweather.gov/api/data/metar?ids=SBGR&format=json&taf=false');
-    const data = await res.json();
-    if (!data || !data.length) return;
-    const m = data[0];
-    const wdir = m.wdir === 'VRB' ? 'Variável' : (m.wdir + '°');
-    const gust = m.wgst ? ` (raj. ${m.wgst}kt)` : '';
-    document.getElementById('metar-wind').innerHTML   = `<span class="mv">${wdir} / ${m.wspd}kt${gust}</span>`;
-    const vis = m.visib === '10+' ? '10 SM +' : (m.visib + ' SM');
-    document.getElementById('metar-vis').innerHTML    = `<span class="mv">${vis}</span>`;
-    const clouds = m.clouds && m.clouds.length
-      ? m.clouds.map(c => `${c.cover}${c.base ? ' ' + (c.base * 100) + 'ft' : ''}`).join(' · ')
-      : 'CLR';
-    document.getElementById('metar-clouds').innerHTML = `<span class="mv">${clouds}</span>`;
-    document.getElementById('metar-temp').innerHTML   = `<span class="mv">${m.temp}°C / DP ${m.dewp}°C</span>`;
-    const qnh = m.altim ? Math.round(m.altim * 33.8639) : '—';
-    document.getElementById('metar-qnh').innerHTML    = `<span class="mv">${qnh} hPa</span>`;
-    document.getElementById('metar-raw').textContent  = m.rawOb || '';
-    if (m.reportTime) {
-      const t = new Date(m.reportTime);
-      document.getElementById('metar-time').textContent = t.toISOString().slice(11,16) + 'Z';
+    const res = await fetch('https://metar.vatsim.net/metar.php?id=SBGR');
+    const raw = (await res.text()).trim();
+    if (!raw || raw.toLowerCase().includes('no metar')) throw new Error('no data');
+
+    // Vento
+    const wm = raw.match(/(\d{3}|VRB)(\d{2,3})(G(\d{2,3}))?KT/);
+    const wdir = wm ? (wm[1] === 'VRB' ? 'Variável' : wm[1] + '°') : '—';
+    const wspd = wm ? wm[2] + 'kt' : '—';
+    const gust = wm && wm[4] ? ` (raj. ${wm[4]}kt)` : '';
+    document.getElementById('metar-wind').innerHTML   = `<span class="mv">${wdir} / ${wspd}${gust}</span>`;
+
+    // Visibilidade
+    let visStr = '—';
+    if (/CAVOK/.test(raw)) { visStr = 'CAVOK'; }
+    else {
+      const vm = raw.match(/(?:^|\s)(\d{4})(?:\s|$)/);
+      if (vm) { const v = parseInt(vm[1]); visStr = v >= 9999 ? '10km +' : v >= 1000 ? (v/1000).toFixed(1)+'km' : v+'m'; }
     }
+    document.getElementById('metar-vis').innerHTML    = `<span class="mv">${visStr}</span>`;
+
+    // Nuvens
+    let cloudStr = 'CAVOK';
+    if (!/CAVOK|CLR|SKC|NCD/.test(raw)) {
+      const cm = [...raw.matchAll(/(FEW|SCT|BKN|OVC)(\d{3})/g)];
+      cloudStr = cm.length ? cm.map(c => `${c[1]} ${parseInt(c[2])*100}ft`).join(' · ') : '—';
+    }
+    document.getElementById('metar-clouds').innerHTML = `<span class="mv">${cloudStr}</span>`;
+
+    // Temperatura / ponto de orvalho
+    const tm = raw.match(/\s(M?\d{2})\/(M?\d{2})\s/);
+    if (tm) {
+      const t = tm[1].replace('M','-'), d = tm[2].replace('M','-');
+      document.getElementById('metar-temp').innerHTML = `<span class="mv">${t}°C / DP ${d}°C</span>`;
+    }
+
+    // QNH
+    const qm = raw.match(/Q(\d{4})/);
+    const am = raw.match(/A(\d{4})/);
+    if (qm) document.getElementById('metar-qnh').innerHTML = `<span class="mv">${qm[1]} hPa</span>`;
+    else if (am) document.getElementById('metar-qnh').innerHTML = `<span class="mv">${Math.round(parseInt(am[1])/100*33.8639)} hPa</span>`;
+
+    // Horário
+    const hm = raw.match(/\d{2}(\d{2})(\d{2})Z/);
+    if (hm) document.getElementById('metar-time').textContent = hm[1]+':'+hm[2]+'Z';
+
+    // METAR bruto
+    document.getElementById('metar-raw').textContent = raw;
+
   } catch(_) {
     document.getElementById('metar-wind').textContent = 'METAR indisponível';
   }
