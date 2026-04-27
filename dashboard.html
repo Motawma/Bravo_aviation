@@ -8,7 +8,7 @@
 <meta http-equiv="Expires" content="0" />
 <title>Dashboard — Bravo Virtual Airline</title>
 <script>
-  const PAGE_VERSION = '3';
+  const PAGE_VERSION = '4';
   const key = 'brv_v_dashboard';
   if (sessionStorage.getItem(key) !== PAGE_VERSION) {
     sessionStorage.setItem(key, PAGE_VERSION);
@@ -272,11 +272,54 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 .live-dot { display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--green,#3db07a); box-shadow:0 0 6px var(--green,#3db07a); margin-right:6px; animation: pulse 1.5s infinite; }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
 
+/* ── PILOT STATS BAR ── */
+.pilot-stats-bar { background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;display:flex;align-items:center;overflow-x:auto;margin-bottom:24px; }
+.pilot-stats-bar .ps-label { font-size:10px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:var(--text-dim);white-space:nowrap;padding-right:20px;border-right:1px solid var(--border);margin-right:20px;flex-shrink:0; }
+.pilot-stat-item { display:flex;align-items:center;gap:10px;padding:0 20px;border-right:1px solid var(--border);flex-shrink:0; }
+.pilot-stat-item:last-child { border-right:none; }
+.pilot-stat-icon { font-size:18px; }
+.pilot-stat-value { font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;color:var(--text);line-height:1.2; }
+.pilot-stat-sub { font-size:10px;color:var(--text-dim); }
+
+/* ── METAR ── */
+.metar-card { background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px; }
+.metar-icao { font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;color:var(--gold); }
+.metar-name { font-size:11px;color:var(--text-dim);margin-bottom:10px; }
+.metar-row { display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid rgba(30,24,64,0.5);font-size:13px;color:var(--text-sec); }
+.metar-row:last-of-type { border-bottom:none; }
+.mi { font-size:15px;width:22px;text-align:center; }
+.mv { color:var(--text);font-weight:500; }
+.metar-raw { font-family:monospace;font-size:10px;color:var(--text-dim);margin-top:10px;line-height:1.5;word-break:break-all;background:var(--bg);border-radius:2px;padding:8px; }
+
+/* ── CALENDAR ── */
+.cal-card { background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px; }
+.cal-header { display:flex;align-items:center;justify-content:space-between;margin-bottom:12px; }
+.cal-month { font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700; }
+.cal-nav { background:none;border:none;cursor:pointer;color:var(--text-dim);font-size:13px;padding:4px 8px;border-radius:2px;transition:color 0.2s; }
+.cal-nav:hover { color:var(--gold); }
+.cal-grid { display:grid;grid-template-columns:repeat(7,1fr);gap:2px; }
+.cal-day-name { font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text-dim);text-align:center;padding:4px 0; }
+.cal-day { text-align:center;padding:6px 2px;font-size:12px;color:var(--text-sec);border-radius:50%;cursor:default; }
+.cal-day.today { background:var(--gold);color:#000;font-weight:700; }
+.cal-day.other-month { opacity:0.3; }
+
+/* ── NOTAMS ── */
+.notam-card { background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px; }
+.notam-item { padding:10px 0;border-bottom:1px solid rgba(30,24,64,0.4); }
+.notam-item:last-child { border-bottom:none; }
+.notam-id { font-size:9px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:var(--gold);margin-bottom:3px; }
+.notam-title { font-size:12px;font-weight:600;color:var(--text);line-height:1.4;margin-bottom:3px; }
+.notam-date { font-size:10px;color:var(--text-dim); }
+
+/* ── INFO GRID ── */
+.info-grid-3 { display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:24px; }
+
 /* ── RESPONSIVE ── */
 @media (max-width: 1100px) {
   :root { --sidebar: 200px; }
   .routes-grid, .downloads-grid { grid-template-columns: repeat(2,1fr); }
   .cards-row { grid-template-columns: repeat(2,1fr); }
+  .info-grid-3 { grid-template-columns: 1fr 1fr; }
 }
 @media (max-width: 768px) {
   aside { position: fixed; left: -240px; transition: left 0.3s; z-index: 200; width: 240px; }
@@ -286,6 +329,9 @@ tr:hover td { background: rgba(255,255,255,0.02); }
   .routes-grid, .downloads-grid { grid-template-columns: 1fr; }
   .cards-row { grid-template-columns: repeat(2,1fr); }
   .profile-grid, .two-col, .form-grid-2, .form-grid-3 { grid-template-columns: 1fr; }
+  .info-grid-3 { grid-template-columns: 1fr; }
+  .pilot-stats-bar { flex-wrap:wrap;gap:12px; }
+  .pilot-stat-item { border-right:none;padding:0; }
 }
 </style>
 </head>
@@ -403,12 +449,72 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 
       <!-- Rank progress -->
       <div class="sec-header"><div class="sec-title">Progresso de patente</div></div>
-      <div class="rank-card">
+      <div class="rank-card gap-b">
         <div class="rank-tiers" id="ov-tiers"></div>
         <div class="progress-bar"><div class="progress-fill" id="ov-progress-fill" style="width:0%"></div></div>
         <div class="progress-meta">
           <span id="ov-prog-cur">—</span>
           <span id="ov-prog-next">—</span>
+        </div>
+      </div>
+
+      <!-- PILOT STATS -->
+      <div class="pilot-stats-bar">
+        <div class="ps-label">Pilot Stats</div>
+        <div class="pilot-stat-item">
+          <span class="pilot-stat-icon">✈️</span>
+          <div><div class="pilot-stat-value" id="ps-ac">—</div><div class="pilot-stat-sub">Aeronave mais voada</div></div>
+        </div>
+        <div class="pilot-stat-item">
+          <span class="pilot-stat-icon">🏢</span>
+          <div><div class="pilot-stat-value" id="ps-airport">—</div><div class="pilot-stat-sub">Aeroporto mais usado</div></div>
+        </div>
+        <div class="pilot-stat-item">
+          <span class="pilot-stat-icon">🗺️</span>
+          <div><div class="pilot-stat-value" id="ps-route">—</div><div class="pilot-stat-sub">Rota mais voada</div></div>
+        </div>
+        <div class="pilot-stat-item">
+          <span class="pilot-stat-icon">🔁</span>
+          <div><div class="pilot-stat-value" id="ps-cycles">0</div><div class="pilot-stat-sub">Ciclos de voo</div></div>
+        </div>
+        <div class="pilot-stat-item">
+          <span class="pilot-stat-icon">📍</span>
+          <div><div class="pilot-stat-value">SBGR</div><div class="pilot-stat-sub">Hub principal</div></div>
+        </div>
+      </div>
+
+      <!-- INFO GRID: METAR + CALENDAR + NOTAMS -->
+      <div class="info-grid-3">
+        <!-- METAR -->
+        <div class="metar-card">
+          <div class="sec-header" style="margin-bottom:12px">
+            <div><div class="metar-icao">SBGR</div><div class="metar-name">Guarulhos — Hub BRV</div></div>
+            <span style="font-size:10px;color:var(--text-dim)" id="metar-time">—</span>
+          </div>
+          <div class="metar-row"><span class="mi">💨</span><span id="metar-wind">Carregando...</span></div>
+          <div class="metar-row"><span class="mi">👁️</span><span id="metar-vis">—</span></div>
+          <div class="metar-row"><span class="mi">☁️</span><span id="metar-clouds">—</span></div>
+          <div class="metar-row"><span class="mi">🌡️</span><span id="metar-temp">—</span></div>
+          <div class="metar-row"><span class="mi">📊</span><span id="metar-qnh">—</span></div>
+          <div class="metar-raw" id="metar-raw"></div>
+        </div>
+
+        <!-- CALENDAR -->
+        <div class="cal-card">
+          <div class="cal-header">
+            <button class="cal-nav" onclick="calMove(-1)">◀</button>
+            <div class="cal-month" id="cal-month-label"></div>
+            <button class="cal-nav" onclick="calMove(1)">▶</button>
+          </div>
+          <div class="cal-grid" id="cal-grid"></div>
+        </div>
+
+        <!-- NOTAMS -->
+        <div class="notam-card">
+          <div class="sec-header" style="margin-bottom:12px">
+            <div class="sec-title" style="font-size:14px">NOTAMs</div>
+          </div>
+          <div id="notams-list"><div style="padding:16px;text-align:center;color:var(--text-dim);font-size:13px">Carregando...</div></div>
         </div>
       </div>
 
@@ -604,6 +710,11 @@ const db   = firebase.firestore();
 /* ── AUTH ── */
 let user = null;
 let flights = [];
+
+/* ── CALENDAR GLOBALS ── */
+let calDate = new Date();
+const MONTHS_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const DAYS_CAL  = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 
 // Oculta tudo até confirmar auth
 document.body.style.visibility = 'hidden';
@@ -900,6 +1011,12 @@ function initUserUI() {
 
   // Notification badge
   updateNotifBadge();
+
+  // Novos painéis
+  calcPilotStats();
+  fetchMETAR();
+  renderCalendar();
+  loadNotams();
 }
 
 function updateNotifBadge() {
@@ -1068,6 +1185,95 @@ function setupLiveFlights() {
       </tr>`;
     }).join('');
   });
+}
+
+/* ── PILOT STATS ── */
+function calcPilotStats() {
+  const approved = flights.filter(f => f.status === 'approved');
+  const acCount = {}, apCount = {}, rtCount = {};
+  approved.forEach(f => {
+    if (f.ac)  acCount[f.ac] = (acCount[f.ac] || 0) + 1;
+    if (f.dep) apCount[f.dep] = (apCount[f.dep] || 0) + 1;
+    if (f.arr) apCount[f.arr] = (apCount[f.arr] || 0) + 1;
+    if (f.dep && f.arr) { const k = f.dep + '→' + f.arr; rtCount[k] = (rtCount[k] || 0) + 1; }
+  });
+  const topAc = Object.entries(acCount).sort((a,b) => b[1]-a[1])[0];
+  const topAp = Object.entries(apCount).sort((a,b) => b[1]-a[1])[0];
+  const topRt = Object.entries(rtCount).sort((a,b) => b[1]-a[1])[0];
+  document.getElementById('ps-ac').textContent      = topAc ? topAc[0] : '—';
+  document.getElementById('ps-airport').textContent = topAp ? topAp[0] : '—';
+  document.getElementById('ps-route').textContent   = topRt ? topRt[0] : '—';
+  document.getElementById('ps-cycles').textContent  = approved.length;
+}
+
+/* ── METAR ── */
+async function fetchMETAR() {
+  try {
+    const res = await fetch('https://aviationweather.gov/api/data/metar?ids=SBGR&format=json&taf=false');
+    const data = await res.json();
+    if (!data || !data.length) return;
+    const m = data[0];
+    const wdir = m.wdir === 'VRB' ? 'Variável' : (m.wdir + '°');
+    const gust = m.wgst ? ` (raj. ${m.wgst}kt)` : '';
+    document.getElementById('metar-wind').innerHTML   = `<span class="mv">${wdir} / ${m.wspd}kt${gust}</span>`;
+    const vis = m.visib === '10+' ? '10 SM +' : (m.visib + ' SM');
+    document.getElementById('metar-vis').innerHTML    = `<span class="mv">${vis}</span>`;
+    const clouds = m.clouds && m.clouds.length
+      ? m.clouds.map(c => `${c.cover}${c.base ? ' ' + (c.base * 100) + 'ft' : ''}`).join(' · ')
+      : 'CLR';
+    document.getElementById('metar-clouds').innerHTML = `<span class="mv">${clouds}</span>`;
+    document.getElementById('metar-temp').innerHTML   = `<span class="mv">${m.temp}°C / DP ${m.dewp}°C</span>`;
+    const qnh = m.altim ? Math.round(m.altim * 33.8639) : '—';
+    document.getElementById('metar-qnh').innerHTML    = `<span class="mv">${qnh} hPa</span>`;
+    document.getElementById('metar-raw').textContent  = m.rawOb || '';
+    if (m.reportTime) {
+      const t = new Date(m.reportTime);
+      document.getElementById('metar-time').textContent = t.toISOString().slice(11,16) + 'Z';
+    }
+  } catch(_) {
+    document.getElementById('metar-wind').textContent = 'METAR indisponível';
+  }
+}
+
+/* ── CALENDAR ── */
+function renderCalendar() {
+  const today = new Date();
+  const y = calDate.getFullYear(), mo = calDate.getMonth();
+  document.getElementById('cal-month-label').textContent = MONTHS_PT[mo] + ' ' + y;
+  const firstDay   = new Date(y, mo, 1).getDay();
+  const daysInMo   = new Date(y, mo + 1, 0).getDate();
+  const daysInPrev = new Date(y, mo, 0).getDate();
+  let html = DAYS_CAL.map(d => `<div class="cal-day-name">${d}</div>`).join('');
+  for (let i = firstDay - 1; i >= 0; i--) html += `<div class="cal-day other-month">${daysInPrev - i}</div>`;
+  for (let d = 1; d <= daysInMo; d++) {
+    const isToday = d === today.getDate() && mo === today.getMonth() && y === today.getFullYear();
+    html += `<div class="cal-day${isToday ? ' today' : ''}">${d}</div>`;
+  }
+  const total = Math.ceil((firstDay + daysInMo) / 7) * 7;
+  for (let d = 1; d <= total - firstDay - daysInMo; d++) html += `<div class="cal-day other-month">${d}</div>`;
+  document.getElementById('cal-grid').innerHTML = html;
+}
+function calMove(dir) { calDate.setMonth(calDate.getMonth() + dir); renderCalendar(); }
+
+/* ── NOTAMS ── */
+async function loadNotams() {
+  const el = document.getElementById('notams-list');
+  try {
+    const snap = await db.collection('notams').orderBy('createdAt', 'desc').limit(6).get();
+    if (snap.empty) throw new Error('empty');
+    el.innerHTML = snap.docs.map(doc => {
+      const d = doc.data();
+      const dt = d.createdAt ? new Date(d.createdAt.seconds * 1000).toLocaleDateString('pt-BR') : '';
+      return `<div class="notam-item"><div class="notam-id">${d.code || 'NOTAM'}</div><div class="notam-title">${d.title}</div><div class="notam-date">Publicado em ${dt}</div></div>`;
+    }).join('');
+  } catch(_) {
+    const fallback = [
+      { code:'NOTAM A', title:'Uso obrigatório de livery oficial da VA em voos online', date:'15 Abr 2025' },
+      { code:'NOTAM B', title:'Transponder Modo C obrigatório acima de 1.000ft AGL', date:'01 Mar 2025' },
+      { code:'NOTAM C', title:'PIREPs manuais aceitos em até 24h após o voo', date:'15 Fev 2025' },
+    ];
+    el.innerHTML = fallback.map(n => `<div class="notam-item"><div class="notam-id">${n.code}</div><div class="notam-title">${n.title}</div><div class="notam-date">Publicado em ${n.date}</div></div>`).join('');
+  }
 }
 
 /* ── DOWNLOAD FAKE ── */
