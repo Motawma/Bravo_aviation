@@ -316,6 +316,27 @@ tr:hover td{background:rgba(255,255,255,.02);}
 <!-- TOAST CONTAINER -->
 <div class="toast-wrap" id="toast-wrap"></div>
 
+<!-- ACCESS MODAL -->
+<div class="modal-overlay" id="accessModal">
+  <div class="modal">
+    <div class="modal-title">✓ Piloto aprovado</div>
+    <p style="font-size:13px;color:var(--text-sec);margin-bottom:20px;">
+      <strong id="access-modal-name"></strong> foi aprovado(a) com sucesso.
+    </p>
+    <div id="access-modal-email-status" style="font-size:12px;margin-bottom:16px;"></div>
+    <div style="background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:16px;margin-bottom:20px;">
+      <div style="font-size:10px;font-weight:600;letter-spacing:0.15em;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px;">Credenciais de acesso temporário</div>
+      <div style="font-size:12px;color:var(--text-sec);margin-bottom:4px;">E-mail: <span style="color:var(--text)" id="access-modal-email"></span></div>
+      <div style="font-size:12px;color:var(--text-sec);margin-bottom:12px;">Senha: <span style="color:var(--gold);font-family:monospace;font-size:14px;font-weight:700;" id="access-modal-pwd"></span></div>
+      <button onclick="navigator.clipboard.writeText(document.getElementById('access-modal-pwd').textContent).then(()=>toast('Senha copiada!'))" style="background:none;border:1px solid var(--border);color:var(--text-sec);padding:5px 12px;border-radius:4px;font-size:11px;cursor:pointer;">Copiar senha</button>
+    </div>
+    <p style="font-size:11px;color:var(--text-dim);margin-bottom:20px;">No primeiro acesso o piloto será obrigado a definir uma nova senha.</p>
+    <div class="modal-actions">
+      <button class="btn-gold" onclick="document.getElementById('accessModal').classList.remove('open')">Fechar</button>
+    </div>
+  </div>
+</div>
+
 <!-- EDIT PILOT MODAL -->
 <div class="modal-overlay" id="editModal">
   <div class="modal">
@@ -573,12 +594,11 @@ function filterApps(status, el) {
 }
 
 async function approveApp(appId) {
-  if (!confirm('Aprovar esta candidatura?\nUm e-mail será enviado ao piloto para definir a senha de acesso.')) return;
+  if (!confirm('Aprovar esta candidatura?')) return;
   const app = allApplications.find(a => a.id === appId);
   if (!app) return;
 
   try {
-    // Cria conta Firebase Auth via app secundário (não desloga o admin)
     const secondary = firebase.initializeApp(firebase.app().options, 'approve_' + Date.now());
     const secAuth   = secondary.auth();
     const tempPwd   = Math.random().toString(36).slice(-8) + 'Aa1!';
@@ -587,36 +607,58 @@ async function approveApp(appId) {
     await secAuth.signOut();
     await secondary.delete();
 
-    // Cria doc no Firestore com o UID real do Firebase Auth
     await db.collection('users').doc(newUid).set({
       name: app.name, vid: app.vid, email: app.email,
       aircraft: app.aircraft || '', hours: 0, flights: 0,
       joinDate: new Date().toISOString().slice(0, 10),
       role: 'pilot', status: 'active',
+      mustChangePassword: true,
       permissions: { pirep:true, flights:true, routes:true, ranking:true, downloads:true, notifications:true }
     });
 
-    // Atualiza candidatura como aprovada
     await db.collection('applications').doc(appId).update({ status: 'approved', approvedUid: newUid });
 
-    // Envia e-mail para o piloto definir a própria senha
-    await auth.sendPasswordResetEmail(app.email);
+    // Tenta enviar e-mail de redefinição (best effort)
+    let emailSent = false;
+    try { await auth.sendPasswordResetEmail(app.email); emailSent = true; } catch(_) {}
 
     app.status = 'approved';
     allPilots.push({ id: newUid, name: app.name, vid: app.vid, email: app.email,
       aircraft: app.aircraft || '', hours: 0, flights: 0, role: 'pilot' });
     updateBadges(); renderOverview(); renderApps(); renderPilots();
-    toast(`${app.name} aprovado! E-mail enviado para ${app.email} para definir a senha.`);
+
+    // Mostra modal com senha temporária (plano B caso e-mail não chegue)
+    showAccessModal(app.name, app.email, tempPwd, emailSent);
+
   } catch(e) {
     if (e.code === 'auth/email-already-in-use') {
-      // Conta já existe — só aprova no Firestore
       await db.collection('applications').doc(appId).update({ status: 'approved' });
       app.status = 'approved';
       updateBadges(); renderOverview(); renderApps();
-      toast(`${app.name} aprovado! (conta já existia no sistema)`, 'ok');
+      toast(`${app.name} aprovado! (conta já existia no sistema)`);
     } else {
       toast('Erro ao aprovar: ' + e.message, 'err');
     }
+  }
+}
+
+function showAccessModal(name, email, pwd, emailSent) {
+  document.getElementById('access-modal-name').textContent  = name;
+  document.getElementById('access-modal-email').textContent = email;
+  document.getElementById('access-modal-pwd').textContent   = pwd;
+  document.getElementById('access-modal-email-status').textContent =
+    emailSent ? '✓ E-mail de redefinição enviado para ' + email : '⚠ E-mail não enviado — use a senha abaixo';
+  document.getElementById('access-modal-email-status').style.color =
+    emailSent ? 'var(--success)' : 'var(--gold)';
+  document.getElementById('accessModal').classList.add('open');
+}
+
+async function resendAccessEmail(email) {
+  try {
+    await auth.sendPasswordResetEmail(email);
+    toast('E-mail de acesso reenviado para ' + email);
+  } catch(e) {
+    toast('Erro ao reenviar: ' + e.message, 'err');
   }
 }
 
@@ -647,6 +689,7 @@ function renderPilots() {
       <td><span class="badge ${p.role==='admin'?'admin':'pilot'}">${p.role==='admin'?'Admin':'Pilot'}</span></td>
       <td style="display:flex;gap:6px;">
         <button class="btn-sm" onclick="openEditModal('${p.id}')">Editar</button>
+        <button class="btn-sm" onclick="resendAccessEmail('${p.email||''}')">Reenviar acesso</button>
         <button class="btn-sm reject" onclick="deletePilot('${p.id}','${(p.name||'').replace(/'/g,'')}')">Excluir</button>
       </td>
     </tr>`).join('');
