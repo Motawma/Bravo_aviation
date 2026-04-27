@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<title>Bravo ACARS</title>
+<style>
+  :root {
+    --bg:    #080612;
+    --panel: #100E25;
+    --border:#1E1840;
+    --cyan:  #00EEFF;
+    --pink:  #FF2080;
+    --green: #3db07a;
+    --red:   #e05555;
+    --amber: #f0a500;
+    --text:  #F0EAF8;
+    --muted: #6A5F8A;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', monospace;
+    font-size: 13px;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── TOPBAR ─────────────────────────── */
+  #topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    -webkit-app-region: drag;
+  }
+  #topbar .brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--cyan);
+    letter-spacing: 0.08em;
+  }
+  #topbar .brand span { color: var(--text); font-weight: 400; font-size: 11px; }
+  #topbar .pilot-info { text-align: right; font-size: 11px; color: var(--muted); }
+  #topbar .pilot-info strong { display: block; color: var(--text); font-size: 13px; }
+  #btn-logout {
+    background: none; border: 1px solid var(--border);
+    color: var(--muted); font-size: 11px; padding: 4px 10px;
+    cursor: pointer; border-radius: 3px; -webkit-app-region: no-drag;
+  }
+  #btn-logout:hover { border-color: var(--red); color: var(--red); }
+
+  /* ── MAIN CONTENT ───────────────────── */
+  #main { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+
+  /* ── PANELS ─────────────────────────── */
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 14px;
+  }
+  .panel-title {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+
+  /* ── LOGIN ──────────────────────────── */
+  #screen-login { padding: 40px 24px; }
+  #screen-login h2 { color: var(--cyan); font-size: 22px; margin-bottom: 4px; }
+  #screen-login p  { color: var(--muted); margin-bottom: 24px; }
+  .field { margin-bottom: 12px; }
+  .field label { display: block; font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+  .field input {
+    width: 100%; padding: 9px 12px; background: var(--bg);
+    border: 1px solid var(--border); color: var(--text);
+    border-radius: 4px; font-size: 13px;
+  }
+  .field input:focus { outline: none; border-color: var(--cyan); }
+  #btn-login {
+    width: 100%; padding: 11px; background: var(--cyan); color: #000;
+    border: none; font-weight: 700; font-size: 14px; border-radius: 4px;
+    cursor: pointer; letter-spacing: 0.05em; margin-top: 6px;
+  }
+  #btn-login:disabled { opacity: 0.5; cursor: not-allowed; }
+  #login-err { color: var(--red); font-size: 12px; margin-top: 8px; min-height: 16px; }
+
+  /* ── SIM STATUS ─────────────────────── */
+  .sim-row { display: flex; align-items: center; justify-content: space-between; }
+  .sim-badge {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 12px; font-weight: 600;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+  .dot.on  { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .dot.err { background: var(--red); }
+
+  .sim-btns { display: flex; gap: 8px; }
+  .btn-sm {
+    padding: 5px 12px; font-size: 11px; font-weight: 600;
+    border-radius: 3px; cursor: pointer; border: 1px solid var(--border);
+  }
+  .btn-cyan  { background: var(--cyan);  color: #000; border-color: var(--cyan); }
+  .btn-ghost { background: transparent; color: var(--muted); }
+  .btn-ghost:hover { border-color: var(--cyan); color: var(--cyan); }
+  .btn-sm:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  #ac-name { font-size: 12px; color: var(--muted); margin-top: 6px; }
+  #ac-name strong { color: var(--text); }
+
+  /* ── ROUTE FIELDS ───────────────────── */
+  .route-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .rf label { font-size: 10px; color: var(--muted); display: block; margin-bottom: 3px; }
+  .rf input {
+    width: 100%; padding: 7px 10px; background: var(--bg);
+    border: 1px solid var(--border); color: var(--text);
+    border-radius: 4px; font-size: 13px; font-weight: 700; letter-spacing: 0.08em;
+  }
+  .rf input:focus { outline: none; border-color: var(--cyan); }
+
+  /* ── TELEMETRY ──────────────────────── */
+  .tele-phase {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.1em;
+    color: var(--cyan); text-transform: uppercase; margin-bottom: 8px;
+  }
+  .tele-timer { font-size: 28px; font-weight: 700; color: var(--text); margin-bottom: 10px; font-variant-numeric: tabular-nums; }
+  .tele-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 6px; }
+  .tele-item label { font-size: 10px; color: var(--muted); display: block; }
+  .tele-item span { font-size: 15px; font-weight: 700; color: var(--text); }
+
+  /* ── VIOLATIONS ─────────────────────── */
+  #violations-list { min-height: 20px; }
+  .viol-ok  { color: var(--green); font-size: 12px; }
+  .viol-err { display: flex; align-items: flex-start; gap: 6px; color: var(--amber); font-size: 12px; margin-bottom: 4px; }
+  .viol-err .vi { font-size: 14px; }
+
+  /* ── ACTION BUTTONS ─────────────────── */
+  #btn-start, #btn-stop {
+    flex: 1; padding: 13px; font-size: 14px; font-weight: 700;
+    border: none; border-radius: 4px; cursor: pointer; letter-spacing: 0.05em;
+  }
+  #btn-start { background: var(--green); color: #fff; }
+  #btn-start:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; }
+  #btn-stop  { background: var(--red); color: #fff; }
+  #btn-stop:disabled  { background: var(--border); color: var(--muted); cursor: not-allowed; }
+  .action-row { display: flex; gap: 10px; }
+
+  /* ── SUMMARY SCREEN ─────────────────── */
+  #screen-summary { padding: 20px; }
+  .summary-score {
+    font-size: 64px; font-weight: 700; text-align: center;
+    margin: 16px 0 4px;
+    color: var(--cyan);
+  }
+  .summary-score.bad { color: var(--red); }
+  .summary-label { text-align: center; font-size: 11px; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; }
+  .summary-stat { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .summary-stat:last-child { border: none; }
+  .summary-stat .k { color: var(--muted); }
+  .summary-badge {
+    display: inline-block; padding: 3px 10px; border-radius: 3px;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .badge-pending  { background: rgba(240,165,0,.15);  color: var(--amber); }
+  .badge-rejected { background: rgba(224,85,85,.15);  color: var(--red); }
+  .badge-ok       { background: rgba(61,176,122,.15); color: var(--green); }
+
+  #btn-new-flight {
+    width: 100%; padding: 11px; background: var(--cyan); color: #000;
+    border: none; font-weight: 700; font-size: 13px; border-radius: 4px;
+    cursor: pointer; letter-spacing: 0.05em; margin-top: 16px;
+  }
+
+  /* ── SCREENS ────────────────────────── */
+  .screen { display: none; }
+  .screen.active { display: flex; flex-direction: column; height: 100%; }
+</style>
+</head>
+<body>
+
+<!-- ─── TOPBAR ───────────────────────────────────────────── -->
+<div id="topbar" style="display:none">
+  <div class="brand">BRAVO ACARS <span>v1.0</span></div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <div class="pilot-info">
+      <strong id="topbar-name">—</strong>
+      <span id="topbar-vid">VID —</span>
+    </div>
+    <button id="btn-logout">Sair</button>
+  </div>
+</div>
+
+<!-- ─── SCREEN: LOGIN ────────────────────────────────────── -->
+<div id="screen-login" class="screen active">
+  <h2>Bravo ACARS</h2>
+  <p>Faça login com sua conta Bravo Aviation</p>
+  <div class="field">
+    <label>E-mail</label>
+    <input type="email" id="inp-email" placeholder="piloto@email.com" />
+  </div>
+  <div class="field">
+    <label>Senha</label>
+    <input type="password" id="inp-pass" placeholder="••••••••" />
+  </div>
+  <button id="btn-login">ENTRAR</button>
+  <div id="login-err"></div>
+</div>
+
+<!-- ─── SCREEN: MAIN (pré-voo + voo) ────────────────────── -->
+<div id="screen-main" class="screen">
+  <div id="main">
+
+    <!-- Simulador -->
+    <div class="panel">
+      <div class="panel-title">Simulador</div>
+      <div class="sim-row">
+        <div class="sim-badge">
+          <div class="dot" id="sim-dot"></div>
+          <span id="sim-label">Desconectado</span>
+        </div>
+        <div class="sim-btns">
+          <button class="btn-sm btn-ghost" id="btn-connect-msfs" onclick="connectSim('msfs')">MSFS</button>
+          <button class="btn-sm btn-ghost" id="btn-connect-xp"   onclick="connectSim('xplane')">X-Plane</button>
+          <button class="btn-sm btn-ghost" id="btn-disconnect-sim" onclick="disconnectSim()" style="display:none">Desconectar</button>
+        </div>
+      </div>
+      <div id="ac-name">Aeronave: <strong id="ac-title">—</strong></div>
+    </div>
+
+    <!-- Rota -->
+    <div class="panel">
+      <div class="panel-title" style="display:flex;align-items:center;justify-content:space-between;">
+        Rota
+        <button onclick="reloadPendingFlight()" id="btn-reload-route" title="Recarregar rota do site" style="background:none;border:1px solid rgba(0,238,255,0.25);color:#00EEFF;font-size:10px;padding:3px 10px;border-radius:3px;cursor:pointer;font-family:inherit;letter-spacing:0.05em;">↻ Recarregar</button>
+      </div>
+      <div id="route-loaded-badge" style="display:none;font-size:10px;color:#3db07a;margin-bottom:6px;">✓ Rota carregada do site</div>
+      <div class="route-grid">
+        <div class="rf"><label>Partida (DEP)</label><input id="inp-dep" maxlength="4" placeholder="SBGR" /></div>
+        <div class="rf"><label>Destino (ARR)</label><input id="inp-arr" maxlength="4" placeholder="SBBR" /></div>
+        <div class="rf"><label>Nível de Voo</label><input id="inp-fl"  maxlength="5" placeholder="350"  /></div>
+        <div class="rf"><label>Observações</label> <input id="inp-obs" placeholder="—"               /></div>
+      </div>
+    </div>
+
+    <!-- Telemetria (oculta no pré-voo) -->
+    <div class="panel" id="panel-tele" style="display:none">
+      <div class="tele-phase" id="tele-phase">PRÉ-VOO</div>
+      <div class="tele-timer" id="tele-timer">00:00:00</div>
+      <div class="tele-grid">
+        <div class="tele-item"><label>ALT (ft)</label><span id="t-alt">—</span></div>
+        <div class="tele-item"><label>IAS (kts)</label><span id="t-spd">—</span></div>
+        <div class="tele-item"><label>VS (fpm)</label><span id="t-vs">—</span></div>
+        <div class="tele-item"><label>HDG (°)</label><span id="t-hdg">—</span></div>
+        <div class="tele-item"><label>Fuel (gal)</label><span id="t-fuel">—</span></div>
+        <div class="tele-item"><label>Dist (nm)</label><span id="t-dist">—</span></div>
+      </div>
+    </div>
+
+    <!-- Violações -->
+    <div class="panel" id="panel-viols" style="display:none">
+      <div class="panel-title">Violações</div>
+      <div id="violations-list"><span class="viol-ok">✓ Nenhuma violação detectada</span></div>
+    </div>
+
+    <!-- Botões de ação -->
+    <div class="action-row">
+      <button id="btn-start" disabled onclick="startFlight()">▶ INICIAR VOO</button>
+      <button id="btn-stop"  disabled onclick="stopFlight()">⏹ ENCERRAR</button>
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /screen-main -->
+
+<!-- ─── SCREEN: SUMMARY ──────────────────────────────────── -->
+<div id="screen-summary" class="screen">
+  <div class="panel-title" style="margin-bottom:4px">Voo encerrado</div>
+  <div id="sum-status-badge"></div>
+  <div class="summary-score" id="sum-score">100</div>
+  <div class="summary-label">PONTUAÇÃO</div>
+  <div style="margin-top:16px">
+    <div class="summary-stat"><span class="k">Rota</span><span id="sum-route">—</span></div>
+    <div class="summary-stat"><span class="k">Duração</span><span id="sum-dur">—</span></div>
+    <div class="summary-stat"><span class="k">Taxa de pouso</span><span id="sum-lr">—</span></div>
+    <div class="summary-stat"><span class="k">Altitude máx.</span><span id="sum-alt">—</span></div>
+    <div class="summary-stat"><span class="k">Veloc. máx.</span><span id="sum-spd">—</span></div>
+    <div class="summary-stat"><span class="k">Combustível usado</span><span id="sum-fuel">—</span></div>
+    <div class="summary-stat"><span class="k">Distância</span><span id="sum-dist">—</span></div>
+  </div>
+  <div style="margin-top:12px">
+    <div class="panel-title">Violações</div>
+    <div id="sum-viols" style="margin-top:6px"></div>
+  </div>
+  <button id="btn-new-flight" onclick="newFlight()">Novo Voo</button>
+</div>
+
+<script src="renderer.js"></script>
+</body>
+</html>
