@@ -375,6 +375,11 @@ tr:hover td{background:rgba(255,255,255,.02);}
             <button class="btn-gold" onclick="addRoute()" style="width:100%;padding:10px 0;font-size:11px;">Adicionar</button>
           </div>
         </div>
+        <div class="form-group" style="margin-top:10px;">
+          <label>Rota AIRAC (airways) — opcional</label>
+          <input id="rf-route" type="text" placeholder="DCT EVINO DCT GUBET UZ25 SOMEP DCT" style="width:100%;font-family:monospace;text-transform:uppercase" />
+          <div style="font-size:11px;color:var(--text-dim);margin-top:4px;">String de airways que será enviada ao SimBrief, VATSIM e IVAO. Ex: <code>DCT EVINO UZ25 SOMEP DCT</code></div>
+        </div>
         <div id="rf-error" style="display:none;color:var(--danger);font-size:12px;margin-top:10px;"></div>
       </div>
 
@@ -644,6 +649,7 @@ async function addRoute() {
   const fl       = document.getElementById('rf-fl').value.trim();
   const eet      = document.getElementById('rf-eet').value.trim();
   const dist     = parseInt(document.getElementById('rf-dist').value) || null;
+  const route    = document.getElementById('rf-route').value.trim().toUpperCase();
   const errEl    = document.getElementById('rf-error');
 
   errEl.style.display = 'none';
@@ -666,10 +672,11 @@ async function addRoute() {
       plannedFL: fl,
       eet,
       distance: dist,
+      route: route || '',
       active: true,
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
-    ['rf-flight','rf-dep','rf-arr','rf-fl','rf-eet','rf-dist'].forEach(id => {
+    ['rf-flight','rf-dep','rf-arr','rf-fl','rf-eet','rf-dist','rf-route'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.value = '';
     });

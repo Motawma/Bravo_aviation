@@ -8,7 +8,7 @@
 <meta http-equiv="Expires" content="0" />
 <title>Voos — Bravo Virtual Airline</title>
 <script>
-  const PAGE_VERSION = '3';
+  const PAGE_VERSION = '4';
   const key = 'brv_v_flight';
   if (sessionStorage.getItem(key) !== PAGE_VERSION) {
     sessionStorage.setItem(key, PAGE_VERSION);
@@ -152,6 +152,37 @@ main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 @keyframes toastIn { from { transform: translateX(110%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
+/* POSITION BAR */
+.position-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 14px 20px; margin-bottom: 20px;
+  gap: 12px;
+}
+.pos-left { display: flex; align-items: center; gap: 14px; }
+.pos-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); box-shadow: 0 0 6px var(--success); flex-shrink: 0; }
+.pos-label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.1em; }
+.pos-airport { font-family: 'Barlow Condensed', sans-serif; font-size: 26px; font-weight: 800; color: var(--text); line-height: 1; }
+.pos-hub { font-size: 10px; font-weight: 700; color: var(--gold); background: rgba(0,238,255,0.1); border: 1px solid rgba(0,238,255,0.2); padding: 2px 8px; border-radius: 2px; letter-spacing: 0.1em; }
+.btn-jumpseat {
+  padding: 9px 18px; background: rgba(240,165,0,0.1); border: 1px solid rgba(240,165,0,0.3);
+  color: #f0a500; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 700;
+  border-radius: var(--radius); cursor: pointer; letter-spacing: 0.05em;
+  transition: all 0.2s; white-space: nowrap;
+}
+.btn-jumpseat:hover { background: rgba(240,165,0,0.2); border-color: #f0a500; }
+.btn-showall { background: none; border: none; color: var(--text-dim); font-size: 11px; cursor: pointer; font-family: 'Inter', sans-serif; text-decoration: underline; }
+.btn-showall:hover { color: var(--text-sec); }
+
+/* JUMPSEAT MODAL */
+.jumpseat-info { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 20px; }
+.jumpseat-route { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.jumpseat-icao { font-family: 'Barlow Condensed', sans-serif; font-size: 28px; font-weight: 800; }
+.jumpseat-arrow { flex: 1; text-align: center; color: #f0a500; }
+.jumpseat-note { font-size: 12px; color: var(--text-dim); line-height: 1.6; }
+.btn-confirm-jump { flex: 1; padding: 12px; background: #f0a500; color: #000; border: none; border-radius: var(--radius); font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; }
+.btn-confirm-jump:disabled { opacity: 0.5; cursor: not-allowed; }
+
 /* RESPONSIVE */
 @media (max-width: 1100px) { .routes-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 700px) { .routes-grid { grid-template-columns: 1fr; } :root { --sidebar: 0px; } aside { display: none; } }
@@ -212,6 +243,24 @@ main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 
   <div class="content">
 
+    <!-- POSITION BAR -->
+    <div class="position-bar" id="position-bar">
+      <div class="pos-left">
+        <div class="pos-dot"></div>
+        <div>
+          <div class="pos-label">Posição atual</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:2px;">
+            <div class="pos-airport" id="pos-airport">—</div>
+            <div class="pos-hub" id="pos-hub-tag" style="display:none">HUB</div>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <button class="btn-showall" id="btn-showall" onclick="toggleShowAll()">Ver todos os voos</button>
+        <button class="btn-jumpseat" id="btn-jumpseat" onclick="openJumpseat()" style="display:none">💺 Jumpseat → Hub</button>
+      </div>
+    </div>
+
     <!-- FILTER BAR -->
     <div class="filter-bar">
       <div class="filter-tabs" id="filter-tabs">
@@ -266,6 +315,28 @@ main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
   </div>
 </div>
 
+<!-- JUMPSEAT MODAL -->
+<div class="modal-overlay" id="modal-jumpseat">
+  <div class="modal">
+    <div class="modal-title" style="color:#f0a500">💺 Solicitar Jumpseat</div>
+    <div class="modal-sub">Reposicionamento para o hub principal. Não conta horas nem pontos.</div>
+    <div class="jumpseat-info">
+      <div class="jumpseat-route">
+        <div class="jumpseat-icao" id="js-from">—</div>
+        <div class="jumpseat-arrow">────✈────</div>
+        <div class="jumpseat-icao" style="color:var(--gold)">SBGR</div>
+      </div>
+      <div class="jumpseat-note">
+        Ao confirmar, sua posição será atualizada para <strong>SBGR — São Paulo/Guarulhos</strong> e os voos disponíveis serão recarregados.
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeJumpseat()">Cancelar</button>
+      <button class="btn-confirm-jump" id="btn-confirm-jump" onclick="confirmJumpseat()">✈ Confirmar Jumpseat</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast-wrap" id="toast-wrap"></div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -283,10 +354,14 @@ firebase.initializeApp({
 const auth = firebase.auth();
 const db   = firebase.firestore();
 
-let currentUser = null;
-let allRoutes   = [];
+const HUB = 'SBGR';
+
+let currentUser  = null;
+let allRoutes    = [];
 let activeFilter = 'ALL';
 let selectedRoute = null;
+let pilotAirport  = HUB;
+let showAll       = false;
 
 const RANKS = [
   { name:'Cadete',           min:0,    max:50    },
@@ -311,7 +386,8 @@ auth.onAuthStateChanged(async (fbUser) => {
     if (!snap.exists) { window.location.href = 'login.html'; return; }
     const data = snap.data();
     if (data.role === 'admin') { window.location.href = 'admin.html'; return; }
-    currentUser = { uid: fbUser.uid, ...data };
+    currentUser  = { uid: fbUser.uid, ...data };
+    pilotAirport = data.currentAirport || HUB;
 
     const av = (currentUser.name || '?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
     document.getElementById('sidebar-avatar').textContent = av;
@@ -325,6 +401,7 @@ auth.onAuthStateChanged(async (fbUser) => {
       }
     }
 
+    updatePositionBar();
     document.body.style.visibility = '';
     await loadRoutes();
   } catch(e) {
@@ -334,6 +411,21 @@ auth.onAuthStateChanged(async (fbUser) => {
 });
 
 function logout() { auth.signOut().then(()=>{ window.location.href='login.html'; }); }
+
+/* ── POSITION BAR ── */
+function updatePositionBar() {
+  document.getElementById('pos-airport').textContent = pilotAirport;
+  const isHub = pilotAirport === HUB;
+  document.getElementById('pos-hub-tag').style.display  = isHub ? '' : 'none';
+  document.getElementById('btn-jumpseat').style.display = isHub ? 'none' : '';
+  document.getElementById('btn-showall').textContent    = showAll ? 'Voos de ' + pilotAirport : 'Ver todos os voos';
+}
+
+function toggleShowAll() {
+  showAll = !showAll;
+  updatePositionBar();
+  renderRoutes();
+}
 
 /* ── LOAD ROUTES ── */
 async function loadRoutes() {
@@ -379,6 +471,7 @@ function renderRoutes() {
   const grid = document.getElementById('routes-grid');
 
   let filtered = allRoutes;
+  if (!showAll) filtered = filtered.filter(r => r.dep === pilotAirport);
   if (activeFilter !== 'ALL') filtered = filtered.filter(r => r.aircraft === activeFilter);
   if (q) filtered = filtered.filter(r =>
     (r.dep||'').includes(q) || (r.arr||'').includes(q) ||
@@ -388,7 +481,14 @@ function renderRoutes() {
   document.getElementById('routes-count').textContent = filtered.length + ' rota' + (filtered.length !== 1 ? 's' : '');
 
   if (!filtered.length) {
-    grid.innerHTML = `<div class="empty-state"><div class="icon">🗺️</div>${allRoutes.length === 0 ? 'Nenhuma rota cadastrada ainda.' : 'Nenhuma rota encontrada para o filtro selecionado.'}</div>`;
+    const noRoutesHere = !showAll && allRoutes.filter(r => r.dep === pilotAirport).length === 0;
+    grid.innerHTML = noRoutesHere
+      ? `<div class="empty-state">
+           <div class="icon">📍</div>
+           <div style="margin-bottom:12px">Não há voos disponíveis saindo de <strong>${pilotAirport}</strong>.</div>
+           <button class="btn-jumpseat" style="margin:0 auto" onclick="openJumpseat()">💺 Solicitar Jumpseat para o Hub (SBGR)</button>
+         </div>`
+      : `<div class="empty-state"><div class="icon">🗺️</div>${allRoutes.length === 0 ? 'Nenhuma rota cadastrada ainda.' : 'Nenhuma rota encontrada para o filtro selecionado.'}</div>`;
     return;
   }
 
@@ -459,16 +559,17 @@ async function confirmRoute() {
   try {
     await db.collection('users').doc(currentUser.uid).update({
       pendingFlight: {
-        dep:       selectedRoute.dep,
-        arr:       selectedRoute.arr,
-        plannedFL: selectedRoute.plannedFL,
-        aircraft:  aircraft,
-        routeId:   selectedRoute.id,
-        flightNumber: selectedRoute.flightNumber,
-        eet:       selectedRoute.eet,
-        distance:  selectedRoute.distance || null,
-        obs:       obs,
-        savedAt:   firebase.firestore.FieldValue.serverTimestamp()
+        dep:         selectedRoute.dep,
+        arr:         selectedRoute.arr,
+        plannedFL:   selectedRoute.plannedFL,
+        aircraft:    aircraft,
+        routeId:     selectedRoute.id,
+        flightNumber:selectedRoute.flightNumber,
+        eet:         selectedRoute.eet,
+        distance:    selectedRoute.distance || null,
+        route:       selectedRoute.route    || '',
+        obs:         obs,
+        savedAt:     firebase.firestore.FieldValue.serverTimestamp()
       }
     });
     btn.textContent = '✔ Confirmado';
@@ -478,6 +579,37 @@ async function confirmRoute() {
     toast('Erro ao salvar rota.', 'err');
     btn.disabled = false;
     btn.textContent = '✔ Confirmar';
+  }
+}
+
+/* ── JUMPSEAT ── */
+function openJumpseat() {
+  document.getElementById('js-from').textContent = pilotAirport;
+  document.getElementById('btn-confirm-jump').disabled = false;
+  document.getElementById('btn-confirm-jump').textContent = '✈ Confirmar Jumpseat';
+  document.getElementById('modal-jumpseat').classList.add('open');
+}
+
+function closeJumpseat() {
+  document.getElementById('modal-jumpseat').classList.remove('open');
+}
+
+async function confirmJumpseat() {
+  const btn = document.getElementById('btn-confirm-jump');
+  btn.disabled = true;
+  btn.textContent = 'Processando...';
+  try {
+    await db.collection('users').doc(currentUser.uid).update({ currentAirport: HUB });
+    pilotAirport = HUB;
+    showAll = false;
+    updatePositionBar();
+    closeJumpseat();
+    toast(`Jumpseat confirmado! Você está em ${HUB}.`, 'ok');
+    renderRoutes();
+  } catch(e) {
+    toast('Erro ao processar jumpseat.', 'err');
+    btn.disabled = false;
+    btn.textContent = '✈ Confirmar Jumpseat';
   }
 }
 

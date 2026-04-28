@@ -252,13 +252,14 @@ auth.onAuthStateChanged(async (fbUser) => {
 
 /* ── RENDER ── */
 function renderBrief(pf, userData) {
-  const dep = pf.dep || '????';
-  const arr = pf.arr || '????';
-  const fl  = pf.plannedFL || '—';
-  const eet = pf.eet || '—';
-  const nm  = pf.distance ? pf.distance + ' NM' : '—';
-  const ac  = pf.aircraft || userData.aircraft || 'A320';
-  const fn  = pf.flightNumber || 'BRV';
+  const dep   = pf.dep || '????';
+  const arr   = pf.arr || '????';
+  const fl    = pf.plannedFL || '—';
+  const eet   = pf.eet || '—';
+  const nm    = pf.distance ? pf.distance + ' NM' : '—';
+  const ac    = pf.aircraft || userData.aircraft || 'A320';
+  const fn    = pf.flightNumber || 'BRV';
+  const route = pf.route || '';
   const depApt = getApt(dep);
   const arrApt = getApt(arr);
 
@@ -335,16 +336,16 @@ function renderBrief(pf, userData) {
 
         <!-- Integration Buttons -->
         <div class="int-btns">
-          <a class="int-btn simbrief" href="${buildSimBriefUrl(dep,arr,fl,fn,ac)}" target="_blank">
+          <a class="int-btn simbrief" href="${buildSimBriefUrl(dep,arr,fl,fn,ac,route)}" target="_blank">
             ✈ SimBrief
           </a>
           <a class="int-btn skyvector" href="https://skyvector.com/?fpl=${dep}%20${arr}" target="_blank">
             🗺 SkyVector
           </a>
-          <a class="int-btn vatsim" href="https://my.vatsim.net/pilots/flightplan/create?callsign=${fn}&dep=${dep}&arr=${arr}&aircraft=${encodeURIComponent(ac)}&altitude=${fl}00&route=DCT" target="_blank">
+          <a class="int-btn vatsim" href="https://my.vatsim.net/pilots/flightplan/create?callsign=${fn}&dep=${dep}&arr=${arr}&aircraft=${encodeURIComponent(ac)}&altitude=${fl}00&route=${encodeURIComponent(route||'DCT')}" target="_blank">
             🔵 VATSIM Prefile
           </a>
-          <a class="int-btn ivao" href="https://fpl.ivao.aero/?callsign=${fn}&adep=${dep}&ades=${arr}&actype=${toICAOType(ac)}&altitude=${fl}00" target="_blank">
+          <a class="int-btn ivao" href="https://fpl.ivao.aero/?callsign=${fn}&adep=${dep}&ades=${arr}&actype=${toICAOType(ac)}&altitude=${fl}00&route=${encodeURIComponent(route||'DCT')}" target="_blank">
             🟣 IVAO Prefile
           </a>
         </div>
@@ -478,9 +479,11 @@ function parseTime(r){
 }
 
 /* ── HELPERS ── */
-function buildSimBriefUrl(dep, arr, fl, fn, ac) {
+function buildSimBriefUrl(dep, arr, fl, fn, ac, route) {
   const type = toICAOType(ac);
-  return `https://www.simbrief.com/system/dispatch.php?orig=${dep}&dest=${arr}&type=${type}&airline=BRV&fltnum=${fn.replace('BRV','')}&fl=${fl}&units=kgs&navlog=1&etops=0&stepclimbs=0`;
+  let url = `https://www.simbrief.com/system/dispatch.php?orig=${dep}&dest=${arr}&type=${type}&airline=BRV&fltnum=${fn.replace('BRV','')}&fl=${fl}&units=kgs&navlog=1&etops=0&stepclimbs=0`;
+  if (route && route.trim()) url += `&route=${encodeURIComponent(route.trim())}`;
+  return url;
 }
 
 function toICAOType(ac) {

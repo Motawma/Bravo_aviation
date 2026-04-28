@@ -513,10 +513,11 @@
 
     await db.collection('pireps').add(pirep);
 
-    // Atualiza horas/voos do piloto
+    // Atualiza horas/voos e posição do piloto
     await db.collection('users').doc(currentUser.uid).update({
-      flights: firebase.firestore.FieldValue.increment(1),
-      hours:   firebase.firestore.FieldValue.increment(+(dur / 3600).toFixed(2))
+      flights:        firebase.firestore.FieldValue.increment(1),
+      hours:          firebase.firestore.FieldValue.increment(+(dur / 3600).toFixed(2)),
+      currentAirport: arr
     }).catch(() => {});
 
     // Apaga liveflight
