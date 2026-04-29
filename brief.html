@@ -344,7 +344,7 @@ function renderBrief(pf, userData) {
           <a class="int-btn vatsim" href="https://my.vatsim.net/pilots/flightplan/create?callsign=${fn}&dep=${dep}&arr=${arr}&aircraft=${encodeURIComponent(ac)}&altitude=${fl}00&route=${encodeURIComponent(route||'DCT')}" target="_blank">
             🔵 VATSIM Prefile
           </a>
-          <a class="int-btn ivao" href="https://fpl.ivao.aero/?callsign=${fn}&adep=${dep}&ades=${arr}&actype=${toICAOType(ac)}&altitude=${fl}00&route=${encodeURIComponent(route||'DCT')}" target="_blank">
+          <a class="int-btn ivao" href="${buildIvaoUrl(dep,arr,fl,fn,ac,route)}" target="_blank">
             🟣 IVAO Prefile
           </a>
         </div>
@@ -478,6 +478,20 @@ function parseTime(r){
 }
 
 /* ── HELPERS ── */
+function buildIvaoUrl(dep, arr, fl, fn, ac, route) {
+  const fp = {
+    callsign:     fn  || '',
+    flightRules:  'I',
+    flightType:   'S',
+    aircraftId:   toICAOType(ac),
+    departureId:  dep || '',
+    arrivalId:    arr || '',
+    altitude:     fl  ? 'F' + String(fl).padStart(3,'0') : '',
+    route:        route || 'DCT'
+  };
+  return 'https://fpl.ivao.aero/flight-plans/create?flightPlan=' + encodeURIComponent(JSON.stringify(fp));
+}
+
 function buildSimBriefUrl(dep, arr, fl, fn, ac, route) {
   const type = toICAOType(ac);
   const num  = (fn || '').replace(/^BRV/i, '').trim() || '001';
