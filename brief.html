@@ -480,15 +480,16 @@ function parseTime(r){
 /* ── HELPERS ── */
 function buildIvaoUrl(dep, arr, fl, fn, ac, route) {
   const fp = {
-    callsign:     fn  || '',
-    flightRules:  'I',
-    flightType:   'S',
-    aircraftId:   toICAOType(ac),
-    departureId:  dep || '',
-    arrivalId:    arr || '',
-    altitude:     fl  ? 'F' + String(fl).padStart(3,'0') : '',
-    route:        route || 'DCT'
+    callsign:    fn  || '',
+    flightRules: 'I',
+    flightType:  'S',
+    aircraftId:  toICAOType(ac),
+    departureId: dep || '',
+    arrivalId:   arr || '',
+    altitudeType:'F',
+    altitude:    fl  ? parseInt(fl, 10) : 0
   };
+  if (route && route.trim()) fp.route = route.trim();
   return 'https://fpl.ivao.aero/flight-plans/create?flightPlan=' + encodeURIComponent(JSON.stringify(fp));
 }
 
