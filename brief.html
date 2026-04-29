@@ -490,7 +490,7 @@ function buildIvaoUrl(dep, arr, fl, fn, ac, route) {
     altitude:    fl  ? parseInt(fl, 10) : 0
   };
   if (route && route.trim()) fp.route = route.trim();
-  return 'https://fpl.ivao.aero/flight-plans/create?flightPlan=' + encodeURIComponent(JSON.stringify(fp));
+  return 'https://fpl.ivao.aero/flight-plans/create?flightPlan=' + btoa(JSON.stringify(fp));
 }
 
 function buildSimBriefUrl(dep, arr, fl, fn, ac, route) {
