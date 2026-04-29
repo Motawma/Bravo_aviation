@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<title>Fix opPoints — BRV Admin</title>
+<style>
+  body { background: #080612; color: #F0EAF8; font-family: monospace; padding: 32px; }
+  h2 { color: #00EEFF; margin-bottom: 20px; }
+  #log { background: #0E0B1E; border: 1px solid #1E1840; border-radius: 4px; padding: 20px; min-height: 200px; white-space: pre-wrap; font-size: 13px; line-height: 1.8; }
+  .ok  { color: #3db07a; }
+  .skip{ color: #9A8FB8; }
+  .err { color: #e05555; }
+  button { margin-top: 20px; padding: 12px 28px; background: #00EEFF; color: #000; border: none; border-radius: 4px; font-weight: 700; font-size: 14px; cursor: pointer; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+</style>
+</head>
+<body>
+<h2>🔧 Fix opPoints — Bravo Aviation</h2>
+<p style="color:#9A8FB8;margin-bottom:20px;font-size:13px">
+  Adiciona <strong style="color:#00EEFF">opPoints: 200</strong> em todos os pilotos que ainda não têm o campo.<br/>
+  Pilotos que já têm opPoints <strong>não são alterados</strong>.
+</p>
+<button id="btn" onclick="runFix()">▶ Executar correção</button>
+<div id="log" style="margin-top:20px">Aguardando...</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+firebase.initializeApp({
+  apiKey: 'AIzaSyC2dDGhKjzHSclyFwUFNGA60DtXAjLEJ6I',
+  authDomain: 'bravo-aviation.firebaseapp.com',
+  projectId: 'bravo-aviation',
+  storageBucket: 'bravo-aviation.firebasestorage.app',
+  messagingSenderId: '712016002234',
+  appId: '1:712016002234:web:ce7a8e39c28bc6d8ca5683'
+});
+const db = firebase.firestore();
+
+function log(msg, cls) {
+  const el = document.getElementById('log');
+  el.innerHTML += `<span class="${cls||''}">${msg}</span>\n`;
+  el.scrollTop = el.scrollHeight;
+}
+
+async function runFix() {
+  const btn = document.getElementById('btn');
+  btn.disabled = true;
+  document.getElementById('log').innerHTML = '';
+
+  log('Buscando pilotos no Firestore...');
+  try {
+    const snap = await db.collection('users').get();
+    log(`Total de documentos encontrados: ${snap.size}\n`);
+
+    let fixed = 0, skipped = 0, errors = 0;
+
+    for (const doc of snap.docs) {
+      const data = doc.data();
+      const name = data.name || doc.id;
+
+      if (data.opPoints !== undefined && data.opPoints !== null) {
+        log(`  SKIP  ${name} — já tem opPoints: ${data.opPoints}`, 'skip');
+        skipped++;
+        continue;
+      }
+
+      try {
+        await db.collection('users').doc(doc.id).update({ opPoints: 200 });
+        log(`  OK    ${name} — opPoints definido para 200`, 'ok');
+        fixed++;
+      } catch(e) {
+        log(`  ERRO  ${name} — ${e.message}`, 'err');
+        errors++;
+      }
+    }
+
+    log(`\n──────────────────────────────`);
+    log(`Corrigidos : ${fixed}`, 'ok');
+    log(`Ignorados  : ${skipped}`, 'skip');
+    log(`Erros      : ${errors}`, errors > 0 ? 'err' : '');
+    log(`\nConcluído!`);
+  } catch(e) {
+    log(`Erro ao buscar usuários: ${e.message}`, 'err');
+  }
+
+  btn.disabled = false;
+}
+</script>
+</body>
+</html>
