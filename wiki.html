@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Operação Padrão — Bravo Virtual Airline</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<style>
+:root {
+  --bg:       #080612;
+  --surface:  #0E0B1E;
+  --surface2: #130F27;
+  --border:   #1E1840;
+  --gold:     #00EEFF;
+  --gold-dim: #007A99;
+  --pink:     #FF2080;
+  --text:     #F0EAF8;
+  --text-sec: #9A8FB8;
+  --text-dim: #4A4068;
+  --green:    #4ade80;
+  --amber:    #f59e0b;
+  --red:      #ff4d4d;
+  --radius:   4px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; font-size: 14px; display: flex; overflow: hidden; }
+
+/* ── MAIN SIDEBAR ─────────────────────────────── */
+aside {
+  width: 220px; min-height: 100vh; background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; flex-shrink: 0;
+}
+.sidebar-logo { padding: 24px 20px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: center; }
+.sidebar-logo img { height: 72px; mix-blend-mode: screen; }
+.sidebar-nav { flex: 1; padding: 12px 0; overflow-y: auto; }
+.nav-section-label { font-size: 9px; font-weight: 700; letter-spacing: 0.25em; text-transform: uppercase; color: var(--text-dim); padding: 14px 20px 6px; }
+.nav-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 20px; cursor: pointer; text-decoration: none;
+  font-size: 13px; font-weight: 500; color: var(--text-sec);
+  border-left: 2px solid transparent;
+  transition: color .2s, background .2s, border-color .2s;
+}
+.nav-item:hover { color: var(--text); background: rgba(255,255,255,.03); }
+.nav-item.active { color: var(--gold); background: rgba(0,238,255,.07); border-left-color: var(--gold); }
+.nav-icon { font-size: 16px; width: 20px; text-align: center; }
+.sidebar-user { padding: 16px 20px; border-top: 1px solid var(--border); display: flex; align-items: center; gap: 12px; }
+.su-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--gold-dim); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: var(--bg); flex-shrink: 0; }
+.su-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.su-rank { font-size: 11px; color: var(--text-dim); }
+.logout-btn { margin-left: auto; background: none; border: none; cursor: pointer; font-size: 18px; color: var(--text-dim); padding: 4px; }
+.logout-btn:hover { color: var(--pink); }
+
+/* ── MAIN LAYOUT ──────────────────────────────── */
+main { flex: 1; display: flex; overflow: hidden; flex-direction: column; }
+.topbar {
+  height: 56px; padding: 0 24px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--surface); flex-shrink: 0;
+}
+.topbar-title { font-family: 'Barlow Condensed', sans-serif; font-size: 20px; font-weight: 700; letter-spacing: .05em; color: var(--gold); }
+.topbar-right { display: flex; align-items: center; gap: 16px; }
+.topbar-right a { font-size: 12px; color: var(--text-dim); text-decoration: none; }
+.topbar-right a:hover { color: var(--text); }
+
+.wiki-wrap { flex: 1; display: flex; overflow: hidden; }
+
+/* ── TOC SIDEBAR ──────────────────────────────── */
+.wiki-toc {
+  width: 220px; flex-shrink: 0; overflow-y: auto;
+  border-right: 1px solid var(--border);
+  padding: 20px 0; background: var(--surface2);
+}
+.toc-section { font-size: 9px; font-weight: 700; letter-spacing: .25em; text-transform: uppercase; color: var(--text-dim); padding: 14px 20px 6px; }
+.toc-item {
+  display: block; padding: 8px 20px;
+  font-size: 12px; font-weight: 500; color: var(--text-sec);
+  text-decoration: none; border-left: 2px solid transparent;
+  transition: color .15s, border-color .15s, background .15s;
+}
+.toc-item:hover { color: var(--text); background: rgba(255,255,255,.03); }
+.toc-item.active { color: var(--gold); border-left-color: var(--gold); background: rgba(0,238,255,.05); }
+.toc-item.sub { padding-left: 32px; font-size: 11px; }
+
+/* ── WIKI CONTENT ─────────────────────────────── */
+.wiki-content { flex: 1; overflow-y: auto; padding: 36px 48px; max-width: 900px; }
+.wiki-hero { margin-bottom: 36px; }
+.wiki-hero h1 { font-family: 'Barlow Condensed', sans-serif; font-size: 36px; font-weight: 800; letter-spacing: .04em; color: var(--gold); }
+.wiki-hero p { color: var(--text-sec); font-size: 13px; margin-top: 6px; }
+
+.wiki-section { margin-bottom: 48px; scroll-margin-top: 20px; }
+.wiki-section h2 {
+  font-family: 'Barlow Condensed', sans-serif; font-size: 24px; font-weight: 700;
+  color: var(--text); letter-spacing: .04em; margin-bottom: 8px;
+  padding-bottom: 8px; border-bottom: 1px solid var(--border);
+}
+.wiki-section h3 {
+  font-family: 'Barlow Condensed', sans-serif; font-size: 18px; font-weight: 700;
+  color: var(--text-sec); margin: 20px 0 10px;
+}
+.wiki-desc {
+  font-size: 13px; color: var(--text-sec); line-height: 1.7;
+  margin-bottom: 16px; background: var(--surface2);
+  border-left: 3px solid var(--gold-dim);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0;
+}
+
+/* Tables */
+.wiki-table-wrap { overflow-x: auto; margin-bottom: 16px; }
+.wiki-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.wiki-table th {
+  text-align: left; padding: 10px 14px;
+  font-size: 10px; font-weight: 700; letter-spacing: .15em; text-transform: uppercase;
+  color: var(--text-dim); background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+}
+.wiki-table td { padding: 10px 14px; border-bottom: 1px solid rgba(30,24,64,.6); vertical-align: middle; }
+.wiki-table tr:last-child td { border-bottom: none; }
+.wiki-table tr:hover td { background: rgba(0,238,255,.03); }
+.pts-pos { font-weight: 700; color: var(--green); }
+.pts-neg { font-weight: 700; color: var(--red); }
+.pts-zero { color: var(--text-dim); }
+.badge-coc { display: inline-block; background: rgba(255,77,77,.15); border: 1px solid rgba(255,77,77,.3); color: var(--red); font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 2px; letter-spacing: .08em; }
+.badge-ov  { display: inline-block; background: rgba(245,158,11,.12); border: 1px solid rgba(245,158,11,.25); color: var(--amber); font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 2px; letter-spacing: .08em; }
+.foqa-box { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 20px; margin-bottom: 16px; }
+.foqa-box strong { color: var(--gold); }
+</style>
+</head>
+<body>
+
+<!-- ── MAIN SIDEBAR ─────────────────────────────── -->
+<aside>
+  <div class="sidebar-logo">
+    <img src="assets/logo.png" onerror="this.style.display='none'" alt="Bravo Aviation" />
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">Principal</div>
+    <a class="nav-item" href="dashboard.html"><span class="nav-icon">🏠</span> Visão Geral</a>
+    <a class="nav-item" href="dashboard.html"><span class="nav-icon">👤</span> Meu Perfil</a>
+    <div class="nav-section-label">Operações</div>
+    <a class="nav-item" href="dashboard.html"><span class="nav-icon">✈️</span> Registrar Voo</a>
+    <a class="nav-item" href="dashboard.html"><span class="nav-icon">📋</span> Meus Voos</a>
+    <a class="nav-item" href="flight.html"><span class="nav-icon">🗺️</span> Voos Disponíveis</a>
+    <a class="nav-item" href="brief.html"><span class="nav-icon">📋</span> Brief</a>
+    <a class="nav-item" href="radar.html"><span class="nav-icon">🛰️</span> Radar</a>
+    <div class="nav-section-label">Comunidade</div>
+    <a class="nav-item" href="dashboard.html"><span class="nav-icon">🏆</span> Ranking</a>
+    <a class="nav-item active" href="wiki.html"><span class="nav-icon">📖</span> Operação Padrão</a>
+    <a class="nav-item" href="dashboard.html"><span class="nav-icon">📦</span> Downloads</a>
+  </nav>
+  <div class="sidebar-user">
+    <div class="su-avatar" id="sb-avatar">?</div>
+    <div style="overflow:hidden;">
+      <div class="su-name" id="sb-name">—</div>
+      <div class="su-rank" id="sb-rank">—</div>
+    </div>
+    <button class="logout-btn" onclick="doLogout()" title="Sair">⏏</button>
+  </div>
+</aside>
+
+<!-- ── MAIN ─────────────────────────────────────── -->
+<main>
+  <div class="topbar">
+    <div class="topbar-title">Operação Padrão — SOP</div>
+    <div class="topbar-right">
+      <a href="dashboard.html">← Dashboard</a>
+    </div>
+  </div>
+
+  <div class="wiki-wrap">
+
+    <!-- ── TOC ───────────────────────────────────── -->
+    <nav class="wiki-toc">
+      <div class="toc-section">Conteúdo</div>
+      <a class="toc-item active" href="#op">OP - Operation points</a>
+      <a class="toc-item sub" href="#op-table">Tabela de pontos</a>
+      <a class="toc-item" href="#foqa">FOQA</a>
+      <a class="toc-item sub" href="#foqa-how">Como funciona</a>
+      <a class="toc-item sub" href="#foqa-penalties">Penalidades</a>
+      <a class="toc-item" href="#lm">LM - Limitations</a>
+      <a class="toc-item sub" href="#lm-a320">A320</a>
+    </nav>
+
+    <!-- ── CONTENT ───────────────────────────────── -->
+    <div class="wiki-content" id="wiki-content">
+
+      <div class="wiki-hero">
+        <h1>Operação Padrão</h1>
+        <p>SOP — Standard Operations Procedures. Leitura obrigatória para todos os tripulantes da Bravo Virtual Airline.</p>
+      </div>
+
+      <!-- OP -->
+      <section class="wiki-section" id="op">
+        <h2>OP — Operation Points</h2>
+        <div class="wiki-desc">
+          São pontos adicionais obtidos pela assiduidade, economia e agilidade durante o voo.
+          Os pontos podem ser descontados quando o tripulante executa ou solicita determinadas ações.
+        </div>
+
+        <div id="op-table"></div>
+        <div class="wiki-table-wrap">
+          <table class="wiki-table">
+            <thead><tr><th>Descrição</th><th>Pontos</th></tr></thead>
+            <tbody>
+              <tr><td>Cadastro na VA</td><td><span class="pts-pos">+200</span></td></tr>
+              <tr><td>Configuração de Flaps adequada para decolagem</td><td><span class="pts-pos">+5</span></td></tr>
+              <tr><td>Configuração de Flaps e Trem adequada para pouso</td><td><span class="pts-pos">+5</span></td></tr>
+              <tr><td>One engine taxi superior a 3 minutos</td><td><span class="pts-pos">+10</span></td></tr>
+              <tr><td>FOQA 100%</td><td><span class="pts-pos">+50</span></td></tr>
+              <tr><td>Escala Experiente</td><td><span class="pts-pos">+50</span></td></tr>
+              <tr><td>Voo longo (mais de 2000 NM)</td><td><span class="pts-pos">+50</span></td></tr>
+              <tr><td>Jumpseat para a base (SBGR)</td><td><span class="pts-zero">0</span></td></tr>
+              <tr><td>Jumpseat para outro aeroporto da malha</td><td><span class="pts-neg">−500</span></td></tr>
+              <tr><td>Voo sem escala (Scheduled)</td><td><span class="pts-neg">−200</span></td></tr>
+              <tr><td>Escala básica</td><td><span class="pts-neg">−100</span></td></tr>
+              <tr><td>Escala avançada</td><td><span class="pts-neg">−150</span></td></tr>
+              <tr><td>Escala experiente</td><td><span class="pts-neg">−200</span></td></tr>
+              <tr><td>Solicitação de voo de instrução</td><td><span class="pts-neg">−500</span></td></tr>
+              <tr><td>Solicitação de checks</td><td><span class="pts-neg">−1500</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+
+      <!-- FOQA -->
+      <section class="wiki-section" id="foqa">
+        <h2>FOQA — Flight Operations Quality Assurance</h2>
+        <div class="wiki-desc">
+          O FOQA é o sistema que verifica cada PIREP, linha por linha, para atestar que o voo foi realizado
+          dentro dos padrões estabelecidos pela Diretoria de Operações de Voos da companhia.
+        </div>
+
+        <div id="foqa-how"></div>
+        <div class="foqa-box">
+          <p style="line-height:1.8;font-size:13px;color:var(--text-sec);">
+            O FOQA restringe-se a dois tipos de falhas: <strong>Código de Conduta (CoC)</strong> e <strong>Operações de Voo (Ov)</strong>.<br><br>
+            Se a soma das perdas ultrapassar <strong>25 pontos</strong> de um total de 100 pontos, o PIREP é reprovado automaticamente.
+            Assim, os pilotos devem manter o seu índice FOQA <strong>acima de 74%</strong> em cada voo.<br><br>
+            Todos os PIREPs reprovados pelo FOQA podem passar por análise manual. O piloto deve solicitá-la
+            por meio da página do PIREP no logbook em até <strong>24 horas</strong> após o envio do PIREP.
+          </p>
+        </div>
+
+        <div id="foqa-penalties"></div>
+        <h3>Penalidades</h3>
+        <div class="wiki-table-wrap">
+          <table class="wiki-table">
+            <thead><tr><th>Descrição</th><th>Tipo</th><th>Pontos</th></tr></thead>
+            <tbody>
+              <tr><td>Aproximação desestabilizada (1000 ft)</td><td><span class="badge-coc">CoC</span></td><td><span class="pts-neg">−100</span></td></tr>
+              <tr><td>Não utilizar a aeronave designada para o voo</td><td><span class="badge-coc">CoC</span></td><td><span class="pts-neg">−100</span></td></tr>
+              <tr><td>Iniciar o ACARS com os motores acionados</td><td><span class="badge-coc">CoC</span></td><td><span class="pts-neg">−100</span></td></tr>
+              <tr><td>Taxa de simulação acima de 1×</td><td><span class="badge-coc">CoC</span></td><td><span class="pts-neg">−100</span></td></tr>
+              <tr><td>Reabastecimento em voo</td><td><span class="badge-coc">CoC</span></td><td><span class="pts-neg">−100</span></td></tr>
+              <tr><td>Pausar o simulador durante o voo</td><td><span class="badge-coc">CoC</span></td><td><span class="pts-neg">−100</span></td></tr>
+              <tr><td>Pouso em aeroporto não programado (alternativo)</td><td><span class="badge-coc">CoC</span></td><td><span class="pts-neg">−100</span></td></tr>
+              <tr><td>Landing g-force superior a 2.0G</td><td><span class="badge-coc">CoC</span></td><td><span class="pts-neg">−100</span></td></tr>
+              <tr><td>Voar mais de 25% do voo offline</td><td><span class="badge-coc">CoC</span></td><td><span class="pts-neg">−100</span></td></tr>
+              <tr><td colspan="3" style="padding:4px 14px;background:rgba(0,0,0,.2);font-size:10px;color:var(--text-dim);letter-spacing:.1em;text-transform:uppercase;">Operações de Voo</td></tr>
+              <tr><td>Exceder o limite da componente de vento de cauda no pouso</td><td><span class="badge-ov">Ov</span></td><td><span class="pts-neg">−15</span></td></tr>
+              <tr><td>Landing g-force entre 1.5G e 2.0G</td><td><span class="badge-ov">Ov</span></td><td><span class="pts-neg">−15</span></td></tr>
+              <tr><td>Exceder o limite da componente de vento de cauda na decolagem</td><td><span class="badge-ov">Ov</span></td><td><span class="pts-neg">−15</span></td></tr>
+              <tr><td>Aviso de bank angle</td><td><span class="badge-ov">Ov</span></td><td><span class="pts-neg">−15</span></td></tr>
+              <tr><td>Aviso de stall</td><td><span class="badge-ov">Ov</span></td><td><span class="pts-neg">−15</span></td></tr>
+              <tr><td>Aviso de overspeed</td><td><span class="badge-ov">Ov</span></td><td><span class="pts-neg">−15</span></td></tr>
+              <tr><td>Speed brakes acionados em velocidade acima do limite permitido</td><td><span class="badge-ov">Ov</span></td><td><span class="pts-neg">−10</span></td></tr>
+              <tr><td>Configuração incorreta de flaps na decolagem</td><td><span class="badge-ov">Ov</span></td><td><span class="pts-neg">−10</span></td></tr>
+              <tr><td>Exceder o teto máximo operacional da aeronave</td><td><span class="badge-ov">Ov</span></td><td><span class="pts-neg">−10</span></td></tr>
+              <tr><td>Exceder o peso máximo de pouso (MLW)</td><td><span class="badge-ov">Ov</span></td><td><span class="pts-neg">−10</span></td></tr>
+              <tr><td>FOB abaixo do limite operacional durante o pouso</td><td><span class="badge-ov">Ov</span></td><td><span class="pts-neg">−10</span></td></tr>
+              <tr><td>Exceder o peso máximo de decolagem (MTOW)</td><td><span class="badge-ov">Ov</span></td><td><span class="pts-neg">−10</span></td></tr>
+              <tr><td>Extensão de trem de pouso em velocidade incompatível</td><td><span class="badge-ov">Ov</span></td><td><span class="pts-neg">−5</span></td></tr>
+              <tr><td>Landing lights acesas acima de 10.000 ft na subida</td><td><span class="badge-ov">Ov</span></td><td><span class="pts-neg">−5</span></td></tr>
+              <tr><td>Luzes beacon desligadas com motores acionados</td><td><span class="badge-ov">Ov</span></td><td><span class="pts-neg">−5</span></td></tr>
+              <tr><td>Recolhimento de trem de pouso em velocidade incompatível</td><td><span class="badge-ov">Ov</span></td><td><span class="pts-neg">−5</span></td></tr>
+              <tr><td>Extensão ou retração de flaps em velocidade incompatível</td><td><span class="badge-ov">Ov</span></td><td><span class="pts-neg">−5</span></td></tr>
+              <tr><td>Luzes strobes desligadas durante o voo</td><td><span class="badge-ov">Ov</span></td><td><span class="pts-neg">−5</span></td></tr>
+              <tr><td>Luzes de navegação desligadas durante o voo</td><td><span class="badge-ov">Ov</span></td><td><span class="pts-neg">−5</span></td></tr>
+              <tr><td>Não utilizar as texturas da VA</td><td><span class="badge-ov">Ov</span></td><td><span class="pts-zero">0</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- LM -->
+      <section class="wiki-section" id="lm">
+        <h2>LM — Limitations</h2>
+        <div class="wiki-desc">
+          Limitações de aeronaves são os parâmetros e condições que definem os limites operacionais dentro dos quais
+          uma aeronave pode ser operada com segurança. Essas limitações são estabelecidas pela Diretoria de Operações
+          para garantir eficiência e ausência de riscos.
+        </div>
+
+        <div id="lm-a320"></div>
+        <h3>Airbus A320</h3>
+        <div class="wiki-table-wrap">
+          <table class="wiki-table">
+            <thead><tr><th>Descrição</th><th>Limitação</th></tr></thead>
+            <tbody>
+              <tr><td>Peso máximo de decolagem (MTOW)</td><td><strong>77.000 kg</strong></td></tr>
+              <tr><td>Peso máximo de pouso (MLW)</td><td><strong>66.000 kg</strong></td></tr>
+              <tr><td>Vento máximo de cauda no pouso e decolagem</td><td><strong>10 kts</strong></td></tr>
+              <tr><td>Velocidade máxima para extensão dos Speedbrakes</td><td><strong>315 KIAS</strong></td></tr>
+              <tr><td>Intervalos de flaps permitidos na decolagem</td><td><strong>1 — 3</strong></td></tr>
+              <tr><td>Velocidade máxima para o 1º dente de flaps</td><td>230 KIAS</td></tr>
+              <tr><td>Velocidade máxima para o 2º dente de flaps</td><td>215 KIAS</td></tr>
+              <tr><td>Velocidade máxima para o 3º dente de flaps</td><td>200 KIAS</td></tr>
+              <tr><td>Velocidade máxima para o 4º dente de flaps</td><td>185 KIAS</td></tr>
+              <tr><td>Velocidade máxima para o 5º dente de flaps (FULL)</td><td>177 KIAS</td></tr>
+              <tr><td>Velocidade máxima para extensão do trem de pouso</td><td><strong>280 KIAS</strong></td></tr>
+              <tr><td>Velocidade máxima para recolhimento do trem de pouso</td><td><strong>280 KIAS</strong></td></tr>
+              <tr><td>FOB mínimo no pouso</td><td><strong>1.600 kg</strong></td></tr>
+              <tr><td>Teto máximo operacional</td><td><strong>39.100 ft</strong></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div><!-- /wiki-content -->
+  </div><!-- /wiki-wrap -->
+</main>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+const FB_CONFIG = {
+  apiKey:            'AIzaSyC2dDGhKjzHSclyFwUFNGA60DtXAjLEJ6I',
+  authDomain:        'bravo-aviation.firebaseapp.com',
+  projectId:         'bravo-aviation',
+  storageBucket:     'bravo-aviation.firebasestorage.app',
+  messagingSenderId: '712016002234',
+  appId:             '1:712016002234:web:ce7a8e39c28bc6d8ca5683'
+};
+firebase.initializeApp(FB_CONFIG);
+const auth = firebase.auth();
+const db   = firebase.firestore();
+
+const RANKS = [
+  { name:'Cadete',         min:0,    max:100  },
+  { name:'Segundo Oficial',min:100,  max:300  },
+  { name:'Primeiro Oficial',min:300, max:700  },
+  { name:'Comandante',     min:700,  max:1500 },
+  { name:'Comandante Sênior',min:1500,max:99999}
+];
+
+auth.onAuthStateChanged(async user => {
+  if (!user) { location.href = 'login.html'; return; }
+  const snap = await db.collection('users').doc(user.uid).get();
+  if (!snap.exists) { location.href = 'login.html'; return; }
+  const u = snap.data();
+  const initials = (u.name||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  document.getElementById('sb-avatar').textContent = initials;
+  document.getElementById('sb-name').textContent   = u.name || user.email;
+  const rank = RANKS.slice().reverse().find(r => (u.hours||0) >= r.min) || RANKS[0];
+  document.getElementById('sb-rank').textContent   = rank.name;
+});
+
+function doLogout() {
+  auth.signOut().then(() => location.href = 'login.html');
+}
+
+// TOC highlight on scroll
+const content = document.getElementById('wiki-content');
+const tocLinks = document.querySelectorAll('.toc-item');
+const sections = document.querySelectorAll('.wiki-section');
+
+content.addEventListener('scroll', () => {
+  let current = '';
+  sections.forEach(s => {
+    if (content.scrollTop >= s.offsetTop - 60) current = s.id;
+  });
+  tocLinks.forEach(a => {
+    const href = a.getAttribute('href').replace('#','');
+    a.classList.toggle('active', href === current);
+  });
+});
+</script>
+</body>
+</html>

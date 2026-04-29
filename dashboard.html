@@ -8,7 +8,7 @@
 <meta http-equiv="Expires" content="0" />
 <title>Dashboard — Bravo Virtual Airline</title>
 <script>
-  const PAGE_VERSION = '7';
+  const PAGE_VERSION = '8';
   const key = 'brv_v_dashboard';
   if (sessionStorage.getItem(key) !== PAGE_VERSION) {
     sessionStorage.setItem(key, PAGE_VERSION);
@@ -252,6 +252,10 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
 .gap-b { margin-bottom: 24px; }
 .tag-sim { display: inline-block; background: rgba(58,127,212,0.1); border: 1px solid rgba(58,127,212,0.2); color: var(--info); font-size: 9px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; padding: 2px 8px; border-radius: 2px; }
+.tag-net { display: inline-block; font-size: 9px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; padding: 2px 8px; border-radius: 2px; margin-left: 4px; }
+.tag-net.vatsim { background: rgba(0,176,224,0.12); border: 1px solid rgba(0,176,224,0.3); color: #00B0E0; }
+.tag-net.ivao   { background: rgba(153,102,255,0.12); border: 1px solid rgba(153,102,255,0.3); color: #9966FF; }
+.tag-net.offline{ background: rgba(120,120,140,0.1); border: 1px solid rgba(120,120,140,0.2); color: var(--text-dim); }
 .empty-state { text-align: center; padding: 48px 24px; color: var(--text-dim); font-size: 13px; }
 .empty-state .big { font-size: 36px; margin-bottom: 12px; }
 
@@ -373,9 +377,16 @@ tr:hover td { background: rgba(255,255,255,0.02); }
     <a class="nav-item" id="nav-downloads" onclick="goTo('downloads',this)">
       <span class="nav-icon">📦</span> Downloads
     </a>
+    <a class="nav-item" href="wiki.html">
+      <span class="nav-icon">📖</span> Operação Padrão
+    </a>
     <a class="nav-item" onclick="goTo('notifs',this)" id="nav-notifs">
       <span class="nav-icon">🔔</span> Notificações
       <span class="nav-badge" id="notif-badge">3</span>
+    </a>
+    <div class="nav-section-label" id="nav-label-admin" style="display:none">Administração</div>
+    <a class="nav-item" id="nav-admin-panel" href="admin.html" style="display:none">
+      <span class="nav-icon">⚙️</span> Painel Admin
     </a>
   </nav>
   <div class="sidebar-user">
@@ -555,6 +566,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
               <div class="profile-stat-row"><span class="k">Membro desde</span><span class="v" id="pf-join">—</span></div>
               <div class="profile-stat-row"><span class="k">Total de horas</span><span class="v" id="pf-hours">—</span></div>
               <div class="profile-stat-row"><span class="k">Total de voos</span><span class="v" id="pf-flights">—</span></div>
+              <div class="profile-stat-row"><span class="k">Pontos OP</span><span class="v" id="pf-op" style="font-weight:700;color:var(--accent);">—</span></div>
             </div>
           </div>
         </div>
@@ -586,7 +598,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
     <div class="page" id="page-pirep">
       <div class="form-card">
         <div class="sec-title" style="margin-bottom:6px;">Registrar voo (PIREP)</div>
-        <div style="font-size:13px;color:var(--text-sec);margin-bottom:24px;">Preencha os dados do seu voo realizado na rede IVAO.</div>
+        <div style="font-size:13px;color:var(--text-sec);margin-bottom:24px;">Preencha os dados do seu voo realizado. Válido para VATSIM, IVAO ou voo offline.</div>
         <form onsubmit="submitPirep(event)" id="pirepForm">
           <div class="form-grid-2">
             <div class="form-group"><label>Aeroporto de origem (ICAO)</label><input type="text" id="dep" placeholder="SBGR" maxlength="4" style="text-transform:uppercase;" required /></div>
@@ -612,6 +624,22 @@ tr:hover td { background: rgba(255,255,255,0.02); }
                 <option>X-Plane 12</option>
                 <option>X-Plane 11</option>
               </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Rede de voo</label>
+            <div style="display:flex;gap:16px;margin-top:6px;">
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;">
+                <input type="radio" name="pirep-network" value="Offline" checked /> Offline
+              </label>
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;">
+                <input type="radio" name="pirep-network" value="VATSIM" style="accent-color:#00B0E0;" />
+                <span style="color:#00B0E0;font-weight:700;">VATSIM</span>
+              </label>
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;">
+                <input type="radio" name="pirep-network" value="IVAO" style="accent-color:#6633CC;" />
+                <span style="color:#9966FF;font-weight:700;">IVAO</span>
+              </label>
             </div>
           </div>
           <div class="form-group"><label>Observações (opcional)</label><textarea id="pirep-obs" placeholder="Condições meteorológicas, eventos durante o voo, etc."></textarea></div>
@@ -771,7 +799,6 @@ auth.onAuthStateChanged(async (fbUser) => {
     }
 
     const data = snap.data();
-    if (data.role === 'admin') { window.location.href = 'admin.html'; return; }
 
     user = {
       uid:         fbUser.uid,
@@ -783,8 +810,16 @@ auth.onAuthStateChanged(async (fbUser) => {
       aircraft:    data.aircraft    || '',
       joinDate:    data.joinDate    || '',
       role:        data.role        || 'pilot',
-      permissions: data.permissions || {}
+      permissions: data.permissions || {},
+      opPoints:    data.opPoints    || 0
     };
+
+    if (user.role === 'admin') {
+      const adminNav = document.getElementById('nav-label-admin');
+      const adminLink = document.getElementById('nav-admin-panel');
+      if (adminNav) adminNav.style.display = '';
+      if (adminLink) adminLink.style.display = '';
+    }
 
     // Primeiro acesso: força troca de senha
     if (data.mustChangePassword) {
@@ -938,7 +973,7 @@ function initUserUI() {
         <td class="td-main">${f.dep} → ${f.arr}</td>
         <td>${f.ac}</td>
         <td>${f.dur}</td>
-        <td><span class="status-badge ${f.status}">${f.status==='approved'?'Aprovado':f.status==='pending'?'Pendente':'Recusado'}</span></td>
+        <td>${netBadge(f.network)}<span class="status-badge ${f.status}">${f.status==='approved'?'Aprovado':f.status==='pending'?'Pendente':'Recusado'}</span></td>
       </tr>`).join('');
   }
 
@@ -973,6 +1008,7 @@ function initUserUI() {
   document.getElementById('pf-join').textContent = new Date(user.joinDate).toLocaleDateString('pt-BR');
   document.getElementById('pf-hours').textContent = user.hours.toFixed(1) + 'h';
   document.getElementById('pf-flights').textContent = user.flights;
+  document.getElementById('pf-op').textContent = (user.opPoints || 0) + ' pts';
   document.getElementById('edit-name').value = user.name;
   document.getElementById('edit-email').value = user.email;
   document.getElementById('edit-vid').value = user.vid;
@@ -991,7 +1027,7 @@ function initUserUI() {
         <td>${f.dur}</td>
         <td>FL${f.fl}</td>
         <td>${new Date(f.date).toLocaleDateString('pt-BR')}</td>
-        <td><span class="tag-sim">${f.sim}</span></td>
+        <td><span class="tag-sim">${f.sim}</span>${netBadge(f.network)}</td>
         <td><span class="status-badge ${f.status}">${f.status==='approved'?'Aprovado':f.status==='pending'?'Pendente':'Recusado'}</span></td>
       </tr>`).join('');
   }
@@ -1086,6 +1122,14 @@ function markAllRead() {
   renderNotifs(); updateNotifBadge();
 }
 
+/* ── NETWORK BADGE ── */
+function netBadge(n) {
+  if (!n || n === 'Offline') return '<span class="tag-net offline">Offline</span>';
+  if (n === 'VATSIM') return '<span class="tag-net vatsim">VATSIM</span>';
+  if (n === 'IVAO')   return '<span class="tag-net ivao">IVAO</span>';
+  return `<span class="tag-net offline">${n}</span>`;
+}
+
 /* ── PIREP SUBMIT ── */
 async function submitPirep(e) {
   e.preventDefault();
@@ -1099,10 +1143,11 @@ async function submitPirep(e) {
     dur:    document.getElementById('pirep-dur').value,
     fl:     document.getElementById('pirep-fl').value,
     date:   document.getElementById('pirep-date').value,
-    sim:    document.getElementById('pirep-sim').value,
-    obs:    document.getElementById('pirep-obs').value,
-    status: 'pending',
-    source: 'manual',
+    sim:     document.getElementById('pirep-sim').value,
+    network: (document.querySelector('input[name="pirep-network"]:checked') || {}).value || 'Offline',
+    obs:     document.getElementById('pirep-obs').value,
+    status:  'pending',
+    source:  'manual',
     createdAt: firebase.firestore.FieldValue.serverTimestamp()
   };
   try {

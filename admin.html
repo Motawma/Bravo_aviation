@@ -320,7 +320,7 @@ tr:hover td{background:rgba(255,255,255,.02);}
       </div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Piloto</th><th>Rota</th><th>Aeronave</th><th>Duração</th><th>FL</th><th>Data</th><th>Sim</th><th>Status</th><th>Ações</th></tr></thead>
+          <thead><tr><th>Piloto</th><th>Rota</th><th>Aeronave</th><th>Duração</th><th>FL</th><th>Data</th><th>Sim</th><th>FOQA</th><th>Status</th><th>Ações</th></tr></thead>
           <tbody id="pireps-table"></tbody>
         </table>
       </div>
@@ -819,6 +819,7 @@ async function approveApp(appId) {
       aircraft: app.aircraft || '', hours: 0, flights: 0,
       joinDate: new Date().toISOString().slice(0, 10),
       role: 'pilot', status: 'active',
+      opPoints: 200,
       mustChangePassword: true,
       permissions: { pirep:true, flights:true, routes:true, ranking:true, downloads:true, notifications:true }
     });
@@ -1050,12 +1051,23 @@ async function savePilot() {
   toast('Piloto atualizado com sucesso!');
 }
 
+/* ── NETWORK BADGE ── */
+function netBadge(n) {
+  const styles = {
+    VATSIM:  'background:rgba(0,176,224,0.12);border:1px solid rgba(0,176,224,0.3);color:#00B0E0;',
+    IVAO:    'background:rgba(153,102,255,0.12);border:1px solid rgba(153,102,255,0.3);color:#9966FF;',
+    Offline: 'background:rgba(120,120,140,0.1);border:1px solid rgba(120,120,140,0.2);color:#888;'
+  };
+  const v = (!n || n==='Offline') ? 'Offline' : n;
+  return `<span style="display:inline-block;font-size:9px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;padding:2px 7px;border-radius:2px;margin-left:4px;${styles[v]||styles.Offline}">${v}</span>`;
+}
+
 /* ── PIREPS ── */
 function renderPireps() {
   const list = allPireps.filter(p=>p.status===currentPirepFilter);
   const tbody = document.getElementById('pireps-table');
   if (!list.length) {
-    tbody.innerHTML=`<tr><td colspan="9"><div class="empty-state"><div class="big">✈️</div>Nenhum PIREP ${currentPirepFilter==='pending'?'pendente':currentPirepFilter==='approved'?'aprovado':'rejeitado'}.</div></td></tr>`;
+    tbody.innerHTML=`<tr><td colspan="10"><div class="empty-state"><div class="big">✈️</div>Nenhum PIREP ${currentPirepFilter==='pending'?'pendente':currentPirepFilter==='approved'?'aprovado':'rejeitado'}.</div></td></tr>`;
     return;
   }
   tbody.innerHTML = list.map(p=>{
@@ -1072,7 +1084,8 @@ function renderPireps() {
       <td>${p.dur}</td>
       <td>FL${p.fl||'—'}</td>
       <td>${dt}</td>
-      <td style="font-size:11px;">${p.sim||'—'}</td>
+      <td style="font-size:11px;">${p.sim||'—'}${netBadge(p.network)}</td>
+      <td style="font-size:11px;font-weight:700;color:${p.foqaScore===100?'#4ade80':p.foqaScore>=75?'#f59e0b':'#ff4d4d'}">${p.foqaScore != null ? p.foqaScore+'%' : (p.source==='acars'?'—':'N/A')}</td>
       <td><span class="badge ${p.status}">${p.status==='pending'?'Pendente':p.status==='approved'?'Aprovado':'Recusado'}</span></td>
       <td style="display:flex;gap:6px;">${actions}</td>
     </tr>`;}).join('');
