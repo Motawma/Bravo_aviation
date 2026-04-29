@@ -883,12 +883,49 @@ function getRank(hours) {
 let PILOTS = [];
 
 const ROUTES = [
-  { dep:'SBGR', arr:'SBBR', city1:'São Paulo', city2:'Brasília',        dur:'1h45', dist:'1070km', freq:'Diário',  ac:'B737-800', fn:'BRV1001', fl:'310', route:'PCL UW2 BRS' },
-  { dep:'SBGR', arr:'SBGL', city1:'São Paulo', city2:'Rio de Janeiro',  dur:'0h55', dist:'360km',  freq:'Diário',  ac:'A320',     fn:'BRV1002', fl:'250', route:'EKIDI' },
-  { dep:'SBGR', arr:'SBCF', city1:'São Paulo', city2:'Belo Horizonte',  dur:'1h10', dist:'590km',  freq:'Diário',  ac:'B737-800', fn:'BRV1003', fl:'280', route:'MOLVA W45 MOXIK' },
-  { dep:'SBGR', arr:'SBSV', city1:'São Paulo', city2:'Salvador',        dur:'2h15', dist:'1960km', freq:'Semanal', ac:'A320',     fn:'BRV1004', fl:'350', route:'ASBUP W1 MAVBO UZ21 DENDE UZ10 BLOCK' },
-  { dep:'SBGR', arr:'SBRF', city1:'São Paulo', city2:'Recife',          dur:'3h00', dist:'2680km', freq:'Semanal', ac:'B737-800', fn:'BRV1005', fl:'360', route:'TEXAS UW13 DEPOT UW58 POTRO' },
-  { dep:'SBGR', arr:'SBPA', city1:'São Paulo', city2:'Porto Alegre',    dur:'1h50', dist:'1100km', freq:'Diário',  ac:'A320',     fn:'BRV1006', fl:'310', route:'GLOBO UW25 OSAMU UM540 NANDU' },
+  // ── SBGR (São Paulo Guarulhos) ──────────────────────────────────────────
+  { dep:'SBGR', arr:'SBBR', city1:'São Paulo',    city2:'Brasília',        dur:'1h45', dist:'1070km', freq:'Diário',  ac:'B737-800', fn:'BRV1001', fl:'310', route:'PCL UW2 BRS' },
+  { dep:'SBGR', arr:'SBGL', city1:'São Paulo',    city2:'Rio de Janeiro',  dur:'0h55', dist:'360km',  freq:'Diário',  ac:'A320',     fn:'BRV1002', fl:'250', route:'EKIDI' },
+  { dep:'SBGR', arr:'SBCF', city1:'São Paulo',    city2:'Belo Horizonte',  dur:'1h10', dist:'590km',  freq:'Diário',  ac:'B737-800', fn:'BRV1003', fl:'280', route:'MOLVA W45 MOXIK' },
+  { dep:'SBGR', arr:'SBSV', city1:'São Paulo',    city2:'Salvador',        dur:'2h15', dist:'1960km', freq:'Semanal', ac:'A320',     fn:'BRV1004', fl:'350', route:'ASBUP W1 MAVBO UZ21 DENDE UZ10 BLOCK' },
+  { dep:'SBGR', arr:'SBRF', city1:'São Paulo',    city2:'Recife',          dur:'3h00', dist:'2680km', freq:'Semanal', ac:'B737-800', fn:'BRV1005', fl:'360', route:'TEXAS UW13 DEPOT UW58 POTRO' },
+  { dep:'SBGR', arr:'SBPA', city1:'São Paulo',    city2:'Porto Alegre',    dur:'1h50', dist:'1100km', freq:'Diário',  ac:'A320',     fn:'BRV1006', fl:'310', route:'GLOBO UW25 OSAMU UM540 NANDU' },
+  { dep:'SBGR', arr:'SBCT', city1:'São Paulo',    city2:'Curitiba',        dur:'0h45', dist:'260km',  freq:'Diário',  ac:'A320',     fn:'BRV1007', fl:'250', route:'DENEM UM540 IGDUN' },
+  { dep:'SBGR', arr:'SBFL', city1:'São Paulo',    city2:'Florianópolis',   dur:'1h05', dist:'540km',  freq:'Diário',  ac:'A320',     fn:'BRV1008', fl:'270', route:'DENEM UM540 BARBI' },
+  { dep:'SBGR', arr:'SBFZ', city1:'São Paulo',    city2:'Fortaleza',       dur:'2h50', dist:'2900km', freq:'Semanal', ac:'B737-800', fn:'BRV1009', fl:'360', route:'TEXAS UZ3 LOBRA UZ6 SOGES' },
+  { dep:'SBGR', arr:'SBBE', city1:'São Paulo',    city2:'Belém',           dur:'3h00', dist:'2800km', freq:'Semanal', ac:'B737-800', fn:'BRV1010', fl:'370', route:'TEXAS UZ3 LOBRA UZ1 UPALA' },
+  { dep:'SBGR', arr:'SBEG', city1:'São Paulo',    city2:'Manaus',          dur:'3h30', dist:'2700km', freq:'Semanal', ac:'B737-800', fn:'BRV1011', fl:'370', route:'TEXAS UZ3 LOBRA UZ5 BEGAS' },
+  { dep:'SBGR', arr:'SBNT', city1:'São Paulo',    city2:'Natal',           dur:'3h20', dist:'3100km', freq:'Semanal', ac:'B737-800', fn:'BRV1012', fl:'360', route:'TEXAS UZ3 LOBRA UZ6 SOGES UW58 GRANA' },
+  { dep:'SBGR', arr:'SBMO', city1:'São Paulo',    city2:'Maceió',          dur:'2h40', dist:'2500km', freq:'Semanal', ac:'A320',     fn:'BRV1013', fl:'350', route:'TEXAS W1 MAVBO UZ21 DENDE UZ10 MOLDI' },
+  { dep:'SBGR', arr:'SBJP', city1:'São Paulo',    city2:'João Pessoa',     dur:'2h55', dist:'2800km', freq:'Semanal', ac:'B737-800', fn:'BRV1014', fl:'360', route:'TEXAS W1 MAVBO UZ21 DENDE UZ10 POTRO UW58 ROBNI' },
+  { dep:'SBGR', arr:'SBCY', city1:'São Paulo',    city2:'Cuiabá',          dur:'2h00', dist:'1500km', freq:'Semanal', ac:'B737-800', fn:'BRV1015', fl:'330', route:'ASBUP UW4 GIGOL' },
+  { dep:'SBGR', arr:'SBVT', city1:'São Paulo',    city2:'Vitória',         dur:'1h00', dist:'650km',  freq:'Diário',  ac:'A320',     fn:'BRV1016', fl:'270', route:'MOLVA W45 VOPAX' },
+  { dep:'SBGR', arr:'SBSL', city1:'São Paulo',    city2:'São Luís',        dur:'2h45', dist:'2800km', freq:'Semanal', ac:'B737-800', fn:'BRV1017', fl:'360', route:'TEXAS UZ3 LOBRA UZ1 PEPOX' },
+  { dep:'SBGR', arr:'SBAR', city1:'São Paulo',    city2:'Aracaju',         dur:'2h20', dist:'2100km', freq:'Semanal', ac:'A320',     fn:'BRV1018', fl:'350', route:'TEXAS W1 MAVBO UZ21 DENDE UZ10 OLBIN' },
+  // ── SBBR (Brasília) ─────────────────────────────────────────────────────
+  { dep:'SBBR', arr:'SBGR', city1:'Brasília',     city2:'São Paulo',       dur:'1h45', dist:'1070km', freq:'Diário',  ac:'B737-800', fn:'BRV2001', fl:'310', route:'BRS UW2 PCL' },
+  { dep:'SBBR', arr:'SBGL', city1:'Brasília',     city2:'Rio de Janeiro',  dur:'1h30', dist:'1160km', freq:'Diário',  ac:'A320',     fn:'BRV2002', fl:'300', route:'UBADU UM698 PIPUX' },
+  { dep:'SBBR', arr:'SBCF', city1:'Brasília',     city2:'Belo Horizonte',  dur:'0h55', dist:'620km',  freq:'Diário',  ac:'A320',     fn:'BRV2003', fl:'270', route:'UBADU W45 MOLVA' },
+  { dep:'SBBR', arr:'SBSV', city1:'Brasília',     city2:'Salvador',        dur:'1h45', dist:'1400km', freq:'Diário',  ac:'B737-800', fn:'BRV2004', fl:'330', route:'DENDE UZ10 BLOCK' },
+  { dep:'SBBR', arr:'SBRF', city1:'Brasília',     city2:'Recife',          dur:'2h20', dist:'2000km', freq:'Semanal', ac:'B737-800', fn:'BRV2005', fl:'350', route:'DENDE UZ10 POTRO' },
+  { dep:'SBBR', arr:'SBPA', city1:'Brasília',     city2:'Porto Alegre',    dur:'2h30', dist:'1800km', freq:'Semanal', ac:'A320',     fn:'BRV2006', fl:'350', route:'BRS UM540 OSAMU' },
+  { dep:'SBBR', arr:'SBFZ', city1:'Brasília',     city2:'Fortaleza',       dur:'2h00', dist:'1900km', freq:'Semanal', ac:'B737-800', fn:'BRV2007', fl:'350', route:'UBADU UZ6 SOGES' },
+  { dep:'SBBR', arr:'SBCT', city1:'Brasília',     city2:'Curitiba',        dur:'1h30', dist:'1100km', freq:'Semanal', ac:'A320',     fn:'BRV2008', fl:'310', route:'BRS UM540 IGDUN' },
+  { dep:'SBBR', arr:'SBBE', city1:'Brasília',     city2:'Belém',           dur:'1h45', dist:'1500km', freq:'Semanal', ac:'B737-800', fn:'BRV2009', fl:'340', route:'UBADU UZ1 UPALA' },
+  { dep:'SBBR', arr:'SBEG', city1:'Brasília',     city2:'Manaus',          dur:'2h30', dist:'2000km', freq:'Semanal', ac:'B737-800', fn:'BRV2010', fl:'360', route:'UBADU UZ5 BEGAS' },
+  // ── SBGL (Rio de Janeiro Galeão) ────────────────────────────────────────
+  { dep:'SBGL', arr:'SBGR', city1:'Rio de Janeiro', city2:'São Paulo',     dur:'0h55', dist:'360km',  freq:'Diário',  ac:'A320',     fn:'BRV3001', fl:'250', route:'EKIDI' },
+  { dep:'SBGL', arr:'SBBR', city1:'Rio de Janeiro', city2:'Brasília',      dur:'1h30', dist:'1160km', freq:'Diário',  ac:'A320',     fn:'BRV3002', fl:'300', route:'PIPUX UM698 UBADU' },
+  { dep:'SBGL', arr:'SBCF', city1:'Rio de Janeiro', city2:'Belo Horizonte',dur:'0h50', dist:'530km',  freq:'Diário',  ac:'A320',     fn:'BRV3003', fl:'250', route:'PIPUX W45 MOLVA' },
+  { dep:'SBGL', arr:'SBSV', city1:'Rio de Janeiro', city2:'Salvador',      dur:'2h00', dist:'1560km', freq:'Semanal', ac:'B737-800', fn:'BRV3004', fl:'350', route:'LOBRA UZ3 DENDE UZ10 BLOCK' },
+  { dep:'SBGL', arr:'SBPA', city1:'Rio de Janeiro', city2:'Porto Alegre',  dur:'1h55', dist:'1520km', freq:'Semanal', ac:'A320',     fn:'BRV3005', fl:'320', route:'DENEM UM540 NANDU' },
+  // ── SBKP (Campinas Viracopos — Azul) ────────────────────────────────────
+  { dep:'SBKP', arr:'SBBR', city1:'Campinas',     city2:'Brasília',        dur:'1h35', dist:'1000km', freq:'Diário',  ac:'A320',     fn:'BRV4001', fl:'310', route:'PCL UW2 BRS' },
+  { dep:'SBKP', arr:'SBGL', city1:'Campinas',     city2:'Rio de Janeiro',  dur:'0h55', dist:'320km',  freq:'Diário',  ac:'A320',     fn:'BRV4002', fl:'250', route:'EKIDI' },
+  { dep:'SBKP', arr:'SBRF', city1:'Campinas',     city2:'Recife',          dur:'3h00', dist:'2700km', freq:'Semanal', ac:'A320',     fn:'BRV4003', fl:'360', route:'TEXAS UW13 DEPOT UW58 POTRO' },
+  { dep:'SBKP', arr:'SBPA', city1:'Campinas',     city2:'Porto Alegre',    dur:'1h55', dist:'1100km', freq:'Diário',  ac:'A320',     fn:'BRV4004', fl:'310', route:'DENEM UM540 NANDU' },
+  { dep:'SBKP', arr:'SBCT', city1:'Campinas',     city2:'Curitiba',        dur:'0h45', dist:'240km',  freq:'Diário',  ac:'A320',     fn:'BRV4005', fl:'250', route:'DENEM UM540 IGDUN' },
+  { dep:'SBKP', arr:'SBFZ', city1:'Campinas',     city2:'Fortaleza',       dur:'2h50', dist:'2900km', freq:'Semanal', ac:'A320',     fn:'BRV4006', fl:'360', route:'ASBUP UZ3 LOBRA UZ6 SOGES' },
 ];
 
 const DOWNLOADS = [
