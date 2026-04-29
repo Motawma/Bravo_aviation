@@ -883,12 +883,12 @@ function getRank(hours) {
 let PILOTS = [];
 
 const ROUTES = [
-  { dep:'SBGR', arr:'SBBR', city1:'São Paulo', city2:'Brasília',        dur:'1h45', dist:'1070km', freq:'Diário',  ac:'B737-800', fn:'BRV1001', fl:'310' },
-  { dep:'SBGR', arr:'SBGL', city1:'São Paulo', city2:'Rio de Janeiro',  dur:'0h55', dist:'360km',  freq:'Diário',  ac:'A320',     fn:'BRV1002', fl:'250' },
-  { dep:'SBGR', arr:'SBCF', city1:'São Paulo', city2:'Belo Horizonte',  dur:'1h10', dist:'590km',  freq:'Diário',  ac:'B737-800', fn:'BRV1003', fl:'280' },
-  { dep:'SBGR', arr:'SBSV', city1:'São Paulo', city2:'Salvador',        dur:'2h15', dist:'1960km', freq:'Semanal', ac:'A320',     fn:'BRV1004', fl:'350' },
-  { dep:'SBGR', arr:'SBRF', city1:'São Paulo', city2:'Recife',          dur:'3h00', dist:'2680km', freq:'Semanal', ac:'B737-800', fn:'BRV1005', fl:'360' },
-  { dep:'SBGR', arr:'SBPA', city1:'São Paulo', city2:'Porto Alegre',    dur:'1h50', dist:'1100km', freq:'Diário',  ac:'A320',     fn:'BRV1006', fl:'310' },
+  { dep:'SBGR', arr:'SBBR', city1:'São Paulo', city2:'Brasília',        dur:'1h45', dist:'1070km', freq:'Diário',  ac:'B737-800', fn:'BRV1001', fl:'310', route:'PCL UW2 BRS' },
+  { dep:'SBGR', arr:'SBGL', city1:'São Paulo', city2:'Rio de Janeiro',  dur:'0h55', dist:'360km',  freq:'Diário',  ac:'A320',     fn:'BRV1002', fl:'250', route:'EKIDI' },
+  { dep:'SBGR', arr:'SBCF', city1:'São Paulo', city2:'Belo Horizonte',  dur:'1h10', dist:'590km',  freq:'Diário',  ac:'B737-800', fn:'BRV1003', fl:'280', route:'MOLVA W45 MOXIK' },
+  { dep:'SBGR', arr:'SBSV', city1:'São Paulo', city2:'Salvador',        dur:'2h15', dist:'1960km', freq:'Semanal', ac:'A320',     fn:'BRV1004', fl:'350', route:'ASBUP W1 MAVBO UZ21 DENDE UZ10 BLOCK' },
+  { dep:'SBGR', arr:'SBRF', city1:'São Paulo', city2:'Recife',          dur:'3h00', dist:'2680km', freq:'Semanal', ac:'B737-800', fn:'BRV1005', fl:'360', route:'TEXAS UW13 DEPOT UW58 POTRO' },
+  { dep:'SBGR', arr:'SBPA', city1:'São Paulo', city2:'Porto Alegre',    dur:'1h50', dist:'1100km', freq:'Diário',  ac:'A320',     fn:'BRV1006', fl:'310', route:'GLOBO UW25 OSAMU UM540 NANDU' },
 ];
 
 const DOWNLOADS = [
@@ -1212,7 +1212,7 @@ async function loadRanking() {
 let _pendingRoute = null;
 function openRouteModal(idx) {
   const r = ROUTES[idx];
-  _pendingRoute = { dep: r.dep, arr: r.arr, plannedFL: r.fl || '', aircraft: user.aircraft || r.ac, flightNumber: r.fn || '', eet: r.dur || '', routeIdx: idx };
+  _pendingRoute = { dep: r.dep, arr: r.arr, plannedFL: r.fl || '', aircraft: user.aircraft || r.ac, flightNumber: r.fn || '', eet: r.dur || '', route: r.route || '', routeIdx: idx };
   document.getElementById('modal-route-info').innerHTML =
     `<strong style="color:#F0EAF8;font-size:16px">${r.dep} → ${r.arr}</strong><br/>
      ${r.city1} → ${r.city2} &nbsp;·&nbsp; ${r.dur} &nbsp;·&nbsp; ${r.dist}<br/>
