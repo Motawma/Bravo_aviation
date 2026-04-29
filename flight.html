@@ -385,7 +385,6 @@ auth.onAuthStateChanged(async (fbUser) => {
     const snap = await db.collection('users').doc(fbUser.uid).get();
     if (!snap.exists) { window.location.href = 'login.html'; return; }
     const data = snap.data();
-    if (data.role === 'admin') { window.location.href = 'admin.html'; return; }
     currentUser  = { uid: fbUser.uid, ...data };
     pilotAirport = data.currentAirport || HUB;
 
