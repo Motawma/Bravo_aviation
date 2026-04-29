@@ -4,24 +4,32 @@
 <meta charset="UTF-8" />
 <title>Fix opPoints — BRV Admin</title>
 <style>
-  body { background: #080612; color: #F0EAF8; font-family: monospace; padding: 32px; }
+  body { background: #080612; color: #F0EAF8; font-family: monospace; padding: 32px; max-width: 640px; }
   h2 { color: #00EEFF; margin-bottom: 20px; }
-  #log { background: #0E0B1E; border: 1px solid #1E1840; border-radius: 4px; padding: 20px; min-height: 200px; white-space: pre-wrap; font-size: 13px; line-height: 1.8; }
+  input { width: 100%; background: #0E0B1E; border: 1px solid #1E1840; color: #F0EAF8; padding: 10px 14px; border-radius: 4px; font-size: 13px; font-family: monospace; margin-bottom: 10px; }
+  #log { background: #0E0B1E; border: 1px solid #1E1840; border-radius: 4px; padding: 20px; min-height: 160px; white-space: pre-wrap; font-size: 13px; line-height: 1.8; margin-top: 20px; }
   .ok  { color: #3db07a; }
   .skip{ color: #9A8FB8; }
   .err { color: #e05555; }
-  button { margin-top: 20px; padding: 12px 28px; background: #00EEFF; color: #000; border: none; border-radius: 4px; font-weight: 700; font-size: 14px; cursor: pointer; }
+  .info{ color: #00EEFF; }
+  button { padding: 11px 24px; background: #00EEFF; color: #000; border: none; border-radius: 4px; font-weight: 700; font-size: 13px; cursor: pointer; margin-right: 8px; }
   button:disabled { opacity: 0.5; cursor: not-allowed; }
+  #login-box { margin-bottom: 24px; }
+  label { font-size: 11px; color: #9A8FB8; letter-spacing: .1em; text-transform: uppercase; display: block; margin-bottom: 4px; }
 </style>
 </head>
 <body>
 <h2>🔧 Fix opPoints — Bravo Aviation</h2>
-<p style="color:#9A8FB8;margin-bottom:20px;font-size:13px">
-  Adiciona <strong style="color:#00EEFF">opPoints: 200</strong> em todos os pilotos que ainda não têm o campo.<br/>
-  Pilotos que já têm opPoints <strong>não são alterados</strong>.
-</p>
-<button id="btn" onclick="runFix()">▶ Executar correção</button>
-<div id="log" style="margin-top:20px">Aguardando...</div>
+
+<div id="login-box">
+  <label>E-mail admin</label>
+  <input type="email" id="inp-email" placeholder="admin@bravo.aero" />
+  <label>Senha</label>
+  <input type="password" id="inp-pwd" placeholder="••••••••" />
+  <button onclick="doLogin()">🔑 Entrar e executar</button>
+</div>
+
+<div id="log">Aguardando login...</div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
@@ -35,7 +43,8 @@ firebase.initializeApp({
   messagingSenderId: '712016002234',
   appId: '1:712016002234:web:ce7a8e39c28bc6d8ca5683'
 });
-const db = firebase.firestore();
+const auth = firebase.auth();
+const db   = firebase.firestore();
 
 function log(msg, cls) {
   const el = document.getElementById('log');
@@ -43,15 +52,27 @@ function log(msg, cls) {
   el.scrollTop = el.scrollHeight;
 }
 
-async function runFix() {
-  const btn = document.getElementById('btn');
-  btn.disabled = true;
+async function doLogin() {
+  const email = document.getElementById('inp-email').value.trim();
+  const pwd   = document.getElementById('inp-pwd').value;
   document.getElementById('log').innerHTML = '';
 
-  log('Buscando pilotos no Firestore...');
+  if (!email || !pwd) { log('Preencha e-mail e senha.', 'err'); return; }
+
+  log('Autenticando...', 'info');
+  try {
+    await auth.signInWithEmailAndPassword(email, pwd);
+    log('Login OK. Iniciando correção...\n', 'ok');
+    await runFix();
+  } catch(e) {
+    log('Erro de login: ' + e.message, 'err');
+  }
+}
+
+async function runFix() {
   try {
     const snap = await db.collection('users').get();
-    log(`Total de documentos encontrados: ${snap.size}\n`);
+    log(`Total de documentos: ${snap.size}\n`);
 
     let fixed = 0, skipped = 0, errors = 0;
 
@@ -79,12 +100,11 @@ async function runFix() {
     log(`Corrigidos : ${fixed}`, 'ok');
     log(`Ignorados  : ${skipped}`, 'skip');
     log(`Erros      : ${errors}`, errors > 0 ? 'err' : '');
-    log(`\nConcluído!`);
+    log(`\n✓ Concluído! Pode fechar esta página.`);
+    await auth.signOut();
   } catch(e) {
-    log(`Erro ao buscar usuários: ${e.message}`, 'err');
+    log(`Erro: ${e.message}`, 'err');
   }
-
-  btn.disabled = false;
 }
 </script>
 </body>
