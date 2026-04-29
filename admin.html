@@ -477,13 +477,6 @@ tr:hover td{background:rgba(255,255,255,.02);}
         </select>
       </div>
     </div>
-    <div class="form-group"><label>Role</label>
-      <select id="add-role">
-        <option value="pilot">Piloto</option>
-        <option value="staff">Staff</option>
-        <option value="admin">Admin</option>
-      </select>
-    </div>
     <div id="add-error" style="display:none;color:var(--danger);font-size:12px;margin-top:4px;"></div>
     <div class="modal-actions">
       <button class="btn-ghost" onclick="closeAddModal()">Cancelar</button>
@@ -985,7 +978,7 @@ async function createPilot() {
   const password = document.getElementById('add-password').value;
   const vid      = document.getElementById('add-vid').value.trim();
   const aircraft = document.getElementById('add-aircraft').value;
-  const role     = document.getElementById('add-role').value;
+  const role     = 'pilot';
   const errEl    = document.getElementById('add-error');
 
   errEl.style.display = 'none';
