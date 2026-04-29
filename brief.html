@@ -480,17 +480,20 @@ function parseTime(r){
 /* ── HELPERS ── */
 function buildIvaoUrl(dep, arr, fl, fn, ac, route) {
   const fp = {
-    callsign:    fn  || '',
-    flightRules: 'I',
-    flightType:  'S',
-    aircraftId:  toICAOType(ac),
-    departureId: dep || '',
-    arrivalId:   arr || '',
-    altitudeType:'F',
-    altitude:    fl  ? parseInt(fl, 10) : 0
+    callsign:          fn  || '',
+    flightRules:       'I',
+    flightType:        'S',
+    aircraftId:        toICAOType(ac),
+    departureId:       dep || '',
+    arrivalId:         arr || '',
+    altitudeType:      'F',
+    altitude:          fl  ? parseInt(fl, 10) : 0,
+    cruisingSpeedType: 'N',
+    cruisingSpeed:     460
   };
   if (route && route.trim()) fp.route = route.trim();
-  return 'https://fpl.ivao.aero/flight-plans/create?flightPlan=' + btoa(JSON.stringify(fp));
+  // btoa produz base64 com +/= que precisam de encodeURIComponent para não quebrar no URLSearchParams
+  return 'https://fpl.ivao.aero/flight-plans/create?flightPlan=' + encodeURIComponent(btoa(JSON.stringify(fp)));
 }
 
 function buildSimBriefUrl(dep, arr, fl, fn, ac, route) {
