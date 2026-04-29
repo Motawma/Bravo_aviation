@@ -151,6 +151,8 @@ main { flex: 1; display: flex; overflow: hidden; flex-direction: column; }
     <a class="nav-item" href="dashboard.html"><span class="nav-icon">🏆</span> Ranking</a>
     <a class="nav-item active" href="wiki.html"><span class="nav-icon">📖</span> Operação Padrão</a>
     <a class="nav-item" href="dashboard.html"><span class="nav-icon">📦</span> Downloads</a>
+    <div class="nav-section-label" id="nav-label-admin" style="display:none;font-size:9px;font-weight:700;letter-spacing:.25em;text-transform:uppercase;color:var(--text-dim);padding:14px 20px 6px">Administração</div>
+    <a class="nav-item" id="nav-admin-panel" href="admin.html" style="display:none"><span class="nav-icon">⚙️</span> Painel Admin</a>
   </nav>
   <div class="sidebar-user">
     <div class="su-avatar" id="sb-avatar">?</div>
@@ -359,6 +361,10 @@ auth.onAuthStateChanged(async user => {
   document.getElementById('sb-name').textContent   = u.name || user.email;
   const rank = RANKS.slice().reverse().find(r => (u.hours||0) >= r.min) || RANKS[0];
   document.getElementById('sb-rank').textContent   = rank.name;
+  if (u.role === 'admin') {
+    document.getElementById('nav-label-admin').style.display = '';
+    document.getElementById('nav-admin-panel').style.display = '';
+  }
 });
 
 function doLogout() {
