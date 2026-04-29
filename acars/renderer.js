@@ -695,12 +695,15 @@
     };
 
     await db.collection('pireps').add(pirep);
-    await db.collection('users').doc(currentUser.uid).update({
+    const userUpdate = {
       flights:        firebase.firestore.FieldValue.increment(1),
       hours:          firebase.firestore.FieldValue.increment(+(dur / 3600).toFixed(2)),
       currentAirport: arr,
-      opPoints:       firebase.firestore.FieldValue.increment(flightOp)
-    }).catch(() => {});
+    };
+    if (!foqaRejected && flightOp > 0) {
+      userUpdate.opPoints = firebase.firestore.FieldValue.increment(flightOp);
+    }
+    await db.collection('users').doc(currentUser.uid).update(userUpdate).catch(() => {});
     await db.collection('liveflights').doc(currentUser.uid).delete().catch(() => {});
 
     showSummary({ dep, arr, dur, landingRate, maxAlt, maxSpd, fuelUsed, foqaScore,
