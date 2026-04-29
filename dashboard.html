@@ -1244,7 +1244,7 @@ function setupLiveFlights() {
     if (!section || !tbody) return;
 
     const now = Date.now();
-    const STALE_MS = 5 * 60 * 1000;
+    const STALE_MS = 20 * 60 * 1000;
 
     const activeDocs = snap.docs.filter(doc => {
       const upd = doc.data().updatedAt;

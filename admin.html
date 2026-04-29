@@ -542,7 +542,7 @@ function setupLiveFlights() {
     if (!section || !tbody) return;
 
     const now = Date.now();
-    const STALE_MS = 5 * 60 * 1000; // 5 minutos sem atualização = voo órfão
+    const STALE_MS = 20 * 60 * 1000; // 20 minutos sem atualização = voo órfão
 
     // Auto-deletar voos órfãos do Firestore
     snap.docs.forEach(doc => {
