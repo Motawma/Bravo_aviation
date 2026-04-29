@@ -145,6 +145,13 @@
   .viol-ok  { color: var(--green); font-size: 12px; }
   .viol-err { display: flex; align-items: flex-start; gap: 6px; color: var(--amber); font-size: 12px; margin-bottom: 4px; }
   .viol-err .vi { font-size: 14px; }
+  .viol-coc { display: flex; align-items: flex-start; gap: 6px; color: #ff4d4d; font-size: 12px; margin-bottom: 4px; font-weight: 600; }
+  .viol-coc .vi { font-size: 14px; }
+  .foqa-live { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; margin-bottom: 6px; padding: 2px 0; }
+  .foqa-live.perfect { color: var(--green); }
+  .foqa-live.bad     { color: #ff4d4d; }
+  .foqa-live:not(.perfect):not(.bad) { color: var(--amber); }
+  .summary-score.perfect { color: var(--green); }
 
   /* ── FLIGHT LOG ─────────────────────── */
   #panel-log { display: none; }
@@ -202,6 +209,8 @@
 
   /* ── SCREENS ────────────────────────── */
   .screen { display: none; }
+  #screen-main { display: none; flex-direction: column; flex: 1; overflow: hidden; }
+  #screen-main.active { display: flex; }
   .screen.active { display: flex; flex-direction: column; height: 100%; }
 
   /* ── UPDATE BANNER ──────────────────── */
@@ -231,7 +240,7 @@
 
 <!-- ─── TOPBAR ───────────────────────────────────────────── -->
 <div id="topbar" style="display:none">
-  <div class="brand">BRAVO ACARS <span>v1.0</span></div>
+  <div class="brand">BRAVO ACARS <span id="app-version"></span></div>
   <div style="display:flex;align-items:center;gap:10px">
     <div class="pilot-info">
       <strong id="topbar-name">—</strong>
@@ -291,6 +300,22 @@
         <div class="rf"><label>Nível de Voo</label><input id="inp-fl"  maxlength="5" placeholder="350"  /></div>
         <div class="rf"><label>Observações</label> <input id="inp-obs" placeholder="—"               /></div>
       </div>
+      <div style="margin-top:10px;">
+        <label style="font-size:10px;color:var(--muted);display:block;margin-bottom:6px;letter-spacing:0.08em;">REDE DE VOO</label>
+        <div style="display:flex;gap:8px;">
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px;">
+            <input type="radio" name="network" id="net-offline" value="Offline" checked style="accent-color:var(--muted);" /> Offline
+          </label>
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px;">
+            <input type="radio" name="network" id="net-vatsim" value="VATSIM" style="accent-color:#00B0E0;" />
+            <span style="color:#00B0E0;font-weight:700;">VATSIM</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px;">
+            <input type="radio" name="network" id="net-ivao" value="IVAO" style="accent-color:#6633CC;" />
+            <span style="color:#9966FF;font-weight:700;">IVAO</span>
+          </label>
+        </div>
+      </div>
     </div>
 
     <!-- Telemetria (oculta no pré-voo) -->
@@ -307,9 +332,12 @@
       </div>
     </div>
 
-    <!-- Violações -->
+    <!-- Violações / FOQA -->
     <div class="panel" id="panel-viols" style="display:none">
-      <div class="panel-title">Violações</div>
+      <div class="panel-title" style="display:flex;align-items:center;justify-content:space-between;">
+        FOQA
+        <div id="foqa-score-live" class="foqa-live perfect">FOQA: 100/100</div>
+      </div>
       <div id="violations-list"><span class="viol-ok">✓ Nenhuma violação detectada</span></div>
     </div>
 
@@ -322,13 +350,14 @@
       <div id="flight-log"></div>
     </div>
 
-    <!-- Botões de ação -->
-    <div class="action-row">
-      <button id="btn-start" disabled onclick="startFlight()">▶ INICIAR VOO</button>
-      <button id="btn-stop"  disabled onclick="stopFlight()">⏹ ENCERRAR</button>
-    </div>
-
   </div><!-- /main -->
+
+  <!-- Botões de ação — fixos no rodapé -->
+  <div class="action-row" style="padding:10px 14px;border-top:1px solid var(--border);background:var(--bg);flex-shrink:0;">
+    <button id="btn-start" disabled onclick="startFlight()">▶ INICIAR VOO</button>
+    <button id="btn-stop"  disabled onclick="stopFlight()">⏹ ENCERRAR</button>
+  </div>
+
 </div><!-- /screen-main -->
 
 <!-- ─── SCREEN: SUMMARY ──────────────────────────────────── -->
@@ -336,7 +365,9 @@
   <div class="panel-title" style="margin-bottom:4px">Voo encerrado</div>
   <div id="sum-status-badge"></div>
   <div class="summary-score" id="sum-score">100</div>
-  <div class="summary-label">PONTUAÇÃO</div>
+  <div class="summary-label">FOQA SCORE</div>
+  <div style="text-align:center;margin-top:4px;margin-bottom:2px;font-size:13px;font-weight:700;color:var(--accent);" id="sum-op">—</div>
+  <div style="text-align:center;font-size:10px;color:var(--muted);letter-spacing:0.1em;">PONTOS OP GANHOS</div>
   <div style="margin-top:16px">
     <div class="summary-stat"><span class="k">Rota</span><span id="sum-route">—</span></div>
     <div class="summary-stat"><span class="k">Duração</span><span id="sum-dur">—</span></div>
@@ -347,7 +378,7 @@
     <div class="summary-stat"><span class="k">Distância</span><span id="sum-dist">—</span></div>
   </div>
   <div style="margin-top:12px">
-    <div class="panel-title">Violações</div>
+    <div class="panel-title">Violações FOQA</div>
     <div id="sum-viols" style="margin-top:6px"></div>
   </div>
   <button id="btn-new-flight" onclick="newFlight()">Novo Voo</button>
