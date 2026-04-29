@@ -230,7 +230,6 @@ auth.onAuthStateChanged(async (fbUser) => {
     const snap = await db.collection('users').doc(fbUser.uid).get();
     if (!snap.exists) { window.location.href = 'login.html'; return; }
     const data = snap.data();
-    if (data.role === 'admin') { window.location.href = 'admin.html'; return; }
 
     document.body.style.visibility = '';
     const pf = data.pendingFlight;
@@ -481,7 +480,11 @@ function parseTime(r){
 /* ── HELPERS ── */
 function buildSimBriefUrl(dep, arr, fl, fn, ac, route) {
   const type = toICAOType(ac);
-  let url = `https://www.simbrief.com/system/dispatch.php?orig=${dep}&dest=${arr}&type=${type}&airline=BRV&fltnum=${fn.replace('BRV','')}&fl=${fl}&units=kgs&navlog=1&etops=0&stepclimbs=0`;
+  const num  = (fn || '').replace(/^BRV/i, '').trim() || '001';
+  let url = `https://www.simbrief.com/system/dispatch.system.php`
+          + `?orig=${dep}&dest=${arr}&type=${type}`
+          + `&airline=BRV&fltnum=${num}`
+          + `&fl=${fl}&units=kgs`;
   if (route && route.trim()) url += `&route=${encodeURIComponent(route.trim())}`;
   return url;
 }
