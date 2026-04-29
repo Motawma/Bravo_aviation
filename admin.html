@@ -1023,6 +1023,7 @@ async function createPilot() {
     const doc = {
       name, email, vid, aircraft, role,
       hours: 0, flights: 0,
+      opPoints: 200,
       joinDate: new Date().toISOString().slice(0,10),
       status: 'active',
       mustChangePassword: true,
