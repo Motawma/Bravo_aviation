@@ -114,12 +114,13 @@
   }
 
   function flightPhase(spd, alt, vs, onGround) {
-    if (onGround && spd < 40)  return 'SOLO';
-    if (onGround && spd >= 40) return 'DECOLAGEM';
-    if (vs > 200)  return 'SUBIDA';
-    if (vs < -200) return 'DESCIDA';
+    if (onGround)              return spd >= 40 ? 'DECOLAGEM' : 'SOLO';
+    if (alt < 50 && spd < 40) return 'SOLO'; // fallback: dados iniciais sem onGround
+    if (vs > 500)              return 'DECOLAGEM';
+    if (vs > 200)              return 'SUBIDA';
+    if (vs < -200)             return 'DESCIDA';
     if (alt > 8000 && Math.abs(vs) <= 200) return 'CRUZEIRO';
-    if (alt <= 8000 && !onGround) return 'APROXIMAÇÃO';
+    if (alt <= 8000)           return 'APROXIMAÇÃO';
     return 'VOO';
   }
 
