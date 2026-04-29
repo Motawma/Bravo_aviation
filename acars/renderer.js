@@ -396,11 +396,25 @@
     flightOp         = 0;
     landingRate      = 0;
     foqaViolations.length = 0;
+    logPrevState = null;
+    logLastPhase = null;
 
     $('panel-tele').style.display  = '';
     $('panel-viols').style.display = '';
     updateStartBtn();
     addLogEntry('▶', `Voo iniciado — ${$('inp-dep').value} → ${$('inp-arr').value}`);
+
+    // Log estado atual das luzes e motores no momento do INICIAR
+    if (lastSimData) {
+      const d = lastSimData;
+      if (d.eng1 || d.eng2)       addLogEntry('🔴', `Motores: ${[d.eng1?'1':'',d.eng2?'2':''].filter(Boolean).join(' e ')} acionados`);
+      if (d.beaconLight)          addLogEntry('🔆', 'Beacon ligado');
+      if (d.navLight)             addLogEntry('🟢', 'Luzes de navegação ligadas');
+      if (d.strobeLight)          addLogEntry('✦',  'Strobes ligados');
+      if (d.taxiLight)            addLogEntry('💡', 'Luzes de taxi ligadas');
+      if (d.landingLights)        addLogEntry('💡', 'Luzes de pouso ligadas');
+      if (d.flapsIndex > 0)       addLogEntry('🛫', `Flaps posição ${d.flapsIndex}`);
+    }
 
     // Timer
     timerInterval = setInterval(() => {
