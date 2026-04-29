@@ -541,7 +541,24 @@ function setupLiveFlights() {
     const count   = document.getElementById('live-count');
     if (!section || !tbody) return;
 
-    if (snap.empty) {
+    const now = Date.now();
+    const STALE_MS = 5 * 60 * 1000; // 5 minutos sem atualização = voo órfão
+
+    // Auto-deletar voos órfãos do Firestore
+    snap.docs.forEach(doc => {
+      const upd = doc.data().updatedAt;
+      if (upd && upd.toDate && (now - upd.toDate().getTime() > STALE_MS)) {
+        db.collection('liveflights').doc(doc.id).delete().catch(() => {});
+      }
+    });
+
+    const activeDocs = snap.docs.filter(doc => {
+      const upd = doc.data().updatedAt;
+      if (!upd || !upd.toDate) return true; // sem timestamp: mostra por precaução
+      return (now - upd.toDate().getTime()) <= STALE_MS;
+    });
+
+    if (!activeDocs.length) {
       section.style.display = 'none';
       tbody.innerHTML = '<tr><td colspan="7" class="empty-row">Nenhum piloto voando no momento.</td></tr>';
       if (count) count.textContent = '';
@@ -549,11 +566,11 @@ function setupLiveFlights() {
     }
 
     section.style.display = '';
-    if (count) count.textContent = '(' + snap.size + ' online)';
+    if (count) count.textContent = '(' + activeDocs.length + ' online)';
 
-    const phases = { taxi:'Solo', climb:'Subida', cruise:'Cruzeiro', descent:'Descida', approach:'Aproximacao', SOLO:'Solo', SUBIDA:'Subida', CRUZEIRO:'Cruzeiro', DESCIDA:'Descida', DECOLAGEM:'Decolagem' };
+    const phases = { taxi:'Solo', climb:'Subida', cruise:'Cruzeiro', descent:'Descida', approach:'Aproximação', SOLO:'Solo', SUBIDA:'Subida', CRUZEIRO:'Cruzeiro', DESCIDA:'Descida', DECOLAGEM:'Decolagem' };
 
-    tbody.innerHTML = snap.docs.map(doc => {
+    tbody.innerHTML = activeDocs.map(doc => {
       const d = doc.data();
       const vsStr = d.vs !== undefined ? (d.vs >= 0 ? '+' : '') + Math.round(d.vs) + ' fpm' : '—';
       return `<tr>

@@ -1242,13 +1242,23 @@ function setupLiveFlights() {
     const section = document.getElementById('ov-live-section');
     const tbody   = document.getElementById('ov-live-table');
     if (!section || !tbody) return;
-    if (snap.empty) {
+
+    const now = Date.now();
+    const STALE_MS = 5 * 60 * 1000;
+
+    const activeDocs = snap.docs.filter(doc => {
+      const upd = doc.data().updatedAt;
+      if (!upd || !upd.toDate) return true;
+      return (now - upd.toDate().getTime()) <= STALE_MS;
+    });
+
+    if (!activeDocs.length) {
       section.style.display = 'none';
       tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Nenhum piloto voando no momento.</td></tr>';
       return;
     }
     section.style.display = '';
-    tbody.innerHTML = snap.docs.map(doc => {
+    tbody.innerHTML = activeDocs.map(doc => {
       const d = doc.data();
       const phases = { taxi:'Solo', climb:'Subida', cruise:'Cruzeiro', descent:'Descida', approach:'Aproximação', SOLO:'Solo', SUBIDA:'Subida', CRUZEIRO:'Cruzeiro', DESCIDA:'Descida' };
       return `<tr>

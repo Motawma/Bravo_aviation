@@ -71,14 +71,20 @@
   let lastLon       = null;
   let liveInterval  = null;
 
-  // Violações
-  const violations  = [];
-  let tookOff       = false;
-  let tookOffWithoutLights = false;
-  let overspeedTimer= 0;       // segundos contínuos em overspeed abaixo de 10k
-  let overspeedFlagged = false;
-  let transponderFlagged = false;
-  let landingRate   = 0;
+  // FOQA
+  const foqaViolations = [];
+  let flightOp         = 0;
+  let tookOff          = false;
+  let tookOffFlapsIdx  = null;
+  let tookOffWeightKg  = 0;
+  let peakGForce       = 1.0;
+  let fuelKgAtStart    = 0;
+  let fuelKgPrev       = 0;
+  let singleEngTaxiSec = 0;
+  let singleEngOPGiven = false;
+  let prevGearDown     = false;
+  let prevFlapsIndex   = 0;
+  let landingRate      = 0;
 
   // ── Utilitários ───────────────────────────────────────────────────────────
   function $ (id) { return document.getElementById(id); }
@@ -115,6 +121,27 @@
     if (alt > 8000 && Math.abs(vs) <= 200) return 'CRUZEIRO';
     if (alt <= 8000 && !onGround) return 'APROXIMAÇÃO';
     return 'VOO';
+  }
+
+  // ── Limitações de aeronaves ───────────────────────────────────────────────
+  const AC_LIMITS = {
+    A320: { mtow:77000, mlw:66000, maxAlt:39100, maxTailwind:10, maxSpdbrake:315,
+            validDepFlaps:[1,2,3], minFob:1600, maxGear:280,
+            flapsMaxSpd:{ 1:230, 2:215, 3:200, 4:185, 5:177 } },
+    B737: { mtow:79016, mlw:66361, maxAlt:41000, maxTailwind:15, maxSpdbrake:320,
+            validDepFlaps:[1,5,10,15,25], minFob:1500, maxGear:270,
+            flapsMaxSpd:{ 1:260, 5:250, 10:210, 15:200, 25:185, 30:170, 40:160 } }
+  };
+  function getAcLimits(title) {
+    const t = (title || '').toUpperCase();
+    if (t.includes('A320') || t.includes('A319') || t.includes('A321') ||
+        t.includes('A318') || t.includes('A32N') || t.includes('FENIX'))
+      return AC_LIMITS.A320;
+    return null; // sem limites específicos para outras aeronaves
+  }
+  function tailwindKts(windDir, windSpd, hdg) {
+    const diff = (windDir - hdg + 360) % 360;
+    return windSpd * -Math.cos(diff * Math.PI / 180);
   }
 
   // ── Log de voo ────────────────────────────────────────────────────────────
@@ -188,6 +215,8 @@
   // ── Screens ───────────────────────────────────────────────────────────────
   function showMain() {
     $('topbar').style.display = 'flex';
+    const verEl = $('app-version');
+    if (verEl && window.acars?.getVersion) verEl.textContent = 'v' + window.acars.getVersion();
     showScreen('screen-main');
   }
 
@@ -354,12 +383,19 @@
     maxAlt          = 0; maxSpd = 0; totalDist = 0;
     lastLat         = lastSimData?.lat ?? null;
     lastLon         = lastSimData?.lon ?? null;
-    tookOff         = false;
-    tookOffWithoutLights = false;
-    overspeedTimer  = 0; overspeedFlagged = false;
-    transponderFlagged = false;
-    landingRate     = 0;
-    violations.length = 0;
+    tookOff          = false;
+    tookOffFlapsIdx  = null;
+    tookOffWeightKg  = 0;
+    peakGForce       = 1.0;
+    fuelKgAtStart    = lastSimData?.fuelWeightKg ?? 0;
+    fuelKgPrev       = fuelKgAtStart;
+    singleEngTaxiSec = 0;
+    singleEngOPGiven = false;
+    prevGearDown     = lastSimData?.gearDown ?? false;
+    prevFlapsIndex   = lastSimData?.flapsIndex ?? 0;
+    flightOp         = 0;
+    landingRate      = 0;
+    foqaViolations.length = 0;
 
     $('panel-tele').style.display  = '';
     $('panel-viols').style.display = '';
@@ -382,24 +418,24 @@
 
   // ── Processar telemetria durante o voo ────────────────────────────────────
   function processTelemetry(d) {
-    const { alt, spd, vs, hdg, fuel, onGround, landingLights, transponderMode, aircraft } = d;
+    const { alt, spd, vs, hdg, fuel, onGround,
+            landingLights, eng1, eng2, beaconLight, strobeLight, navLight,
+            flapsIndex, gearDown,
+            altAgl, gForce, simRate, totalWeightKg, fuelWeightKg,
+            spoilersPos, stallWarning, overspeedWarning, bankDeg,
+            windDir, windSpd } = d;
+    const lim = getAcLimits(aircraftTitle);
 
-    // Atualiza máximos
     if (alt > maxAlt) maxAlt = alt;
     if (spd > maxSpd) maxSpd = spd;
-
-    // Distância acumulada
     if (lastLat !== null) {
       const dist = haversine(lastLat, lastLon, d.lat, d.lon);
-      if (dist < 50) totalDist += dist; // ignora saltos impossíveis
+      if (dist < 50) totalDist += dist;
     }
     lastLat = d.lat; lastLon = d.lon;
 
-    // Fase do voo
     const phase = flightPhase(spd, alt, vs, onGround);
     $('tele-phase').textContent = phase;
-
-    // Telemetria na UI
     $('t-alt').textContent  = fmt(alt) + ' ft';
     $('t-spd').textContent  = fmt(spd) + ' kts';
     $('t-vs').textContent   = (vs >= 0 ? '+' : '') + fmt(vs) + ' fpm';
@@ -407,84 +443,230 @@
     $('t-fuel').textContent = fmt(fuel, 0) + ' gal';
     $('t-dist').textContent = fmt(totalDist, 0) + ' nm';
 
-    // ── Violação 1: decolou sem luzes de pouso ──────────────────────────────
+    // ── [CoC] Iniciar com motores ────────────────────────────────────────────
+    if (!tookOff && (eng1 || eng2)) {
+      addFoqaViolation('start_engines_on', 'ACARS iniciado com motores acionados', 100, 'CoC');
+    }
+
+    // ── [CoC] Simulação acelerada ────────────────────────────────────────────
+    if (simRate > 1.0) {
+      addFoqaViolation('sim_rate_fast', `Taxa de simulação ${(simRate||1).toFixed(0)}x detectada`, 100, 'CoC');
+    }
+
+    // ── [Ov] Beacon desligado com motores ───────────────────────────────────
+    if ((eng1 || eng2) && !beaconLight) {
+      addFoqaViolation('beacon_off', 'Luzes beacon desligadas com motores acionados', 5, 'Ov');
+    }
+
+    // ── [Ov] Strobes/Nav desligados durante o voo ───────────────────────────
+    if (!onGround) {
+      if (!strobeLight) addFoqaViolation('strobes_off', 'Luzes strobes desligadas durante o voo', 5, 'Ov');
+      if (!navLight)    addFoqaViolation('nav_off',     'Luzes de navegação desligadas durante o voo', 5, 'Ov');
+    }
+
+    // ── Decolagem detectada ──────────────────────────────────────────────────
     if (!tookOff && spd > 80 && !onGround) {
-      tookOff = true;
-      if (!landingLights) {
-        tookOffWithoutLights = true;
-        addViolation('no_landing_lights', 'Decolou sem luzes de pouso', 10);
+      tookOff         = true;
+      tookOffFlapsIdx = flapsIndex;
+      tookOffWeightKg = totalWeightKg || 0;
+
+      if (lim) {
+        // Flaps incorretos na decolagem (A320 only)
+        if (!lim.validDepFlaps.includes(flapsIndex)) {
+          addFoqaViolation('dep_flaps_wrong', `Flaps de decolagem incorretos (posição ${flapsIndex})`, 10, 'Ov');
+        } else {
+          flightOp += 5;
+          addLogEntry('⭐', '+5 OP — Flaps de decolagem corretos');
+        }
+        // MTOW (A320 only)
+        if (totalWeightKg > lim.mtow) {
+          addFoqaViolation('exceed_mtow', `Excedeu MTOW (${Math.round(totalWeightKg)} kg)`, 10, 'Ov');
+        }
+        // Vento de cauda na decolagem (A320 only)
+        if (windSpd > 0) {
+          const tw = tailwindKts(windDir || 0, windSpd, hdg);
+          if (tw > lim.maxTailwind) {
+            addFoqaViolation('tailwind_dep', `Vento de cauda na decolagem (${tw.toFixed(0)} kts)`, 15, 'Ov');
+          }
+        }
       }
     }
 
-    // ── Violação 2: transponder não em Modo C (acima de 1000ft AGL) ─────────
-    if (!transponderFlagged && !onGround && alt > 1000) {
-      const modeC = (simType === 'xplane') ? transponderMode === 3 : transponderMode === 4;
-      if (!modeC) {
-        transponderFlagged = true;
-        addViolation('transponder', 'Transponder não estava em Modo C', 10);
+    // ── Checks em voo (após decolagem) ──────────────────────────────────────
+    if (tookOff && !onGround) {
+      // Teto máximo (A320 only)
+      if (lim && alt > lim.maxAlt) {
+        addFoqaViolation('exceed_ceiling', `Excedeu teto máximo (${Math.round(alt)} ft)`, 10, 'Ov');
       }
+      // Reabastecimento em voo (todas as aeronaves)
+      if (fuelWeightKg && fuelKgPrev > 0 && fuelWeightKg > fuelKgPrev + 50) {
+        addFoqaViolation('fuel_refill', 'Reabastecimento em voo detectado', 100, 'CoC');
+      }
+      // Landing lights acesas > 10.000ft na subida (todas as aeronaves)
+      if (alt > 10000 && vs > 200 && landingLights) {
+        addFoqaViolation('ll_above_10k', 'Luzes de pouso acesas acima de 10.000 ft na subida', 5, 'Ov');
+      }
+      // Speed brakes em alta velocidade (A320 only)
+      if (lim && (spoilersPos || 0) > 2000 && spd > lim.maxSpdbrake) {
+        addFoqaViolation('speedbrake_overspeed', `Speed brakes acionados acima de ${lim.maxSpdbrake} kts`, 10, 'Ov');
+      }
+      // Stall / Overspeed warning
+      if (stallWarning)     addFoqaViolation('stall_warn',    'Aviso de stall acionado', 15, 'Ov');
+      if (overspeedWarning) addFoqaViolation('overspeed_warn','Aviso de overspeed acionado', 15, 'Ov');
+      // Bank angle
+      if (Math.abs(bankDeg || 0) > 35) {
+        addFoqaViolation('bank_angle', `Bank angle excessivo (${Math.round(Math.abs(bankDeg))}°)`, 15, 'Ov');
+      }
+      // Aproximação desestabilizada a 1000ft AGL
+      const agl = altAgl || alt;
+      if (agl > 900 && agl < 1100 && vs < 0) {
+        if (spd > 200 || vs < -1500) {
+          addFoqaViolation('unstabilized_approach',
+            `Aproximação desestabilizada (${Math.round(spd)} kts / ${Math.round(vs)} fpm)`, 100, 'CoC');
+        }
+      }
+      // Peak G-force pré-pouso
+      if (agl < 500 && (gForce || 0) > peakGForce) peakGForce = gForce;
     }
 
-    // ── Violação 3: overspeed abaixo de 10.000ft ─────────────────────────────
-    if (!onGround && alt < 10000 && spd > 150) {
-      overspeedTimer++;
-      if (overspeedTimer >= 60 && !overspeedFlagged) {
-        overspeedFlagged = true;
-        addViolation('overspeed_10k', 'Velocidade > 150kts abaixo de 10.000ft', 15);
+    // ── Fuel weight tracking ─────────────────────────────────────────────────
+    if (fuelWeightKg) fuelKgPrev = fuelWeightKg;
+
+    // ── Extensão/retração de trem (A320 only) ────────────────────────────────
+    if (lim) {
+      if (gearDown && !prevGearDown && spd > lim.maxGear) {
+        addFoqaViolation('gear_ext_speed', `Trem extendido em velocidade incompatível (${Math.round(spd)} kts)`, 5, 'Ov');
       }
-    } else {
-      overspeedTimer = 0;
+      if (!gearDown && prevGearDown && spd > lim.maxGear) {
+        addFoqaViolation('gear_ret_speed', `Trem recolhido em velocidade incompatível (${Math.round(spd)} kts)`, 5, 'Ov');
+      }
+    }
+    prevGearDown = gearDown;
+
+    // ── Flaps em velocidade incompatível (A320 only) ──────────────────────────
+    if (lim && flapsIndex !== prevFlapsIndex && flapsIndex > 0) {
+      const maxFlapSpd = lim.flapsMaxSpd[flapsIndex];
+      if (maxFlapSpd && spd > maxFlapSpd) {
+        addFoqaViolation('flap_overspeed',
+          `Flaps posição ${flapsIndex} em ${Math.round(spd)} kts (máx ${maxFlapSpd} kts)`, 5, 'Ov');
+      }
+    }
+    prevFlapsIndex = flapsIndex;
+
+    // ── Single engine taxi ────────────────────────────────────────────────────
+    if (onGround && eng1 !== eng2) {
+      singleEngTaxiSec++;
+      if (singleEngTaxiSec >= 180 && !singleEngOPGiven) {
+        singleEngOPGiven = true;
+        addLogEntry('⭐', '+10 OP — Taxi com motor único por 3 minutos');
+      }
+    } else if (onGround) {
+      singleEngTaxiSec = 0;
     }
 
-    // ── Detecção de pouso ────────────────────────────────────────────────────
+    // ── Detecção de pouso ─────────────────────────────────────────────────────
     if (tookOff && onGround && spd < 40) {
-      // Usa touchdownVS do MSFS se disponível, senão usa VS atual como fallback
       landingRate = d.touchdownVS > 0 ? d.touchdownVS : Math.abs(Math.min(vs, 0));
+      const lg = Math.max(peakGForce, gForce || 1.0);
+      if (lg > 2.0) {
+        addFoqaViolation('gforce_coc', `G-force no pouso superior a 2.0G (${lg.toFixed(2)}G)`, 100, 'CoC');
+      } else if (lg > 1.5) {
+        addFoqaViolation('gforce_ov', `G-force no pouso 1.5-2.0G (${lg.toFixed(2)}G)`, 15, 'Ov');
+      }
+      if (lim) {
+        // MLW, FOB, tailwind no pouso (A320 only)
+        if (totalWeightKg > lim.mlw) {
+          addFoqaViolation('exceed_mlw', `Excedeu MLW no pouso (${Math.round(totalWeightKg)} kg)`, 10, 'Ov');
+        }
+        if (fuelWeightKg && fuelWeightKg < lim.minFob) {
+          addFoqaViolation('fob_low', `FOB abaixo do mínimo no pouso (${Math.round(fuelWeightKg)} kg)`, 10, 'Ov');
+        }
+        if (windSpd > 0) {
+          const tw = tailwindKts(windDir || 0, windSpd, hdg);
+          if (tw > lim.maxTailwind) {
+            addFoqaViolation('tailwind_arr', `Vento de cauda no pouso (${tw.toFixed(0)} kts)`, 15, 'Ov');
+          }
+        }
+        // OP: configuração correta de pouso (A320 only — flapsIndex >= 3 = CONF3/FULL)
+        if (gearDown && flapsIndex >= 3) {
+          flightOp += 5;
+          addLogEntry('⭐', '+5 OP — Configuração de pouso correta (flaps + trem)');
+        }
+      }
       onLanding();
     }
   }
 
-  function addViolation(type, desc, penalty) {
-    if (violations.find(v => v.type === type)) return;
-    violations.push({ type, desc, penalty });
+  function addFoqaViolation(type, desc, pts, cat) {
+    if (foqaViolations.find(v => v.type === type)) return;
+    foqaViolations.push({ type, desc, pts, cat });
+    if (cat === 'CoC') addLogEntry('✗', `[CoC] ${desc}`);
+    else               addLogEntry('⚠', `[Ov -${pts}pts] ${desc}`);
     renderViolations();
   }
 
   function renderViolations() {
-    const list = $('violations-list');
-    if (violations.length === 0) {
+    const list   = $('violations-list');
+    const scoreEl = $('foqa-score-live');
+    const ovDed  = foqaViolations.filter(v => v.cat === 'Ov').reduce((s, v) => s + v.pts, 0);
+    const hasCoc = foqaViolations.some(v => v.cat === 'CoC');
+    const score  = Math.max(0, 100 - ovDed);
+    const rejected = hasCoc || ovDed > 25;
+    if (scoreEl) {
+      scoreEl.textContent = rejected ? 'FOQA: REPROVADO' : `FOQA: ${score}/100`;
+      scoreEl.className = 'foqa-live' + (rejected ? ' bad' : score === 100 ? ' perfect' : '');
+    }
+    if (foqaViolations.length === 0) {
       list.innerHTML = '<span class="viol-ok">✓ Nenhuma violação detectada</span>';
       return;
     }
-    list.innerHTML = violations.map(v =>
-      `<div class="viol-err"><span class="vi">⚠</span><span>-${v.penalty}pts — ${v.desc}</span></div>`
-    ).join('');
+    const coc = foqaViolations.filter(v => v.cat === 'CoC');
+    const ov  = foqaViolations.filter(v => v.cat === 'Ov');
+    list.innerHTML = [
+      ...coc.map(v => `<div class="viol-coc"><span class="vi">✗</span><span>[CoC] ${v.desc}</span></div>`),
+      ...ov.map(v  => `<div class="viol-err"><span class="vi">⚠</span><span>[Ov -${v.pts}] ${v.desc}</span></div>`)
+    ].join('');
   }
 
   // ── Pouso detectado ───────────────────────────────────────────────────────
   async function onLanding() {
     if (!flightActive) return;
     flightActive = false;
-    addLogEntry('🛬', `Pouso detectado — ${Math.round(lastSimData?.spd || 0)} kts, ${Math.round(landingRate)} FPM`);
+    addLogEntry('🛬', `Pouso — ${Math.round(lastSimData?.spd || 0)} kts, ${Math.round(landingRate)} FPM`);
     clearInterval(timerInterval);
     clearInterval(liveInterval);
 
-    const dur  = Math.floor((Date.now() - flightStart) / 1000);
-    const fuel = Math.max(0, fuelAtStart - (lastSimData?.fuel ?? fuelAtStart));
+    const dur     = Math.floor((Date.now() - flightStart) / 1000);
+    const fuelUsed = Math.max(0, fuelAtStart - (lastSimData?.fuel ?? fuelAtStart));
 
-    // Score
-    const totalPenalty = violations.reduce((acc, v) => acc + v.penalty, 0);
-    const score        = Math.max(0, 100 - totalPenalty);
-
-    // Hard landing?
+    // FOQA
+    const cocViols  = foqaViolations.filter(v => v.cat === 'CoC');
+    const ovDed     = foqaViolations.filter(v => v.cat === 'Ov').reduce((s, v) => s + v.pts, 0);
     const hardLanding  = landingRate > 500;
-    const status       = hardLanding ? 'rejected' : 'pending';
+    const foqaRejected = cocViols.length > 0 || ovDed > 25 || hardLanding;
+    const foqaScore    = Math.max(0, 100 - ovDed);
+    const status       = foqaRejected ? 'rejected' : 'pending';
+    const rejectReason = hardLanding ? 'hard_landing' :
+                         cocViols.length > 0 ? cocViols[0].type : 'foqa_exceeded';
 
-    // PIREP
-    const dep  = $('inp-dep').value.trim().toUpperCase();
-    const arr  = $('inp-arr').value.trim().toUpperCase();
-    const fl   = $('inp-fl').value.trim();
-    const obs  = $('inp-obs').value.trim();
+    // OP Points
+    if (singleEngOPGiven) flightOp += 10;
+    if (foqaScore === 100 && !foqaRejected) {
+      flightOp += 50;
+      addLogEntry('⭐', '+50 OP — FOQA 100%');
+    }
+    if (totalDist > 2000) {
+      flightOp += 50;
+      addLogEntry('⭐', '+50 OP — Voo longo (>2000 nm)');
+    }
+    addLogEntry('📋', `FOQA: ${foqaScore}/100 | OP ganhos: +${flightOp}`);
+
+    const dep     = $('inp-dep').value.trim().toUpperCase();
+    const arr     = $('inp-arr').value.trim().toUpperCase();
+    const fl      = $('inp-fl').value.trim();
+    const obs     = $('inp-obs').value.trim();
+    const netEl   = document.querySelector('input[name="network"]:checked');
+    const network = netEl ? netEl.value : 'Offline';
 
     const pirep = {
       pilotId:      currentUser.uid,
@@ -492,38 +674,37 @@
       pilotVid:     userData.vid  || '',
       dep, arr,
       ac:           userData.aircraft || aircraftTitle || '',
-      fl,
-      obs,
+      fl, obs,
       dur:          fmtDur(dur),
       date:         new Date().toISOString().split('T')[0],
       sim:          simType === 'msfs' ? 'MSFS' : 'X-Plane',
+      network,
       status,
       source:       'acars',
       maxAlt:       Math.round(maxAlt),
       maxSpd:       Math.round(maxSpd),
-      fuelUsed:     Math.round(fuel),
+      fuelUsed:     Math.round(fuelUsed),
       landingRate:  Math.round(landingRate),
       distance:     Math.round(totalDist),
-      score,
-      violations:   violations.map(({ type, desc }) => ({ type, desc })),
-      autoRejected: hardLanding,
-      rejectReason: hardLanding ? 'hard_landing' : null,
+      foqaScore,
+      foqaViolations: foqaViolations.map(({ type, desc, pts, cat }) => ({ type, desc, pts, cat })),
+      autoRejected: foqaRejected,
+      rejectReason: foqaRejected ? rejectReason : null,
+      opEarned:     flightOp,
       createdAt:    firebase.firestore.FieldValue.serverTimestamp()
     };
 
     await db.collection('pireps').add(pirep);
-
-    // Atualiza horas/voos e posição do piloto
     await db.collection('users').doc(currentUser.uid).update({
       flights:        firebase.firestore.FieldValue.increment(1),
       hours:          firebase.firestore.FieldValue.increment(+(dur / 3600).toFixed(2)),
-      currentAirport: arr
+      currentAirport: arr,
+      opPoints:       firebase.firestore.FieldValue.increment(flightOp)
     }).catch(() => {});
-
-    // Apaga liveflight
     await db.collection('liveflights').doc(currentUser.uid).delete().catch(() => {});
 
-    showSummary({ dep, arr, dur, landingRate, maxAlt, maxSpd, fuel, score, status, violations, totalDist });
+    showSummary({ dep, arr, dur, landingRate, maxAlt, maxSpd, fuelUsed, foqaScore,
+                  status, foqaViolations, totalDist, flightOp, hardLanding });
   }
 
   // ── Encerrar manualmente ──────────────────────────────────────────────────
@@ -540,9 +721,18 @@
     $('panel-tele').style.display  = 'none';
     $('panel-viols').style.display = 'none';
     $('violations-list').innerHTML = '<span class="viol-ok">✓ Nenhuma violação detectada</span>';
-    $('tele-timer').textContent    = '00:00:00';
+    const scoreEl = $('foqa-score-live');
+    if (scoreEl) { scoreEl.textContent = 'FOQA: 100/100'; scoreEl.className = 'foqa-live perfect'; }
+    $('tele-timer').textContent = '00:00:00';
     updateStartBtn();
   }
+
+  // Limpa liveflight se o app for fechado durante um voo ativo
+  window.addEventListener('beforeunload', () => {
+    if (flightActive && currentUser) {
+      db.collection('liveflights').doc(currentUser.uid).delete().catch(() => {});
+    }
+  });
 
   // ── Live tracking ─────────────────────────────────────────────────────────
   async function pushLiveFlight() {
@@ -567,14 +757,19 @@
   }
 
   // ── Tela de resumo ────────────────────────────────────────────────────────
-  function showSummary({ dep, arr, dur, landingRate, maxAlt, maxSpd, fuel, score, status, violations, totalDist }) {
-    const hardLanding = status === 'rejected';
+  function showSummary({ dep, arr, dur, landingRate, maxAlt, maxSpd, fuelUsed, foqaScore,
+                         status, foqaViolations, totalDist, flightOp, hardLanding }) {
+    const rejected = status === 'rejected';
+    const coc = foqaViolations.filter(v => v.cat === 'CoC');
+    const ov  = foqaViolations.filter(v => v.cat === 'Ov');
 
-    $('sum-score').textContent = hardLanding ? '✗' : score;
-    $('sum-score').className   = 'summary-score' + (hardLanding ? ' bad' : '');
+    $('sum-score').textContent = rejected ? '✗' : foqaScore;
+    $('sum-score').className   = 'summary-score' + (rejected ? ' bad' : foqaScore === 100 ? ' perfect' : '');
 
-    const badgeClass = hardLanding ? 'badge-rejected' : (score >= 80 ? 'badge-ok' : 'badge-pending');
-    const badgeText  = hardLanding ? 'PIREP REPROVADO — POUSO DURO' : (score >= 80 ? 'PIREP APROVADO' : 'AGUARDANDO REVISÃO');
+    const badgeClass = rejected ? 'badge-rejected' : 'badge-pending';
+    const badgeText  = rejected
+      ? (hardLanding ? 'REPROVADO — POUSO DURO' : coc.length ? 'REPROVADO — VIOLAÇÃO CoC' : 'REPROVADO — FOQA')
+      : 'PENDENTE DE APROVAÇÃO';
     $('sum-status-badge').innerHTML = `<span class="summary-badge ${badgeClass}">${badgeText}</span>`;
 
     $('sum-route').textContent = `${dep} → ${arr}`;
@@ -582,19 +777,21 @@
     $('sum-lr').textContent    = Math.round(landingRate) + ' FPM' + (hardLanding ? ' ⚠' : '');
     $('sum-alt').textContent   = fmt(maxAlt) + ' ft';
     $('sum-spd').textContent   = fmt(maxSpd) + ' kts';
-    $('sum-fuel').textContent  = fmt(fuel, 0) + ' gal';
+    $('sum-fuel').textContent  = fmt(fuelUsed, 0) + ' gal';
     $('sum-dist').textContent  = fmt(totalDist, 0) + ' nm';
 
+    const opEl = $('sum-op');
+    if (opEl) opEl.textContent = (flightOp > 0 ? '+' : '') + flightOp + ' pontos';
+
     const violsEl = $('sum-viols');
-    if (violations.length === 0 && !hardLanding) {
-      violsEl.innerHTML = '<span class="viol-ok">✓ Nenhuma violação</span>';
+    if (foqaViolations.length === 0 && !hardLanding) {
+      violsEl.innerHTML = '<span class="viol-ok">✓ FOQA 100% — Nenhuma violação</span>';
     } else {
-      violsEl.innerHTML = violations.map(v =>
-        `<div class="viol-err"><span class="vi">⚠</span><span>-${v.penalty}pts — ${v.desc}</span></div>`
-      ).join('');
-      if (hardLanding) {
-        violsEl.innerHTML += '<div class="viol-err"><span class="vi">✗</span><span>Pouso duro (>' + Math.round(landingRate) + ' FPM) — PIREP reprovado</span></div>';
-      }
+      violsEl.innerHTML = [
+        ...coc.map(v => `<div class="viol-coc"><span class="vi">✗</span><span>[CoC] ${v.desc}</span></div>`),
+        ...ov.map(v  => `<div class="viol-err"><span class="vi">⚠</span><span>[Ov -${v.pts}pts] ${v.desc}</span></div>`),
+        hardLanding ? `<div class="viol-coc"><span class="vi">✗</span><span>Pouso duro — ${Math.round(landingRate)} FPM</span></div>` : ''
+      ].join('');
     }
 
     $('topbar').style.display = 'flex';
