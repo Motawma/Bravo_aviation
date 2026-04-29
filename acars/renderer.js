@@ -219,6 +219,7 @@
     const verEl = $('app-version');
     if (verEl && window.acars?.getVersion) verEl.textContent = 'v' + window.acars.getVersion();
     showScreen('screen-main');
+    addLogEntry('✅', 'ACARS pronto — conecte o simulador para iniciar');
   }
 
   // ── Login ─────────────────────────────────────────────────────────────────
@@ -325,7 +326,6 @@
         $('btn-connect-msfs').style.display   = 'none';
         $('btn-connect-xp').style.display     = 'none';
         $('btn-disconnect-sim').style.display = '';
-        $('panel-log').style.display = '';
         logPrevState = null;
         logLastPhase = null;
         addLogEntry('🔌', `Simulador conectado (${type === 'msfs' ? 'MSFS' : 'X-Plane'})`);
@@ -337,7 +337,6 @@
         $('btn-connect-msfs').style.display   = '';
         $('btn-connect-xp').style.display     = '';
         $('btn-disconnect-sim').style.display = 'none';
-        $('panel-log').style.display = 'none';
       }
       updateStartBtn();
     });
