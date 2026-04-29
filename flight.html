@@ -222,6 +222,10 @@ main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
     <a class="nav-item" href="dashboard.html" onclick="sessionStorage.setItem('brv_goto','downloads')">
       <span class="nav-icon">📦</span> Downloads
     </a>
+    <div class="nav-section-label" id="nav-label-admin" style="display:none">Administração</div>
+    <a class="nav-item" id="nav-admin-panel" href="admin.html" style="display:none">
+      <span class="nav-icon">⚙️</span> Painel Admin
+    </a>
   </nav>
   <div class="sidebar-user">
     <div class="user-avatar" id="sidebar-avatar">—</div>
@@ -392,6 +396,11 @@ auth.onAuthStateChanged(async (fbUser) => {
     document.getElementById('sidebar-avatar').textContent = av;
     document.getElementById('sidebar-name').textContent  = currentUser.name || fbUser.email;
     document.getElementById('sidebar-rank').textContent  = getRank(currentUser.hours||0).name;
+
+    if (data.role === 'admin') {
+      document.getElementById('nav-label-admin').style.display = '';
+      document.getElementById('nav-admin-panel').style.display = '';
+    }
 
     if (currentUser.aircraft) {
       const sel = document.getElementById('modal-aircraft');
