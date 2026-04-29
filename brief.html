@@ -344,7 +344,7 @@ function renderBrief(pf, userData) {
           <a class="int-btn vatsim" href="https://my.vatsim.net/pilots/flightplan/create?callsign=${fn}&dep=${dep}&arr=${arr}&aircraft=${encodeURIComponent(ac)}&altitude=${fl}00&route=${encodeURIComponent(route||'DCT')}" target="_blank">
             🔵 VATSIM Prefile
           </a>
-          <a class="int-btn ivao" href="${buildIvaoUrl(dep,arr,fl,fn,ac,route)}" target="_blank">
+          <a class="int-btn ivao" href="${buildIvaoUrl(dep,arr,fl,fn,ac,route,eet)}" target="_blank">
             🟣 IVAO Prefile
           </a>
         </div>
@@ -478,7 +478,7 @@ function parseTime(r){
 }
 
 /* ── HELPERS ── */
-function buildIvaoUrl(dep, arr, fl, fn, ac, route) {
+function buildIvaoUrl(dep, arr, fl, fn, ac, route, eet) {
   const fp = {
     callsign:          fn  || '',
     flightRules:       'I',
@@ -487,12 +487,16 @@ function buildIvaoUrl(dep, arr, fl, fn, ac, route) {
     departureId:       dep || '',
     arrivalId:         arr || '',
     altitudeType:      'F',
-    altitude:          fl  ? parseInt(fl, 10) : 0,
+    altitude:          fl && fl !== '—' ? parseInt(fl, 10) : 0,
     cruisingSpeedType: 'N',
-    cruisingSpeed:     460
+    cruisingSpeed:     460,
+    remarks:           'OPR/BRV BRAVO AVIATION'
   };
   if (route && route.trim()) fp.route = route.trim();
-  // btoa produz base64 com +/= que precisam de encodeURIComponent para não quebrar no URLSearchParams
+  if (eet && eet !== '—') {
+    const m = eet.match(/(\d+)h(\d+)/);
+    if (m) fp.eet = parseInt(m[1]) * 3600 + parseInt(m[2]) * 60;
+  }
   return 'https://fpl.ivao.aero/flight-plans/create?flightPlan=' + encodeURIComponent(btoa(JSON.stringify(fp)));
 }
 
