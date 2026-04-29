@@ -330,7 +330,7 @@
       ]);
 
       if (userSnap.exists && userSnap.data().role === 'admin') {
-        window.location.href = 'admin.html'; return;
+        window.location.href = 'dashboard.html'; return;
       }
       if (appSnap.exists && appSnap.data().status === 'pending') {
         showStatus('pending'); btn.classList.remove('loading'); return;
@@ -377,8 +377,7 @@
       const snap = await db.collection('users').doc(fbUser.uid).get();
       if (!snap.exists) return;
       const role = snap.data().role;
-      if (role === 'admin')                       window.location.href = 'admin.html';
-      else if (role === 'pilot' || role === 'staff') window.location.href = 'dashboard.html';
+      if (role === 'admin' || role === 'pilot' || role === 'staff') window.location.href = 'dashboard.html';
     } catch (_) {}
   });
 </script>
