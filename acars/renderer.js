@@ -60,16 +60,18 @@
   let logLastPhase  = null;
 
   // Dados de voo
-  let flightStart   = null;
-  let timerInterval = null;
-  let lastSimData   = null;
+  let flightStart     = null;
+  let timerInterval   = null;
+  let lastSimData     = null;
+  let lastSimDataTime = 0;
   let fuelAtStart   = null;
   let maxAlt        = 0;
   let maxSpd        = 0;
   let totalDist     = 0;
   let lastLat       = null;
   let lastLon       = null;
-  let liveInterval  = null;
+  let liveInterval      = null;
+  let liveFlightPushed  = false;
 
   // FOQA
   const foqaViolations = [];
@@ -85,6 +87,14 @@
   let prevGearDown     = false;
   let prevFlapsIndex   = 0;
   let landingRate      = 0;
+  let cruiseWindowStart = null;
+  let cruiseConfirmed   = false;
+  let cruiseReported    = false;
+  let hasLanded         = false;
+  let prevOnGrnd        = false;
+  let prevEng1          = false;
+  let prevEng2          = false;
+  let overspeed10kSec   = 0;
 
   // ── Utilitários ───────────────────────────────────────────────────────────
   function $ (id) { return document.getElementById(id); }
@@ -113,13 +123,24 @@
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
   }
 
+  function classifyLanding(fpm) {
+    if (fpm <= 150)  return 'Pouso Suave 🧈 (Butter)';
+    if (fpm <= 300)  return 'Pouso Normal ✅ (Firme)';
+    if (fpm <= 500)  return 'Pouso Duro ⚠️ (Hard)';
+    return 'Pouso Crítico ❌ (Check Gear)';
+  }
+
   function flightPhase(spd, alt, vs, onGround) {
     if (onGround)              return spd >= 40 ? 'DECOLAGEM' : 'SOLO';
     if (alt < 50 && spd < 40) return 'SOLO'; // fallback: dados iniciais sem onGround
     if (vs > 500)              return 'DECOLAGEM';
     if (vs > 200)              return 'SUBIDA';
     if (vs < -200)             return 'DESCIDA';
-    if (alt > 8000 && Math.abs(vs) <= 200) return 'CRUZEIRO';
+    if (alt > 8000 && Math.abs(vs) <= 200) {
+      const plannedFL = parseInt(document.getElementById('inp-fl')?.value) || 0;
+      if (plannedFL > 0) return cruiseConfirmed ? 'CRUZEIRO' : 'VOO';
+      return 'CRUZEIRO';
+    }
     if (alt <= 8000)           return 'APROXIMAÇÃO';
     return 'VOO';
   }
@@ -169,6 +190,15 @@
     const p = logPrevState;
 
     if (!p) {
+      // Primeiro pacote após reset — loga o estado atual dos itens já ativos
+      if (d.eng1)          addLogEntry('🔴', 'Motor 1 acionado');
+      if (d.eng2)          addLogEntry('🔴', 'Motor 2 acionado');
+      if (d.beaconLight)   addLogEntry('🔆', 'Beacon ligado');
+      if (d.navLight)      addLogEntry('🟢', 'Luzes de navegação ligadas');
+      if (d.strobeLight)   addLogEntry('✦',  'Strobes ligados');
+      if (d.taxiLight)     addLogEntry('💡', 'Luzes de taxi ligadas');
+      if (d.landingLights) addLogEntry('💡', 'Luzes de pouso ligadas');
+      if ((d.flapsIndex || 0) > 0) addLogEntry('🛫', `Flaps posição ${d.flapsIndex}`);
       logPrevState = { ...d };
       return;
     }
@@ -185,15 +215,23 @@
     if (changed('landingLights')) addLogEntry('💡', d.landingLights ? 'Luzes de pouso ligadas' : 'Luzes de pouso desligadas', !d.landingLights);
 
     if (changed('flapsIndex')) {
-      if (d.flapsIndex === 0) addLogEntry('🛫', 'Flaps recolhidos');
-      else if (d.flapsIndex > (p.flapsIndex || 0)) addLogEntry('🛬', `Flaps posição ${d.flapsIndex}`);
-      else addLogEntry('🛫', `Flaps reduzidos para posição ${d.flapsIndex}`);
+      const ias = Math.round(d.spd);
+      if (d.flapsIndex === 0) addLogEntry('🛫', `Flaps recolhidos — ${ias} kts`);
+      else if (d.flapsIndex > (p.flapsIndex || 0)) addLogEntry('🛬', `Flaps posição ${d.flapsIndex} — ${ias} kts`);
+      else addLogEntry('🛫', `Flaps reduzidos para posição ${d.flapsIndex} — ${ias} kts`);
     }
 
-    if (changed('gearDown')) addLogEntry(d.gearDown ? '⬇️' : '⬆️', d.gearDown ? 'Trem de pouso extendido' : 'Trem de pouso recolhido');
+    if (changed('gearDown')) {
+      const ias = Math.round(d.spd);
+      addLogEntry(d.gearDown ? '⬇️' : '⬆️',
+        d.gearDown ? `Trem de pouso extendido — ${ias} kts` : `Trem de pouso recolhido — ${ias} kts`);
+    }
 
-    if (changed('onGround') && !d.onGround) addLogEntry('✈️', 'Decolagem detectada');
-    if (changed('onGround') &&  d.onGround && d.spd > 10) addLogEntry('🛬', `Pouso — ${Math.round(d.spd)} kts`);
+    if (changed('onGround') && !d.onGround) addLogEntry('✈️', `Decolagem — ${Math.round(d.spd)} kts`);
+    if (changed('onGround') &&  d.onGround && d.spd > 10) {
+      const tvs = Math.round(d.touchdownVS || 0);
+      addLogEntry('🛬', `Pouso — ${Math.round(d.spd)} kts | -${tvs} FPM — ${classifyLanding(tvs)}`);
+    }
 
     const phase = flightPhase(d.spd, d.alt, d.vs, d.onGround);
     if (phase !== logLastPhase) {
@@ -329,10 +367,18 @@
         logPrevState = null;
         logLastPhase = null;
         addLogEntry('🔌', `Simulador conectado (${type === 'msfs' ? 'MSFS' : 'X-Plane'})`);
+
+        // Se após 6s nenhum dado chegar, o MSFS provavelmente está no menu sem voo
+        setTimeout(() => {
+          if (simConnected && !lastSimData) {
+            addLogEntry('⚠', 'Nenhum dado recebido — carregue um voo no MSFS e volte ao cockpit');
+          }
+        }, 6000);
       } else {
         dot.className   = 'dot';
         label.textContent = 'Desconectado';
         aircraftTitle   = null;
+        lastSimData     = null;
         $('ac-title').textContent = '—';
         $('btn-connect-msfs').style.display   = '';
         $('btn-connect-xp').style.display     = '';
@@ -342,13 +388,23 @@
     });
 
     window.acars.onSimData(data => {
-      lastSimData = data;
+      if (data._simException !== undefined) {
+        addLogEntry('✗', `SimConnect exceção ${data._simException} — var[${data._simExIndex}]: "${data._simExVar}"`);
+        return;
+      }
+
+      lastSimData     = data;
+      lastSimDataTime = Date.now();
 
       // Detecta aeronave carregada
       if (data.aircraft && data.aircraft !== aircraftTitle) {
         aircraftTitle = data.aircraft;
         $('ac-title').textContent = aircraftTitle;
-        addLogEntry('✈️', `Aeronave: ${aircraftTitle}`, true);
+        if (aircraftTitle === 'MSFS Aircraft') {
+          addLogEntry('⚠', 'Nenhum voo carregado no MSFS — carregue uma aeronave e volte ao cockpit antes de iniciar', false);
+        } else {
+          addLogEntry('✈️', `Aeronave: ${aircraftTitle}`, true);
+        }
         updateStartBtn();
       }
 
@@ -395,36 +451,42 @@
     prevFlapsIndex   = lastSimData?.flapsIndex ?? 0;
     flightOp         = 0;
     landingRate      = 0;
+    cruiseWindowStart = null;
+    cruiseConfirmed   = false;
+    cruiseReported    = false;
+    hasLanded         = false;
+    prevOnGrnd        = false;
+    prevEng1          = lastSimData?.eng1 ?? false;
+    prevEng2          = lastSimData?.eng2 ?? false;
+    overspeed10kSec   = 0;
     foqaViolations.length = 0;
     logPrevState = null;
     logLastPhase = null;
+    liveFlightPushed = false;
 
     $('panel-tele').style.display  = '';
     $('panel-viols').style.display = '';
     updateStartBtn();
     addLogEntry('▶', `Voo iniciado — ${$('inp-dep').value} → ${$('inp-arr').value}`);
 
-    // Log estado atual das luzes e motores no momento do INICIAR
-    if (lastSimData) {
-      const d = lastSimData;
-      if (d.eng1 || d.eng2)       addLogEntry('🔴', `Motores: ${[d.eng1?'1':'',d.eng2?'2':''].filter(Boolean).join(' e ')} acionados`);
-      if (d.beaconLight)          addLogEntry('🔆', 'Beacon ligado');
-      if (d.navLight)             addLogEntry('🟢', 'Luzes de navegação ligadas');
-      if (d.strobeLight)          addLogEntry('✦',  'Strobes ligados');
-      if (d.taxiLight)            addLogEntry('💡', 'Luzes de taxi ligadas');
-      if (d.landingLights)        addLogEntry('💡', 'Luzes de pouso ligadas');
-      if (d.flapsIndex > 0)       addLogEntry('🛫', `Flaps posição ${d.flapsIndex}`);
-    }
+    // Captura estado atual imediatamente para que mudanças sejam detectadas no próximo pacote
+    if (lastSimData) detectLogEvents(lastSimData);
 
-    // Timer
+    // Timer + vigilância de dados parados
+    let dataStaleWarned = false;
+    lastSimDataTime = Date.now(); // garante que não dispara imediatamente
     timerInterval = setInterval(() => {
       const secs = Math.floor((Date.now() - flightStart) / 1000);
       $('tele-timer').textContent = fmtDur(secs);
+      if (!dataStaleWarned && Date.now() - lastSimDataTime > 8000) {
+        dataStaleWarned = true;
+        addLogEntry('⚠', 'Sem dados do simulador — verifique a conexão ou carregue um voo no MSFS');
+      }
     }, 1000);
 
-    // Live tracking (a cada 30s)
+    // Live tracking (a cada 5s)
     await pushLiveFlight();
-    liveInterval = setInterval(pushLiveFlight, 30000);
+    liveInterval = setInterval(pushLiveFlight, 5000);
 
     // Apaga pendingFlight do Firestore
     await db.collection('users').doc(currentUser.uid).update({ pendingFlight: firebase.firestore.FieldValue.delete() }).catch(() => {});
@@ -457,10 +519,10 @@
     $('t-fuel').textContent = fmt(fuel, 0) + ' gal';
     $('t-dist').textContent = fmt(totalDist, 0) + ' nm';
 
-    // ── [CoC] Iniciar com motores ────────────────────────────────────────────
-    if (!tookOff && (eng1 || eng2)) {
-      addFoqaViolation('start_engines_on', 'ACARS iniciado com motores acionados', 100, 'CoC');
-    }
+    // Solo efetivo: SimConnect onGround OU alt < 50ft E spd < 40kts
+    // (evita falsos positivos durante inicialização da aeronave)
+    const agl = altAgl || alt;
+    const effectivelyOnGround = onGround || (agl < 50 && spd < 40);
 
     // ── [CoC] Simulação acelerada ────────────────────────────────────────────
     if (simRate > 1.0) {
@@ -473,13 +535,13 @@
     }
 
     // ── [Ov] Strobes/Nav desligados durante o voo ───────────────────────────
-    if (!onGround) {
+    if (!effectivelyOnGround) {
       if (!strobeLight) addFoqaViolation('strobes_off', 'Luzes strobes desligadas durante o voo', 5, 'Ov');
       if (!navLight)    addFoqaViolation('nav_off',     'Luzes de navegação desligadas durante o voo', 5, 'Ov');
     }
 
     // ── Decolagem detectada ──────────────────────────────────────────────────
-    if (!tookOff && spd > 80 && !onGround) {
+    if (!tookOff && spd > 80 && !effectivelyOnGround) {
       tookOff         = true;
       tookOffFlapsIdx = flapsIndex;
       tookOffWeightKg = totalWeightKg || 0;
@@ -543,6 +605,38 @@
       if (agl < 500 && (gForce || 0) > peakGForce) peakGForce = gForce;
     }
 
+    // ── Cruzeiro: confirmação por FL planejado ±200ft por 30s ────────────────
+    if (tookOff && !onGround) {
+      const plannedFL = parseInt($('inp-fl').value) || 0;
+      const targetAlt = plannedFL * 100;
+      if (targetAlt > 0) {
+        if (Math.abs(alt - targetAlt) <= 200) {
+          if (!cruiseWindowStart) cruiseWindowStart = Date.now();
+          else if (!cruiseConfirmed && Date.now() - cruiseWindowStart >= 30000) {
+            cruiseConfirmed = true;
+            if (!cruiseReported) {
+              cruiseReported = true;
+              addLogEntry('✈️', `Cruzeiro confirmado — FL${plannedFL} (${Math.round(alt)} ft)`);
+            }
+          }
+        } else {
+          cruiseWindowStart = null;
+          if (cruiseConfirmed && alt < targetAlt - 1000) cruiseConfirmed = false;
+        }
+      }
+    }
+
+    // ── Overspeed < 10.000 ft (250 kts) ──────────────────────────────────────
+    if (tookOff && !effectivelyOnGround && spd > 250 && alt < 10000) {
+      overspeed10kSec++;
+      if (overspeed10kSec % 5 === 0) {
+        addFoqaViolation(`overspeed_10k_${overspeed10kSec}`,
+          `Velocidade > 250 kts abaixo de 10.000 ft — ${Math.round(spd)} kts (${overspeed10kSec}s)`, 5, 'Ov');
+      }
+    } else {
+      overspeed10kSec = 0;
+    }
+
     // ── Fuel weight tracking ─────────────────────────────────────────────────
     if (fuelWeightKg) fuelKgPrev = fuelWeightKg;
 
@@ -567,6 +661,14 @@
     }
     prevFlapsIndex = flapsIndex;
 
+    // ── Motores desligados com flaps baixados ─────────────────────────────────
+    if (onGround && flapsIndex > 0) {
+      if (prevEng1 && !eng1) addFoqaViolation('engines_off_flaps',
+        `Motor desligado com flaps na posição ${flapsIndex} — recolha os flaps antes`, 50, 'Ov');
+    }
+    prevEng1 = eng1;
+    prevEng2 = eng2;
+
     // ── Single engine taxi ────────────────────────────────────────────────────
     if (onGround && eng1 !== eng2) {
       singleEngTaxiSec++;
@@ -578,8 +680,9 @@
       singleEngTaxiSec = 0;
     }
 
-    // ── Detecção de pouso ─────────────────────────────────────────────────────
-    if (tookOff && onGround && spd < 40) {
+    // ── Touchdown: captura dados no momento do impacto ───────────────────────
+    if (tookOff && !prevOnGrnd && onGround) {
+      hasLanded = true;
       landingRate = d.touchdownVS > 0 ? d.touchdownVS : Math.abs(Math.min(vs, 0));
       const lg = Math.max(peakGForce, gForce || 1.0);
       if (lg > 2.0) {
@@ -588,7 +691,6 @@
         addFoqaViolation('gforce_ov', `G-force no pouso 1.5-2.0G (${lg.toFixed(2)}G)`, 15, 'Ov');
       }
       if (lim) {
-        // MLW, FOB, tailwind no pouso (A320 only)
         if (totalWeightKg > lim.mlw) {
           addFoqaViolation('exceed_mlw', `Excedeu MLW no pouso (${Math.round(totalWeightKg)} kg)`, 10, 'Ov');
         }
@@ -601,12 +703,16 @@
             addFoqaViolation('tailwind_arr', `Vento de cauda no pouso (${tw.toFixed(0)} kts)`, 15, 'Ov');
           }
         }
-        // OP: configuração correta de pouso (A320 only — flapsIndex >= 3 = CONF3/FULL)
         if (gearDown && flapsIndex >= 3) {
           flightOp += 5;
           addLogEntry('⭐', '+5 OP — Configuração de pouso correta (flaps + trem)');
         }
       }
+    }
+    prevOnGrnd = onGround;
+
+    // ── Finalização de voo: estacionado, motores off, freio acionado ─────────
+    if (tookOff && hasLanded && onGround && spd < 5 && !eng1 && !eng2 && d.parkingBrake) {
       onLanding();
     }
   }
@@ -646,7 +752,7 @@
   async function onLanding() {
     if (!flightActive) return;
     flightActive = false;
-    addLogEntry('🛬', `Pouso — ${Math.round(lastSimData?.spd || 0)} kts, ${Math.round(landingRate)} FPM`);
+    addLogEntry('🛬', `Taxa de pouso: -${Math.round(landingRate)} FPM — ${classifyLanding(Math.round(landingRate))}`);
     clearInterval(timerInterval);
     clearInterval(liveInterval);
 
@@ -684,6 +790,7 @@
 
     const pirep = {
       pilotId:      currentUser.uid,
+      userId:       currentUser.uid,
       pilotName:    userData.name || '',
       pilotVid:     userData.vid  || '',
       dep, arr,
@@ -726,7 +833,7 @@
 
   // ── Encerrar manualmente ──────────────────────────────────────────────────
   window.stopFlight = async () => {
-    if (!confirm('Encerrar o voo agora? O PIREP será descartado.')) return;
+    if (!confirm('Finalizar o voo agora? O PIREP será descartado.')) return;
     flightActive = false;
     clearInterval(timerInterval);
     clearInterval(liveInterval);
@@ -752,12 +859,17 @@
   });
 
   // ── Live tracking ─────────────────────────────────────────────────────────
+  const PHASE_EN = {
+    'SOLO':'taxi', 'DECOLAGEM':'climb', 'SUBIDA':'climb',
+    'CRUZEIRO':'cruise', 'DESCIDA':'descent', 'APROXIMAÇÃO':'approach', 'VOO':'cruise'
+  };
+
   async function pushLiveFlight() {
     if (!lastSimData || !flightActive) return;
     const d = lastSimData;
-    const phase = flightPhase(d.spd, d.alt, d.vs, d.onGround);
+    const phase = PHASE_EN[flightPhase(d.spd, d.alt, d.vs, d.onGround)] || 'taxi';
 
-    await db.collection('liveflights').doc(currentUser.uid).set({
+    const payload = {
       pilotName: userData.name || '',
       dep:       $('inp-dep').value.trim().toUpperCase(),
       arr:       $('inp-arr').value.trim().toUpperCase(),
@@ -766,11 +878,17 @@
       lat:       d.lat, lon: d.lon,
       alt:       Math.round(d.alt),
       spd:       Math.round(d.spd),
-      hdg:       Math.round(d.hdg),
+      hdg:       Math.round(((d.hdg || 0) + 360) % 360),
       vs:        Math.round(d.vs),
-      startedAt: firebase.firestore.FieldValue.serverTimestamp(),
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    }, { merge: true }).catch(() => {});
+    };
+
+    if (!liveFlightPushed) {
+      payload.startedAt = firebase.firestore.FieldValue.serverTimestamp();
+      liveFlightPushed = true;
+    }
+
+    await db.collection('liveflights').doc(currentUser.uid).set(payload, { merge: true }).catch(() => {});
   }
 
   // ── Tela de resumo ────────────────────────────────────────────────────────

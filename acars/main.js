@@ -56,6 +56,10 @@ ipcMain.on('update:install', () => {
   autoUpdater.quitAndInstall();
 });
 
+ipcMain.on('get:version', (e) => {
+  e.returnValue = app.getVersion();
+});
+
 // ── IPC: conectar ao simulador ──────────────────────────────
 ipcMain.handle('sim:connect', async (_e, { type }) => {
   if (simHandler) simHandler.disconnect();
@@ -89,5 +93,7 @@ ipcMain.handle('sim:disconnect', async () => {
     simHandler.disconnect();
     simHandler = null;
   }
+  if (win && !win.isDestroyed())
+    win.webContents.send('sim:status', { connected: false, type: null });
   return { ok: true };
 });

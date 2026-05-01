@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld('acars', {
   connectSim:    (type) => ipcRenderer.invoke('sim:connect', { type }),
   disconnectSim: ()     => ipcRenderer.invoke('sim:disconnect'),
   installUpdate: ()     => ipcRenderer.send('update:install'),
+  getVersion:    ()     => require('electron').ipcRenderer.sendSync('get:version'),
 
   // main → renderer
   onSimData:      (cb) => ipcRenderer.on('sim:data',       (_e, d) => cb(d)),
