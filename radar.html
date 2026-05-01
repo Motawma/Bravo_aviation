@@ -277,7 +277,7 @@ function planeIcon(heading, phase) {
     <path fill="${color}" d="M24 4 C22 4 20 6 20 8 L20 24 L4 32 L4 36 L20 31 L20 42 L15 44 L15 47 L24 45 L33 47 L33 44 L28 42 L28 31 L44 36 L44 32 L28 24 L28 8 C28 6 26 4 24 4 Z"/>
   </svg>`;
   return L.divIcon({
-    html: `<div class="plane-marker" style="color:${color};transform:rotate(${(hdg+90)%360}deg);filter:drop-shadow(0 0 6px ${color})">${svg}</div>`,
+    html: `<div class="plane-marker" style="color:${color};transform:rotate(${hdg}deg);filter:drop-shadow(0 0 6px ${color})">${svg}</div>`,
     iconSize: [36, 36],
     iconAnchor: [18, 18],
     popupAnchor: [0, -20],
