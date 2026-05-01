@@ -926,6 +926,42 @@ const ROUTES = [
   { dep:'SBKP', arr:'SBPA', city1:'Campinas',     city2:'Porto Alegre',    dur:'1h55', dist:'1100km', freq:'Diário',  ac:'A320',     fn:'BRV4004', fl:'310', route:'DENEM UM540 NANDU' },
   { dep:'SBKP', arr:'SBCT', city1:'Campinas',     city2:'Curitiba',        dur:'0h45', dist:'240km',  freq:'Diário',  ac:'A320',     fn:'BRV4005', fl:'250', route:'DENEM UM540 IGDUN' },
   { dep:'SBKP', arr:'SBFZ', city1:'Campinas',     city2:'Fortaleza',       dur:'2h50', dist:'2900km', freq:'Semanal', ac:'A320',     fn:'BRV4006', fl:'360', route:'ASBUP UZ3 LOBRA UZ6 SOGES' },
+  // ── SBPA (Porto Alegre) — B737-800 ──────────────────────────────────────
+  { dep:'SBPA', arr:'SBGR', city1:'Porto Alegre',  city2:'São Paulo',       dur:'1h50', dist:'1100km', freq:'Diário',  ac:'B737-800', fn:'BRV5001', fl:'310', route:'NANDU UM540 OSAMU UW25 GLOBO' },
+  { dep:'SBPA', arr:'SBBR', city1:'Porto Alegre',  city2:'Brasília',        dur:'2h30', dist:'1800km', freq:'Semanal', ac:'B737-800', fn:'BRV5002', fl:'350', route:'OSAMU UM540 BRS' },
+  { dep:'SBPA', arr:'SBGL', city1:'Porto Alegre',  city2:'Rio de Janeiro',  dur:'1h55', dist:'1520km', freq:'Semanal', ac:'B737-800', fn:'BRV5003', fl:'320', route:'NANDU UM540 DENEM' },
+  { dep:'SBPA', arr:'SBSV', city1:'Porto Alegre',  city2:'Salvador',        dur:'3h10', dist:'2800km', freq:'Semanal', ac:'B737-800', fn:'BRV5004', fl:'370', route:'NANDU UM540 BRS DENDE UZ10 BLOCK' },
+  { dep:'SBPA', arr:'SBRF', city1:'Porto Alegre',  city2:'Recife',          dur:'3h45', dist:'3400km', freq:'Semanal', ac:'B737-800', fn:'BRV5005', fl:'370', route:'NANDU UM540 BRS DENDE UZ10 POTRO' },
+  { dep:'SBPA', arr:'SBFZ', city1:'Porto Alegre',  city2:'Fortaleza',       dur:'4h00', dist:'3700km', freq:'Semanal', ac:'B737-800', fn:'BRV5006', fl:'370', route:'NANDU UM540 BRS UBADU UZ6 SOGES' },
+  { dep:'SBPA', arr:'SBCT', city1:'Porto Alegre',  city2:'Curitiba',        dur:'0h55', dist:'450km',  freq:'Diário',  ac:'B737-800', fn:'BRV5007', fl:'250', route:'NANDU UM540 IGDUN' },
+  { dep:'SBPA', arr:'SBFL', city1:'Porto Alegre',  city2:'Florianópolis',   dur:'0h40', dist:'260km',  freq:'Diário',  ac:'B737-800', fn:'BRV5008', fl:'220', route:'NANDU UM540 BARBI' },
+  // ── SBSV (Salvador) — B737-800 ──────────────────────────────────────────
+  { dep:'SBSV', arr:'SBGR', city1:'Salvador',      city2:'São Paulo',       dur:'2h15', dist:'1960km', freq:'Semanal', ac:'B737-800', fn:'BRV6001', fl:'350', route:'BLOCK UZ10 DENDE W1 ASBUP' },
+  { dep:'SBSV', arr:'SBBR', city1:'Salvador',      city2:'Brasília',        dur:'1h45', dist:'1400km', freq:'Diário',  ac:'B737-800', fn:'BRV6002', fl:'330', route:'BLOCK UZ10 DENDE' },
+  { dep:'SBSV', arr:'SBGL', city1:'Salvador',      city2:'Rio de Janeiro',  dur:'2h00', dist:'1560km', freq:'Semanal', ac:'B737-800', fn:'BRV6003', fl:'350', route:'BLOCK UZ10 DENDE UZ3 LOBRA' },
+  { dep:'SBSV', arr:'SBRF', city1:'Salvador',      city2:'Recife',          dur:'1h20', dist:'840km',  freq:'Diário',  ac:'B737-800', fn:'BRV6004', fl:'280', route:'BLOCK UZ10 POTRO' },
+  { dep:'SBSV', arr:'SBFZ', city1:'Salvador',      city2:'Fortaleza',       dur:'1h50', dist:'1400km', freq:'Diário',  ac:'B737-800', fn:'BRV6005', fl:'320', route:'DENDE UZ6 SOGES' },
+  { dep:'SBSV', arr:'SBPA', city1:'Salvador',      city2:'Porto Alegre',    dur:'3h10', dist:'2800km', freq:'Semanal', ac:'B737-800', fn:'BRV6006', fl:'370', route:'BLOCK UZ10 DENDE BRS UM540 NANDU' },
+  { dep:'SBSV', arr:'SBBE', city1:'Salvador',      city2:'Belém',           dur:'2h30', dist:'2000km', freq:'Semanal', ac:'B737-800', fn:'BRV6007', fl:'350', route:'DENDE UZ1 UPALA' },
+  { dep:'SBSV', arr:'SBEG', city1:'Salvador',      city2:'Manaus',          dur:'3h15', dist:'2900km', freq:'Semanal', ac:'B737-800', fn:'BRV6008', fl:'370', route:'DENDE UZ5 BEGAS' },
+  // ── SBRF (Recife) — B737-800 ────────────────────────────────────────────
+  { dep:'SBRF', arr:'SBGR', city1:'Recife',        city2:'São Paulo',       dur:'3h00', dist:'2680km', freq:'Semanal', ac:'B737-800', fn:'BRV7001', fl:'360', route:'POTRO UW58 DEPOT UW13 TEXAS' },
+  { dep:'SBRF', arr:'SBBR', city1:'Recife',        city2:'Brasília',        dur:'2h20', dist:'2000km', freq:'Semanal', ac:'B737-800', fn:'BRV7002', fl:'350', route:'POTRO UZ10 DENDE' },
+  { dep:'SBRF', arr:'SBSV', city1:'Recife',        city2:'Salvador',        dur:'1h20', dist:'840km',  freq:'Diário',  ac:'B737-800', fn:'BRV7003', fl:'280', route:'POTRO UZ10 BLOCK' },
+  { dep:'SBRF', arr:'SBFZ', city1:'Recife',        city2:'Fortaleza',       dur:'1h10', dist:'800km',  freq:'Diário',  ac:'B737-800', fn:'BRV7004', fl:'260', route:'POTRO UW58 SOGES' },
+  { dep:'SBRF', arr:'SBNT', city1:'Recife',        city2:'Natal',           dur:'0h45', dist:'300km',  freq:'Diário',  ac:'B737-800', fn:'BRV7005', fl:'220', route:'POTRO UW58 GRANA' },
+  { dep:'SBRF', arr:'SBPA', city1:'Recife',        city2:'Porto Alegre',    dur:'3h45', dist:'3400km', freq:'Semanal', ac:'B737-800', fn:'BRV7006', fl:'370', route:'POTRO UZ10 DENDE BRS UM540 NANDU' },
+  { dep:'SBRF', arr:'SBBE', city1:'Recife',        city2:'Belém',           dur:'2h15', dist:'1900km', freq:'Semanal', ac:'B737-800', fn:'BRV7007', fl:'340', route:'LOBRA UZ1 UPALA' },
+  { dep:'SBRF', arr:'SBMQ', city1:'Recife',        city2:'Macapá',          dur:'2h45', dist:'2300km', freq:'Semanal', ac:'B737-800', fn:'BRV7008', fl:'360', route:'LOBRA UZ1 UPALA AMAPA' },
+  // ── SBCF (Belo Horizonte) — B737-800 ────────────────────────────────────
+  { dep:'SBCF', arr:'SBGR', city1:'Belo Horizonte', city2:'São Paulo',      dur:'1h10', dist:'590km',  freq:'Diário',  ac:'B737-800', fn:'BRV8001', fl:'280', route:'MOXIK W45 MOLVA' },
+  { dep:'SBCF', arr:'SBBR', city1:'Belo Horizonte', city2:'Brasília',       dur:'0h55', dist:'620km',  freq:'Diário',  ac:'B737-800', fn:'BRV8002', fl:'270', route:'MOLVA W45 UBADU' },
+  { dep:'SBCF', arr:'SBGL', city1:'Belo Horizonte', city2:'Rio de Janeiro', dur:'0h50', dist:'530km',  freq:'Diário',  ac:'B737-800', fn:'BRV8003', fl:'250', route:'MOLVA W45 PIPUX' },
+  { dep:'SBCF', arr:'SBSV', city1:'Belo Horizonte', city2:'Salvador',       dur:'1h30', dist:'1100km', freq:'Diário',  ac:'B737-800', fn:'BRV8004', fl:'300', route:'UBADU DENDE UZ10 BLOCK' },
+  { dep:'SBCF', arr:'SBRF', city1:'Belo Horizonte', city2:'Recife',         dur:'2h20', dist:'1900km', freq:'Semanal', ac:'B737-800', fn:'BRV8005', fl:'350', route:'UBADU DENDE UZ10 POTRO' },
+  { dep:'SBCF', arr:'SBPA', city1:'Belo Horizonte', city2:'Porto Alegre',   dur:'2h00', dist:'1700km', freq:'Semanal', ac:'B737-800', fn:'BRV8006', fl:'340', route:'MOLVA UM540 NANDU' },
+  { dep:'SBCF', arr:'SBFZ', city1:'Belo Horizonte', city2:'Fortaleza',      dur:'2h40', dist:'2400km', freq:'Semanal', ac:'B737-800', fn:'BRV8007', fl:'360', route:'UBADU UZ6 SOGES' },
+  { dep:'SBCF', arr:'SBBE', city1:'Belo Horizonte', city2:'Belém',          dur:'2h45', dist:'2300km', freq:'Semanal', ac:'B737-800', fn:'BRV8008', fl:'360', route:'UBADU UZ1 UPALA' },
 ];
 
 const DOWNLOADS = [
