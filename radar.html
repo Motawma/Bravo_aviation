@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>Radar — Bravo Virtual Airline</title>
+<title>Radar v3 — Bravo Virtual Airline</title>
 <script>
   const PAGE_VERSION = '1';
   const key = 'brv_v_radar';
@@ -271,23 +271,13 @@ const PHASE_CSS = {
 /* ── AIRCRAFT SVG ICON ── */
 function planeIcon(heading, phase) {
   const color = PHASE_COLORS[phase] || '#00EEFF';
-  const hdg = (heading || 0) - 90;
+  const hdg = heading || 0;
+  // SVG sem rotação interna — rotação aplicada via CSS no div externo
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="36" height="36">
-    <g transform="rotate(${hdg},24,24)">
-      <path fill="${color}" d="
-        M24 4
-        C22 4 20 6 20 8
-        L20 24
-        L4 32 L4 36 L20 31
-        L20 42 L15 44 L15 47 L24 45 L33 47 L33 44 L28 42
-        L28 31 L44 36 L44 32
-        L28 24 L28 8
-        C28 6 26 4 24 4 Z
-      "/>
-    </g>
+    <path fill="${color}" d="M24 4 C22 4 20 6 20 8 L20 24 L4 32 L4 36 L20 31 L20 42 L15 44 L15 47 L24 45 L33 47 L33 44 L28 42 L28 31 L44 36 L44 32 L28 24 L28 8 C28 6 26 4 24 4 Z"/>
   </svg>`;
   return L.divIcon({
-    html: `<div class="plane-marker" style="color:${color}">${svg}</div>`,
+    html: `<div class="plane-marker" style="color:${color};transform:rotate(${(hdg+90)%360}deg);filter:drop-shadow(0 0 6px ${color})">${svg}</div>`,
     iconSize: [36, 36],
     iconAnchor: [18, 18],
     popupAnchor: [0, -20],
@@ -380,6 +370,11 @@ function buildPopup(d) {
     <div class="popup-row">💨 Vel. IAS: <strong>${spd}</strong></div>
     <div class="popup-row">↕ VS: <strong>${vs}</strong></div>
     <div class="popup-row">🧭 HDG: <strong>${hdg}</strong></div>
+    <div style="margin:6px 0;padding:6px 8px;background:#0a0a1a;border-radius:6px;border:1px solid #1E1840;">
+      <span style="font-size:10px;color:#888;">BUSSOLA (nariz): </span>
+      <span style="font-size:22px;color:#00EEFF;display:inline-block;transform:rotate(${d.hdg||0}deg);line-height:1;">&#8593;</span>
+      <span style="font-size:11px;color:#00EEFF;font-weight:700;">${Math.round(d.hdg||0)}&deg;</span>
+    </div>
     <div class="popup-sep"></div>
     <div class="popup-row">⏱ Tempo de voo: <strong>${elapsed}</strong></div>
   </div>`;
