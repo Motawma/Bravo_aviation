@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<title>Importar Rotas B737-800 — Admin BRV</title>
+<style>
+body{background:#080612;color:#F0EAF8;font-family:monospace;padding:30px;max-width:800px;margin:0 auto}
+h1{color:#00EEFF;margin-bottom:20px}
+button{background:#00EEFF;color:#000;border:none;padding:12px 28px;font-size:15px;font-weight:700;cursor:pointer;border-radius:4px;margin-right:10px}
+button:disabled{opacity:0.4;cursor:not-allowed}
+#log{background:#0E0B1E;border:1px solid #1E1840;padding:16px;margin-top:20px;height:400px;overflow-y:auto;font-size:12px;line-height:1.6}
+.ok{color:#00EEFF}.skip{color:#9A8FB8}.err{color:#FF2080}.bold{color:#fff;font-weight:bold}
+#summary{background:#130F27;border:1px solid #1E1840;padding:14px;margin-top:14px;font-size:13px;display:none}
+#login-box{background:#0E0B1E;border:1px solid #1E1840;padding:20px;margin-bottom:20px;display:none}
+#login-box input{background:#080612;border:1px solid #1E1840;color:#F0EAF8;padding:8px 12px;font-size:14px;width:280px;margin:6px 0;display:block}
+</style>
+</head>
+<body>
+<h1>🛠 Importar Rotas B737-800 — Bravo Aviation Admin</h1>
+<p style="color:#9A8FB8;margin-bottom:20px">Esta ferramenta insere as rotas B737-800 na coleção <code>routes</code> do Firestore.<br>
+Rotas com <code>flightNumber</code> já existente serão ignoradas (sem duplicatas).</p>
+
+<div id="login-box">
+  <p style="color:#00EEFF;margin-bottom:10px">Login necessário para escrever no Firestore:</p>
+  <input id="email" type="email" placeholder="Email admin" />
+  <input id="password" type="password" placeholder="Senha" />
+  <button id="btn-login">Entrar</button>
+  <span id="login-err" style="color:#FF2080;margin-left:10px"></span>
+</div>
+
+<button id="btn-import" disabled>⏳ Aguardando auth...</button>
+<button id="btn-check" disabled>🔍 Verificar Firestore</button>
+
+<div id="log"><span class="skip">Aguardando Firebase...</span></div>
+<div id="summary"></div>
+
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: 'AIzaSyC2dDGhKjzHSclyFwUFNGA60DtXAjLEJ6I',
+  authDomain: 'bravo-aviation.firebaseapp.com',
+  projectId: 'bravo-aviation',
+  storageBucket: 'bravo-aviation.firebasestorage.app',
+  messagingSenderId: '712016002234',
+  appId: '1:712016002234:web:ce7a8e39c28bc6d8ca5683'
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db   = firebase.firestore();
+
+// ── TODAS as rotas B737-800 ──────────────────────────────────────────────────
+const ROUTES_737 = [
+  // SBGR (São Paulo) ─────────────────────────────────────────────────────────
+  { dep:'SBGR', arr:'SBBR', city1:'São Paulo',      city2:'Brasília',        dur:'1h45', dist:'1070km', freq:'Diário',  aircraft:'B737-800', flightNumber:'BRV1001', flightLevel:'310', route:'PCL UW2 BRS',                            active:true },
+  { dep:'SBGR', arr:'SBRF', city1:'São Paulo',      city2:'Recife',          dur:'3h00', dist:'2680km', freq:'Semanal', aircraft:'B737-800', flightNumber:'BRV1005', flightLevel:'360', route:'TEXAS UW13 DEPOT UW58 POTRO',             active:true },
+  // SBBR (Brasília) ──────────────────────────────────────────────────────────
+  { dep:'SBBR', arr:'SBGR', city1:'Brasília',       city2:'São Paulo',       dur:'1h45', dist:'1070km', freq:'Diário',  aircraft:'B737-800', flightNumber:'BRV2001', flightLevel:'310', route:'BRS UW2 PCL',                             active:true },
+  { dep:'SBBR', arr:'SBSV', city1:'Brasília',       city2:'Salvador',        dur:'1h45', dist:'1400km', freq:'Diário',  aircraft:'B737-800', flightNumber:'BRV2004', flightLevel:'330', route:'DENDE UZ10 BLOCK',                        active:true },
+  { dep:'SBBR', arr:'SBRF', city1:'Brasília',       city2:'Recife',          dur:'2h20', dist:'2000km', freq:'Semanal', aircraft:'B737-800', flightNumber:'BRV2005', flightLevel:'350', route:'DENDE UZ10 POTRO',                        active:true },
+  // SBGL (Rio de Janeiro) ────────────────────────────────────────────────────
+  { dep:'SBGL', arr:'SBSV', city1:'Rio de Janeiro', city2:'Salvador',        dur:'2h00', dist:'1560km', freq:'Semanal', aircraft:'B737-800', flightNumber:'BRV3004', flightLevel:'350', route:'LOBRA UZ3 DENDE UZ10 BLOCK',              active:true },
+  // SBCT (Curitiba) ──────────────────────────────────────────────────────────
+  { dep:'SBCT', arr:'SBGR', city1:'Curitiba',       city2:'São Paulo',       dur:'0h45', dist:'260km',  freq:'Diário',  aircraft:'B737-800', flightNumber:'BRV9001', flightLevel:'250', route:'IGDUN UM540 DENEM',                       active:true },
+  { dep:'SBCT', arr:'SBBR', city1:'Curitiba',       city2:'Brasília',        dur:'1h30', dist:'1100km', freq:'Semanal', aircraft:'B737-800', flightNumber:'BRV9002', flightLevel:'310', route:'IGDUN UM540 BRS',                         active:true },
+  { dep:'SBCT', arr:'SBGL', city1:'Curitiba',       city2:'Rio de Janeiro',  dur:'1h10', dist:'850km',  freq:'Diário',  aircraft:'B737-800', flightNumber:'BRV9003', flightLevel:'280', route:'IGDUN UM540 DENEM',                       active:true },
+  { dep:'SBCT', arr:'SBSV', city1:'Curitiba',       city2:'Salvador',        dur:'2h50', dist:'2500km', freq:'Semanal', aircraft:'B737-800', flightNumber:'BRV9004', flightLevel:'360', route:'IGDUN UM540 BRS DENDE UZ10 BLOCK',        active:true },
+  { dep:'SBCT', arr:'SBRF', city1:'Curitiba',       city2:'Recife',          dur:'3h20', dist:'3000km', freq:'Semanal', aircraft:'B737-800', flightNumber:'BRV9005', flightLevel:'370', route:'IGDUN UM540 BRS DENDE UZ10 POTRO',        active:true },
+  { dep:'SBCT', arr:'SBFZ', city1:'Curitiba',       city2:'Fortaleza',       dur:'3h45', dist:'3400km', freq:'Semanal', aircraft:'B737-800', flightNumber:'BRV9006', flightLevel:'370', route:'IGDUN UM540 BRS UBADU UZ6 SOGES',         active:true },
+  { dep:'SBCT', arr:'SBPA', city1:'Curitiba',       city2:'Porto Alegre',    dur:'0h55', dist:'450km',  freq:'Diário',  aircraft:'B737-800', flightNumber:'BRV9007', flightLevel:'250', route:'IGDUN UM540 NANDU',                       active:true },
+  { dep:'SBCT', arr:'SBEG', city1:'Curitiba',       city2:'Manaus',          dur:'3h30', dist:'3100km', freq:'Semanal', aircraft:'B737-800', flightNumber:'BRV9008', flightLevel:'370', route:'IGDUN UM540 BRS UBADU UZ5 BEGAS',         active:true },
+  // SBPA (Porto Alegre) ──────────────────────────────────────────────────────
+  { dep:'SBPA', arr:'SBGR', city1:'Porto Alegre',   city2:'São Paulo',       dur:'1h50', dist:'1100km', freq:'Diário',  aircraft:'B737-800', flightNumber:'BRV5001', flightLevel:'310', route:'NANDU UM540 OSAMU UW25 GLOBO',            active:true },
+  { dep:'SBPA', arr:'SBBR', city1:'Porto Alegre',   city2:'Brasília',        dur:'2h30', dist:'1800km', freq:'Semanal', aircraft:'B737-800', flightNumber:'BRV5002', flightLevel:'350', route:'OSAMU UM540 BRS',                         active:true },
+  { dep:'SBPA', arr:'SBGL', city1:'Porto Alegre',   city2:'Rio de Janeiro',  dur:'1h55', dist:'1520km', freq:'Semanal', aircraft:'B737-800', flightNumber:'BRV5003', flightLevel:'320', route:'NANDU UM540 DENEM',                       active:true },
+  { dep:'SBPA', arr:'SBSV', city1:'Porto Alegre',   city2:'Salvador',        dur:'3h10', dist:'2800km', freq:'Semanal', aircraft:'B737-800', flightNumber:'BRV5004', flightLevel:'370', route:'NANDU UM540 BRS DENDE UZ10 BLOCK',        active:true },
+  { dep:'SBPA', arr:'SBRF', city1:'Porto Alegre',   city2:'Recife',          dur:'3h45', dist:'3400km', freq:'Semanal', aircraft:'B737-800', flightNumber:'BRV5005', flightLevel:'370', route:'NANDU UM540 BRS DENDE UZ10 POTRO',        active:true },
+  { dep:'SBPA', arr:'SBFZ', city1:'Porto Alegre',   city2:'Fortaleza',       dur:'4h00', dist:'3700km', freq:'Semanal', aircraft:'B737-800', flightNumber:'BRV5006', flightLevel:'370', route:'NANDU UM540 BRS UBADU UZ6 SOGES',         active:true },
+  { dep:'SBPA', arr:'SBCT', city1:'Porto Alegre',   city2:'Curitiba',        dur:'0h55', dist:'450km',  freq:'Diário',  aircraft:'B737-800', flightNumber:'BRV5007', flightLevel:'250', route:'NANDU UM540 IGDUN',                       active:true },
+  { dep:'SBPA', arr:'SBFL', city1:'Porto Alegre',   city2:'Florianópolis',   dur:'0h40', dist:'260km',  freq:'Diário',  aircraft:'B737-800', flightNumber:'BRV5008', flightLevel:'220', route:'NANDU UM540 BARBI',                       active:true },
+  // SBSV (Salvador) ──────────────────────────────────────────────────────────
+  { dep:'SBSV', arr:'SBGR', city1:'Salvador',       city2:'São Paulo',       dur:'2h15', dist:'1960km', freq:'Semanal', aircraft:'B737-800', flightNumber:'BRV6001', flightLevel:'350', route:'BLOCK UZ10 DENDE W1 ASBUP',               active:true },
+  { dep:'SBSV', arr:'SBBR', city1:'Salvador',       city2:'Brasília',        dur:'1h45', dist:'1400km', freq:'Diário',  aircraft:'B737-800', flightNumber:'BRV6002', flightLevel:'330', route:'BLOCK UZ10 DENDE',                        active:true },
+  { dep:'SBSV', arr:'SBGL', city1:'Salvador',       city2:'Rio de Janeiro',  dur:'2h00', dist:'1560km', freq:'Semanal', aircraft:'B737-800', flightNumber:'BRV6003', flightLevel:'350', route:'BLOCK UZ10 DENDE UZ3 LOBRA',              active:true },
+  { dep:'SBSV', arr:'SBRF', city1:'Salvador',       city2:'Recife',          dur:'1h20', dist:'840km',  freq:'Diário',  aircraft:'B737-800', flightNumber:'BRV6004', flightLevel:'280', route:'BLOCK UZ10 POTRO',                        active:true },
+  { dep:'SBSV', arr:'SBFZ', city1:'Salvador',       city2:'Fortaleza',       dur:'1h50', dist:'1400km', freq:'Diário',  aircraft:'B737-800', flightNumber:'BRV6005', flightLevel:'320', route:'DENDE UZ6 SOGES',                         active:true },
+  { dep:'SBSV', arr:'SBPA', city1:'Salvador',       city2:'Porto Alegre',    dur:'3h10', dist:'2800km', freq:'Semanal', aircraft:'B737-800', flightNumber:'BRV6006', flightLevel:'370', route:'BLOCK UZ10 DENDE BRS UM540 NANDU',        active:true },
+  { dep:'SBSV', arr:'SBBE', city1:'Salvador',       city2:'Belém',           dur:'2h30', dist:'2000km', freq:'Semanal', aircraft:'B737-800', flightNumber:'BRV6007', flightLevel:'350', route:'DENDE UZ1 UPALA',                         active:true },
+  { dep:'SBSV', arr:'SBEG', city1:'Salvador',       city2:'Manaus',          dur:'3h15', dist:'2900km', freq:'Semanal', aircraft:'B737-800', flightNumber:'BRV6008', flightLevel:'370', route:'DENDE UZ5 BEGAS',                         active:true },
+  // SBRF (Recife) ────────────────────────────────────────────────────────────
+  { dep:'SBRF', arr:'SBGR', city1:'Recife',         city2:'São Paulo',       dur:'3h00', dist:'2680km', freq:'Semanal', aircraft:'B737-800', flightNumber:'BRV7001', flightLevel:'360', route:'POTRO UW58 DEPOT UW13 TEXAS',             active:true },
+  { dep:'SBRF', arr:'SBBR', city1:'Recife',         city2:'Brasília',        dur:'2h20', dist:'2000km', freq:'Semanal', aircraft:'B737-800', flightNumber:'BRV7002', flightLevel:'350', route:'POTRO UZ10 DENDE',                        active:true },
+  { dep:'SBRF', arr:'SBSV', city1:'Recife',         city2:'Salvador',        dur:'1h20', dist:'840km',  freq:'Diário',  aircraft:'B737-800', flightNumber:'BRV7003', flightLevel:'280', route:'POTRO UZ10 BLOCK',                        active:true },
+  { dep:'SBRF', arr:'SBFZ', city1:'Recife',         city2:'Fortaleza',       dur:'1h10', dist:'800km',  freq:'Diário',  aircraft:'B737-800', flightNumber:'BRV7004', flightLevel:'260', route:'POTRO UW58 SOGES',                        active:true },
+  { dep:'SBRF', arr:'SBNT', city1:'Recife',         city2:'Natal',           dur:'0h45', dist:'300km',  freq:'Diário',  aircraft:'B737-800', flightNumber:'BRV7005', flightLevel:'220', route:'POTRO UW58 GRANA',                        active:true },
+  { dep:'SBRF', arr:'SBPA', city1:'Recife',         city2:'Porto Alegre',    dur:'3h45', dist:'3400km', freq:'Semanal', aircraft:'B737-800', flightNumber:'BRV7006', flightLevel:'370', route:'POTRO UZ10 DENDE BRS UM540 NANDU',        active:true },
+  { dep:'SBRF', arr:'SBBE', city1:'Recife',         city2:'Belém',           dur:'2h15', dist:'1900km', freq:'Semanal', aircraft:'B737-800', flightNumber:'BRV7007', flightLevel:'340', route:'LOBRA UZ1 UPALA',                         active:true },
+  { dep:'SBRF', arr:'SBMQ', city1:'Recife',         city2:'Macapá',          dur:'2h45', dist:'2300km', freq:'Semanal', aircraft:'B737-800', flightNumber:'BRV7008', flightLevel:'360', route:'LOBRA UZ1 UPALA AMAPA',                   active:true },
+  // SBCF (Belo Horizonte) ────────────────────────────────────────────────────
+  { dep:'SBCF', arr:'SBGR', city1:'Belo Horizonte', city2:'São Paulo',       dur:'1h10', dist:'590km',  freq:'Diário',  aircraft:'B737-800', flightNumber:'BRV8001', flightLevel:'280', route:'MOXIK W45 MOLVA',                         active:true },
+  { dep:'SBCF', arr:'SBBR', city1:'Belo Horizonte', city2:'Brasília',        dur:'0h55', dist:'620km',  freq:'Diário',  aircraft:'B737-800', flightNumber:'BRV8002', flightLevel:'270', route:'MOLVA W45 UBADU',                         active:true },
+  { dep:'SBCF', arr:'SBGL', city1:'Belo Horizonte', city2:'Rio de Janeiro',  dur:'0h50', dist:'530km',  freq:'Diário',  aircraft:'B737-800', flightNumber:'BRV8003', flightLevel:'250', route:'MOLVA W45 PIPUX',                         active:true },
+  { dep:'SBCF', arr:'SBSV', city1:'Belo Horizonte', city2:'Salvador',        dur:'1h30', dist:'1100km', freq:'Diário',  aircraft:'B737-800', flightNumber:'BRV8004', flightLevel:'300', route:'UBADU DENDE UZ10 BLOCK',                  active:true },
+  { dep:'SBCF', arr:'SBRF', city1:'Belo Horizonte', city2:'Recife',          dur:'2h20', dist:'1900km', freq:'Semanal', aircraft:'B737-800', flightNumber:'BRV8005', flightLevel:'350', route:'UBADU DENDE UZ10 POTRO',                  active:true },
+  { dep:'SBCF', arr:'SBPA', city1:'Belo Horizonte', city2:'Porto Alegre',    dur:'2h00', dist:'1700km', freq:'Semanal', aircraft:'B737-800', flightNumber:'BRV8006', flightLevel:'340', route:'MOLVA UM540 NANDU',                       active:true },
+  { dep:'SBCF', arr:'SBFZ', city1:'Belo Horizonte', city2:'Fortaleza',       dur:'2h40', dist:'2400km', freq:'Semanal', aircraft:'B737-800', flightNumber:'BRV8007', flightLevel:'360', route:'UBADU UZ6 SOGES',                         active:true },
+  { dep:'SBCF', arr:'SBBE', city1:'Belo Horizonte', city2:'Belém',           dur:'2h45', dist:'2300km', freq:'Semanal', aircraft:'B737-800', flightNumber:'BRV8008', flightLevel:'360', route:'UBADU UZ1 UPALA',                         active:true },
+];
+
+const logEl = document.getElementById('log');
+const btnImport = document.getElementById('btn-import');
+const btnCheck = document.getElementById('btn-check');
+const loginBox = document.getElementById('login-box');
+const summaryEl = document.getElementById('summary');
+
+function log(msg, cls='') {
+  const line = document.createElement('div');
+  line.className = cls;
+  line.innerHTML = msg;
+  logEl.appendChild(line);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+// ── Auth ─────────────────────────────────────────────────────────────────────
+auth.onAuthStateChanged(user => {
+  if (user) {
+    loginBox.style.display = 'none';
+    btnImport.disabled = false;
+    btnCheck.disabled = false;
+    btnImport.textContent = `▶ Importar ${ROUTES_737.length} rotas B737-800`;
+    log(`✅ Autenticado como <b>${user.email}</b>`, 'ok');
+    log(`Total de rotas para importar: <b>${ROUTES_737.length}</b>`, 'bold');
+  } else {
+    loginBox.style.display = 'block';
+    btnImport.disabled = true;
+    btnCheck.disabled = true;
+    btnImport.textContent = '⏳ Aguardando login...';
+    log('⚠ Não autenticado. Faça login acima.', 'err');
+  }
+});
+
+document.getElementById('btn-login').addEventListener('click', async () => {
+  const email = document.getElementById('email').value;
+  const pass  = document.getElementById('password').value;
+  const errEl = document.getElementById('login-err');
+  try {
+    await auth.signInWithEmailAndPassword(email, pass);
+    errEl.textContent = '';
+  } catch(e) {
+    errEl.textContent = e.message;
+  }
+});
+
+// ── Verificar Firestore ───────────────────────────────────────────────────────
+btnCheck.addEventListener('click', async () => {
+  btnCheck.disabled = true;
+  log('--- Verificando Firestore... ---', 'bold');
+  try {
+    const snap = await db.collection('routes').get();
+    const existing = snap.docs.map(d => d.data().flightNumber || d.data().fn);
+    const byAircraft = {};
+    snap.docs.forEach(d => {
+      const ac = d.data().aircraft || d.data().ac || '?';
+      byAircraft[ac] = (byAircraft[ac] || 0) + 1;
+    });
+    log(`Total de rotas no Firestore: <b>${snap.size}</b>`, 'ok');
+    Object.entries(byAircraft).forEach(([ac, n]) => log(`  ${ac}: ${n} rotas`, 'skip'));
+    const missing = ROUTES_737.filter(r => !existing.includes(r.flightNumber));
+    log(`Rotas B737-800 já presentes: <b>${ROUTES_737.length - missing.length}</b>`, 'ok');
+    log(`Rotas B737-800 faltando: <b>${missing.length}</b>`, missing.length > 0 ? 'err' : 'ok');
+  } catch(e) {
+    log('Erro: ' + e.message, 'err');
+  }
+  btnCheck.disabled = false;
+});
+
+// ── Importar ─────────────────────────────────────────────────────────────────
+btnImport.addEventListener('click', async () => {
+  btnImport.disabled = true;
+  btnCheck.disabled = true;
+  summaryEl.style.display = 'none';
+  log('--- Iniciando importação... ---', 'bold');
+
+  // Busca existentes pelo campo flightNumber
+  let existingFns = new Set();
+  try {
+    const snap = await db.collection('routes').get();
+    snap.docs.forEach(d => {
+      const fn = d.data().flightNumber || d.data().fn;
+      if (fn) existingFns.add(fn);
+    });
+    log(`Firestore: ${snap.size} rotas existentes lidas.`, 'skip');
+  } catch(e) {
+    log('Erro ao ler Firestore: ' + e.message, 'err');
+    btnImport.disabled = false;
+    btnCheck.disabled = false;
+    return;
+  }
+
+  let added = 0, skipped = 0, errors = 0;
+
+  for (const route of ROUTES_737) {
+    if (existingFns.has(route.flightNumber)) {
+      log(`  ↷ SKIP  ${route.flightNumber}  (${route.dep}→${route.arr})`, 'skip');
+      skipped++;
+      continue;
+    }
+    try {
+      await db.collection('routes').add(route);
+      log(`  ✔ ADD   ${route.flightNumber}  ${route.dep}→${route.arr}  ${route.city1}→${route.city2}`, 'ok');
+      added++;
+    } catch(e) {
+      log(`  ✘ ERR   ${route.flightNumber}  ${e.message}`, 'err');
+      errors++;
+    }
+  }
+
+  log('--- Concluído! ---', 'bold');
+  summaryEl.style.display = 'block';
+  summaryEl.innerHTML = `
+    <b>Resultado:</b><br>
+    ✅ Inseridas: <b style="color:#00EEFF">${added}</b><br>
+    ↷ Ignoradas (já existiam): <b style="color:#9A8FB8">${skipped}</b><br>
+    ❌ Erros: <b style="color:#FF2080">${errors}</b><br><br>
+    ${added > 0 ? '✅ Abra o <b>flight.html</b> e recarregue — o filtro B737-800 deve aparecer.' : ''}
+  `;
+
+  btnImport.textContent = `✅ Importação concluída (${added} inseridas)`;
+  btnCheck.disabled = false;
+});
+</script>
+</body>
+</html>
