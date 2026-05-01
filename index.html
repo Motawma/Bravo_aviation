@@ -338,6 +338,8 @@
   .footer-links a:hover { color: var(--gold); }
   .ivao-link { color: var(--gold); text-decoration: none; }
   .ivao-link:hover { text-decoration: underline; }
+  .footer-ivao-logo { height: 22px; opacity: 0.65; filter: brightness(0) invert(0.75); vertical-align: middle; transition: opacity 0.2s; }
+  .footer-ivao-logo:hover { opacity: 1; }
 
   /* ── ANIMATIONS ── */
   @keyframes fadeUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
@@ -813,7 +815,7 @@
             <div class="contact-icon">✉</div>
             <div class="contact-item-text">
               <div class="key" data-pt="E-mail oficial" data-en="Official e-mail">E-mail oficial</div>
-              <div class="val">contato@bravoaviation.aero</div>
+              <div class="val"><a href="mailto:bravoaviationva@gmail.com" style="color:inherit;text-decoration:none;">bravoaviationva@gmail.com</a></div>
             </div>
           </div>
           <div class="contact-item">
@@ -865,10 +867,10 @@
     </div>
     <div class="footer-copy">
       © 2025 Bravo Virtual Airline — Callsign BRV — Hub SBGR<br />
-      <span data-pt="Orgulhosamente parceira" data-en="Proudly partnered with">Orgulhosamente parceira</span>
-      <a href="https://www.ivao.aero" target="_blank" class="ivao-link"> IVAO</a>
-      &nbsp;·&nbsp;
-      <span data-pt="Não possui fins comerciais" data-en="Non-commercial">Não possui fins comerciais</span>
+      Bravo Aviation - Em processo de homologação como Partner Virtual Airline da IVAO.<br />
+      <a href="https://ivao.aero" target="_blank" rel="noopener" style="display:inline-block;margin-top:10px;">
+        <img src="assets/img/ivao_logo.svg" alt="IVAO Partner" class="footer-ivao-logo" />
+      </a>
     </div>
     <div class="footer-links">
       <a href="#about" data-pt="Sobre" data-en="About">Sobre</a>
