@@ -67,8 +67,10 @@ main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 .content { flex: 1; overflow-y: auto; padding: 32px; }
 
 /* FILTER BAR */
-.filter-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
-.filter-tabs { display: flex; gap: 6px; }
+.filter-bar { display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; }
+.filter-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.filter-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.filter-sub-tabs { border-top: 1px solid var(--border); padding-top: 8px; width: 100%; }
 .filter-tab { padding: 7px 16px; border-radius: 20px; border: 1px solid var(--border); background: transparent; color: var(--text-sec); font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; letter-spacing: 0.05em; transition: all 0.2s; }
 .filter-tab:hover { border-color: var(--gold-dim); color: var(--text); }
 .filter-tab.active { background: rgba(0,238,255,0.12); border-color: var(--gold); color: var(--gold); }
@@ -184,11 +186,19 @@ main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 .btn-showall:hover { color: var(--text-sec); }
 
 /* JUMPSEAT MODAL */
-.jumpseat-info { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 20px; }
-.jumpseat-route { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
-.jumpseat-icao { font-family: 'Barlow Condensed', sans-serif; font-size: 28px; font-weight: 800; }
-.jumpseat-arrow { flex: 1; text-align: center; color: #f0a500; }
-.jumpseat-note { font-size: 12px; color: var(--text-dim); line-height: 1.6; }
+.js-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+.js-option { background: var(--bg); border: 2px solid var(--border); border-radius: var(--radius); padding: 14px 12px; cursor: pointer; display: flex; align-items: flex-start; gap: 10px; transition: border-color 0.2s, background 0.2s; }
+.js-option:hover { border-color: rgba(240,165,0,0.35); }
+.js-option.active { border-color: #f0a500; background: rgba(240,165,0,0.07); }
+.js-opt-icon { font-size: 18px; margin-top: 1px; }
+.js-opt-title { font-size: 12px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+.js-opt-icao { font-size: 11px; color: var(--text-sec); line-height: 1.4; margin-bottom: 4px; }
+.js-opt-pts-ok { font-size: 11px; font-weight: 700; color: var(--success); }
+.js-opt-pts-bad { font-size: 11px; font-weight: 700; color: var(--pink); }
+.js-airport-label { display: block; font-size: 10px; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 7px; }
+.js-airport-input { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 10px 12px; border-radius: var(--radius); font-family: 'Barlow Condensed', sans-serif; font-size: 18px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; }
+.js-airport-input:focus { outline: none; border-color: #f0a500; }
+.js-from-line { font-size: 12px; color: var(--text-dim); margin-bottom: 20px; }
 .btn-confirm-jump { flex: 1; padding: 12px; background: #f0a500; color: #000; border: none; border-radius: var(--radius); font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; }
 .btn-confirm-jump:disabled { opacity: 0.5; cursor: not-allowed; }
 
@@ -270,17 +280,22 @@ main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
       </div>
       <div style="display:flex;align-items:center;gap:10px;">
         <button class="btn-showall" id="btn-showall" onclick="toggleShowAll()">Ver todos os voos</button>
-        <button class="btn-jumpseat" id="btn-jumpseat" onclick="openJumpseat()" style="display:none">💺 Jumpseat → Hub</button>
+        <button class="btn-jumpseat" id="btn-jumpseat" onclick="openJumpseat()" style="display:none">💺 Jumpseat</button>
       </div>
     </div>
 
     <!-- FILTER BAR -->
     <div class="filter-bar">
-      <div class="filter-tabs" id="filter-tabs">
-        <button class="filter-tab active" data-filter="ALL" onclick="setFilter('ALL',this)">ALL</button>
+      <div class="filter-row">
+        <div class="filter-tabs" id="filter-tabs">
+          <button class="filter-tab active" data-filter="ALL" onclick="setCategoryFilter('ALL',this)">Todos</button>
+        </div>
+        <input class="filter-search" type="text" id="search-input" placeholder="Buscar por ICAO, voo..." oninput="renderRoutes()" />
+        <div class="routes-count" id="routes-count">— rotas</div>
       </div>
-      <input class="filter-search" type="text" id="search-input" placeholder="Buscar por ICAO, voo..." oninput="renderRoutes()" />
-      <div class="routes-count" id="routes-count">— rotas</div>
+      <div class="filter-row" id="filter-sub-row" style="display:none">
+        <div class="filter-tabs filter-sub-tabs" id="filter-sub-tabs"></div>
+      </div>
     </div>
 
     <!-- ROUTES GRID -->
@@ -331,21 +346,38 @@ main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 <!-- JUMPSEAT MODAL -->
 <div class="modal-overlay" id="modal-jumpseat">
   <div class="modal">
-    <div class="modal-title" style="color:#f0a500">💺 Solicitar Jumpseat</div>
-    <div class="modal-sub">Reposicionamento para o hub principal. Não conta horas nem pontos.</div>
-    <div class="jumpseat-info">
-      <div class="jumpseat-route">
-        <div class="jumpseat-icao" id="js-from">—</div>
-        <div class="jumpseat-arrow">────✈────</div>
-        <div class="jumpseat-icao" style="color:var(--gold)">SBGR</div>
+    <div class="modal-title" style="color:#f0a500">💺 Jumpseat</div>
+    <div class="modal-sub">Escolha o destino do reposicionamento.</div>
+
+    <div class="js-options">
+      <div class="js-option active" id="js-opt-hub" onclick="selectJumpseatOption('hub')">
+        <div class="js-opt-icon">🏠</div>
+        <div>
+          <div class="js-opt-title">Hub Principal</div>
+          <div class="js-opt-icao">SBGR — Guarulhos</div>
+          <div class="js-opt-pts-ok">0 pontos</div>
+        </div>
       </div>
-      <div class="jumpseat-note">
-        Ao confirmar, sua posição será atualizada para <strong>SBGR — São Paulo/Guarulhos</strong> e os voos disponíveis serão recarregados.
+      <div class="js-option" id="js-opt-other" onclick="selectJumpseatOption('other')">
+        <div class="js-opt-icon">📍</div>
+        <div>
+          <div class="js-opt-title">Outro Aeroporto</div>
+          <div class="js-opt-icao">Informe o ICAO abaixo</div>
+          <div class="js-opt-pts-bad">−10 pontos</div>
+        </div>
       </div>
     </div>
+
+    <div id="js-airport-wrap" style="display:none;margin-bottom:16px">
+      <label class="js-airport-label">Código ICAO do aeroporto</label>
+      <input class="js-airport-input" type="text" id="js-airport-input" placeholder="Ex: SBCT" maxlength="4" />
+    </div>
+
+    <div class="js-from-line">De: <strong id="js-from">—</strong></div>
+
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeJumpseat()">Cancelar</button>
-      <button class="btn-confirm-jump" id="btn-confirm-jump" onclick="confirmJumpseat()">✈ Confirmar Jumpseat</button>
+      <button class="btn-confirm-jump" id="btn-confirm-jump" onclick="confirmJumpseat()">✈ Confirmar</button>
     </div>
   </div>
 </div>
@@ -371,10 +403,15 @@ const HUB = 'SBGR';
 
 let currentUser  = null;
 let allRoutes    = [];
-let activeFilter = 'ALL';
-let selectedRoute = null;
-let pilotAirport  = HUB;
-let showAll       = false;
+let activeFilter   = 'ALL';
+let activeCategory = 'ALL';
+let selectedRoute  = null;
+let pilotAirport   = HUB;
+let showAll        = false;
+let fleetCategoryMap  = {}; // aircraft name → main category
+let categoryAircraftMap = {}; // category → [aircraft names]
+let jumpSeatOption = 'hub';
+const JS_PENALTY   = 10;
 
 const RANKS = [
   { name:'Cadete',           min:0,    max:50    },
@@ -420,6 +457,7 @@ auth.onAuthStateChanged(async (fbUser) => {
 
     updatePositionBar();
     document.body.style.visibility = '';
+    await loadFleetForFilters();
     await loadRoutes();
   } catch(e) {
     document.body.style.visibility = '';
@@ -444,6 +482,22 @@ function toggleShowAll() {
   renderRoutes();
 }
 
+/* ── LOAD FLEET FOR FILTERS ── */
+async function loadFleetForFilters() {
+  try {
+    const snap = await db.collection('fleet').where('active','==',true).get();
+    fleetCategoryMap = {};
+    snap.docs.forEach(d => {
+      const f = d.data();
+      if (f.name && f.category) {
+        fleetCategoryMap[f.name] = f.category.split('·')[0].trim();
+      }
+    });
+  } catch(e) {
+    fleetCategoryMap = {};
+  }
+}
+
 /* ── LOAD ROUTES ── */
 async function loadRoutes() {
   try {
@@ -459,25 +513,69 @@ async function loadRoutes() {
   renderRoutes();
 }
 
-/* ── BUILD DYNAMIC FILTERS ── */
+/* ── BUILD DYNAMIC FILTERS (cascade) ── */
 function buildFilters() {
-  const types = [...new Set(allRoutes.map(r => r.aircraft).filter(Boolean))].sort();
-  const container = document.getElementById('filter-tabs');
-  container.innerHTML = `<button class="filter-tab active" data-filter="ALL" onclick="setFilter('ALL',this)">ALL</button>`;
+  const usedTypes = [...new Set(allRoutes.map(r => r.aircraft).filter(Boolean))].sort();
+
+  categoryAircraftMap = {};
+  usedTypes.forEach(type => {
+    const cat = fleetCategoryMap[type] || 'Outros';
+    if (!categoryAircraftMap[cat]) categoryAircraftMap[cat] = [];
+    categoryAircraftMap[cat].push(type);
+  });
+
+  const categories = Object.keys(categoryAircraftMap).sort();
+
+  const catContainer = document.getElementById('filter-tabs');
+  catContainer.innerHTML = `<button class="filter-tab active" data-filter="ALL" onclick="setCategoryFilter('ALL',this)">Todos</button>`;
+  categories.forEach(cat => {
+    const btn = document.createElement('button');
+    btn.className = 'filter-tab';
+    btn.dataset.filter = cat;
+    btn.textContent = cat;
+    btn.onclick = function() { setCategoryFilter(cat, this); };
+    catContainer.appendChild(btn);
+  });
+
+  updateSubTabs();
+}
+
+function setCategoryFilter(cat, el) {
+  activeCategory = cat;
+  activeFilter   = 'ALL';
+  document.querySelectorAll('#filter-tabs .filter-tab').forEach(b => b.classList.remove('active'));
+  if (el) el.classList.add('active');
+  updateSubTabs();
+  renderRoutes();
+}
+
+function updateSubTabs() {
+  const subRow = document.getElementById('filter-sub-row');
+  const subContainer = document.getElementById('filter-sub-tabs');
+
+  const types = activeCategory !== 'ALL' ? (categoryAircraftMap[activeCategory] || []) : [];
+  if (types.length <= 1) {
+    subRow.style.display = 'none';
+    subContainer.innerHTML = '';
+    return;
+  }
+
+  subContainer.innerHTML = `<button class="filter-tab active" data-filter="ALL" onclick="setFilter('ALL',this)">Todos</button>`;
   types.forEach(t => {
     const btn = document.createElement('button');
     btn.className = 'filter-tab';
     btn.dataset.filter = t;
     btn.textContent = t;
     btn.onclick = function() { setFilter(t, this); };
-    container.appendChild(btn);
+    subContainer.appendChild(btn);
   });
+  subRow.style.display = '';
 }
 
-/* ── FILTER ── */
+/* ── FILTER (aircraft sub-level) ── */
 function setFilter(val, el) {
   activeFilter = val;
-  document.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('#filter-sub-tabs .filter-tab').forEach(b => b.classList.remove('active'));
   if (el) el.classList.add('active');
   renderRoutes();
 }
@@ -489,6 +587,9 @@ function renderRoutes() {
 
   let filtered = allRoutes;
   if (!showAll) filtered = filtered.filter(r => r.dep === pilotAirport);
+  if (activeCategory !== 'ALL' && categoryAircraftMap[activeCategory]) {
+    filtered = filtered.filter(r => categoryAircraftMap[activeCategory].includes(r.aircraft));
+  }
   if (activeFilter !== 'ALL') filtered = filtered.filter(r => r.aircraft === activeFilter);
   if (q) filtered = filtered.filter(r =>
     (r.dep||'').includes(q) || (r.arr||'').includes(q) ||
@@ -621,10 +722,22 @@ async function confirmRoute() {
 
 /* ── JUMPSEAT ── */
 function openJumpseat() {
+  jumpSeatOption = 'hub';
+  document.getElementById('js-opt-hub').classList.add('active');
+  document.getElementById('js-opt-other').classList.remove('active');
+  document.getElementById('js-airport-wrap').style.display = 'none';
+  document.getElementById('js-airport-input').value = '';
   document.getElementById('js-from').textContent = pilotAirport;
   document.getElementById('btn-confirm-jump').disabled = false;
-  document.getElementById('btn-confirm-jump').textContent = '✈ Confirmar Jumpseat';
+  document.getElementById('btn-confirm-jump').textContent = '✈ Confirmar';
   document.getElementById('modal-jumpseat').classList.add('open');
+}
+
+function selectJumpseatOption(opt) {
+  jumpSeatOption = opt;
+  document.getElementById('js-opt-hub').classList.toggle('active', opt === 'hub');
+  document.getElementById('js-opt-other').classList.toggle('active', opt === 'other');
+  document.getElementById('js-airport-wrap').style.display = opt === 'other' ? 'block' : 'none';
 }
 
 function closeJumpseat() {
@@ -633,20 +746,40 @@ function closeJumpseat() {
 
 async function confirmJumpseat() {
   const btn = document.getElementById('btn-confirm-jump');
+
+  let destAirport, penalty;
+  if (jumpSeatOption === 'hub') {
+    destAirport = HUB;
+    penalty = 0;
+  } else {
+    const icao = (document.getElementById('js-airport-input').value || '').trim().toUpperCase();
+    if (icao.length < 3) {
+      toast('Informe um código ICAO válido (mín. 3 caracteres).', 'err');
+      return;
+    }
+    destAirport = icao;
+    penalty = JS_PENALTY;
+  }
+
   btn.disabled = true;
   btn.textContent = 'Processando...';
   try {
-    await db.collection('users').doc(currentUser.uid).update({ currentAirport: HUB });
-    pilotAirport = HUB;
+    const upd = { currentAirport: destAirport };
+    if (penalty > 0) upd.score = firebase.firestore.FieldValue.increment(-penalty);
+    await db.collection('users').doc(currentUser.uid).update(upd);
+    pilotAirport = destAirport;
     showAll = false;
     updatePositionBar();
     closeJumpseat();
-    toast(`Jumpseat confirmado! Você está em ${HUB}.`, 'ok');
+    const msg = penalty > 0
+      ? `Jumpseat para ${destAirport} confirmado! −${penalty} pontos aplicados.`
+      : `Jumpseat para ${destAirport} confirmado!`;
+    toast(msg, 'ok');
     renderRoutes();
   } catch(e) {
     toast('Erro ao processar jumpseat.', 'err');
     btn.disabled = false;
-    btn.textContent = '✈ Confirmar Jumpseat';
+    btn.textContent = '✈ Confirmar';
   }
 }
 
