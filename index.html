@@ -1023,27 +1023,22 @@
 
   async function loadSiteStats() {
     try {
-      const [userSnap, pirepSnap, routeSnap] = await Promise.all([
-        _db.collection('users').get(),
-        _db.collection('pireps').where('status','==','approved').get(),
-        _db.collection('routes').where('active','==',true).get()
-      ]);
-      const pilots  = userSnap.docs.filter(d => d.data().role !== 'admin');
-      const hours   = Math.round(pilots.reduce((s,d) => s + (d.data().hours || 0), 0));
-      const flights = pirepSnap.size;
-      const acTypes = new Set(routeSnap.docs.map(d => d.data().aircraft || d.data().ac).filter(Boolean)).size;
-
+      // Lê de siteConfig/stats — documento público atualizado pelo admin
+      const doc = await _db.collection('siteConfig').doc('stats').get();
       const setStat = (id, val) => {
         const el = document.getElementById(id);
-        if (!el) return;
+        if (!el || val == null) return;
         el.dataset.count = val;
         if (typeof animateCounter === 'function') animateCounter(el, val);
         else el.textContent = val.toLocaleString('pt-BR');
       };
-      setStat('stat-pilots',   pilots.length);
-      setStat('stat-hours',    hours);
-      setStat('stat-flights',  flights);
-      setStat('stat-aircraft', acTypes || 2);
+      if (doc.exists) {
+        const d = doc.data();
+        setStat('stat-pilots',   d.pilots  ?? 0);
+        setStat('stat-hours',    d.hours   ?? 0);
+        setStat('stat-flights',  d.flights ?? 0);
+        setStat('stat-aircraft', d.aircraft ?? 2);
+      }
     } catch(e) { console.warn('Stats:', e.message); }
   }
 

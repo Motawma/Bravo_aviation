@@ -800,6 +800,14 @@ function renderOverview() {
   document.getElementById('ov-hours').textContent   = totalHours.toFixed(1)+'h';
   document.getElementById('ov-flights').textContent = totalFlights;
 
+  // Grava stats públicos para o site (lidos por index.html sem autenticação)
+  db.collection('siteConfig').doc('stats').set({
+    pilots:   activePilots.length,
+    hours:    Math.round(totalHours),
+    flights:  totalFlights,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  }).catch(() => {});
+
   // Recent apps
   const tbody = document.getElementById('ov-apps-table');
   const recent = allApplications.filter(a=>a.status==='pending').slice(0,5);
