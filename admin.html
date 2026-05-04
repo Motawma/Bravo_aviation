@@ -461,6 +461,16 @@ tr:hover td{background:rgba(255,255,255,.02);}
         </div>
       </div>
 
+      <!-- SYNC STATS -->
+      <div class="route-form-card">
+        <div style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--text-sec);">📊 Stats do site público</div>
+        <p style="font-size:12px;color:var(--text-dim);margin-bottom:16px;">Sincroniza os números (pilotos, horas, voos) visíveis na página inicial para visitantes não autenticados.</p>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <button class="btn-primary" onclick="syncPublicStats()">🔄 Sincronizar stats agora</button>
+          <span id="site-stats-msg" style="font-size:12px;color:var(--text-dim);"></span>
+        </div>
+      </div>
+
     </div>
 
   </div>
@@ -1235,6 +1245,33 @@ async function loadSiteStaff() {
     if (d.ops) { setVal('site-ops-name', d.ops.name); setVal('site-ops-vid', d.ops.vid); }
     if (d.hr)  { setVal('site-hr-name',  d.hr.name);  setVal('site-hr-vid',  d.hr.vid);  }
   } catch(e) { toast('Erro ao carregar configurações.', 'err'); }
+}
+
+async function syncPublicStats() {
+  const msg = document.getElementById('site-stats-msg');
+  msg.style.color = 'var(--text-dim)';
+  msg.textContent = 'Sincronizando...';
+  try {
+    const allMembers   = allPilots;
+    const totalHours   = allMembers.reduce((s,p) => s + (p.hours || 0), 0);
+    const totalFlights = allPireps.filter(p => p.status === 'approved' || p.status === 'rejected').length;
+    const acTypes      = new Set(allPireps.map(p => p.ac || p.aircraft).filter(Boolean)).size || 2;
+    await db.collection('siteConfig').doc('stats').set({
+      pilots:   allMembers.length,
+      hours:    Math.round(totalHours),
+      flights:  totalFlights,
+      aircraft: acTypes,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    msg.style.color = 'var(--success)';
+    msg.textContent = `✓ Sincronizado: ${allMembers.length} pilotos · ${Math.round(totalHours)}h · ${totalFlights} voos · ${acTypes} aeronaves`;
+    setTimeout(() => { msg.textContent = ''; }, 6000);
+    toast('Stats do site atualizados!', 'ok');
+  } catch(e) {
+    msg.style.color = 'var(--danger)';
+    msg.textContent = '✗ Erro: ' + e.message;
+    toast('Erro ao sincronizar: ' + e.message, 'err');
+  }
 }
 
 async function saveSiteStaff() {
