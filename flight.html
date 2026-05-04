@@ -97,14 +97,23 @@ main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 .rc-meta-label { font-size: 9px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-dim); }
 .rc-meta-value { font-family: 'Barlow Condensed', sans-serif; font-size: 15px; font-weight: 700; color: var(--text); }
 .btn-fly {
-  width: 100%; padding: 10px; border-radius: var(--radius); cursor: pointer;
+  flex:1; padding: 10px; border-radius: var(--radius); cursor: pointer;
   border: 1px solid rgba(0,238,255,0.3); background: rgba(0,238,255,0.08);
   color: var(--gold); font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 700;
   letter-spacing: 0.08em; text-transform: uppercase;
-  transition: background 0.2s, border-color 0.2s; margin-top: auto;
+  transition: background 0.2s, border-color 0.2s;
 }
 .btn-fly:hover { background: rgba(0,238,255,0.18); border-color: var(--gold); }
 .btn-fly.selected { background: var(--gold); color: #000; border-color: var(--gold); }
+.btn-simbrief {
+  padding: 10px 12px; border-radius: var(--radius); cursor: pointer;
+  border: 1px solid rgba(155,48,255,0.3); background: rgba(155,48,255,0.08);
+  color: #B070FF; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 700;
+  letter-spacing: 0.05em; text-transform: uppercase;
+  transition: background 0.2s, border-color 0.2s; white-space: nowrap;
+}
+.btn-simbrief:hover { background: rgba(155,48,255,0.18); border-color: #9B30FF; }
+.rc-actions { display:flex; gap:8px; margin-top:auto; padding-top:12px; }
 
 /* EMPTY / LOADING */
 .empty-state { grid-column: 1 / -1; text-align: center; padding: 60px 24px; color: var(--text-dim); font-size: 14px; }
@@ -528,8 +537,28 @@ function renderRoutes() {
           <div class="rc-meta-value">${r.distance ? r.distance + ' NM' : '—'}</div>
         </div>
       </div>
-      <button class="btn-fly" onclick="openModal(${JSON.stringify(r).split('"').join("'")})" >▶ Voar esta rota</button>
+      <div class="rc-actions">
+        <button class="btn-fly" onclick="openModal(${JSON.stringify(r).split('"').join("'")})">▶ Voar</button>
+        <button class="btn-simbrief" onclick="openSimbrief(${JSON.stringify(r).split('"').join("'")})">SimBrief ↗</button>
+      </div>
     </div>`).join('');
+}
+
+/* ── SIMBRIEF ── */
+const AC_SIMBRIEF = { 'B737-800':'B738', 'A320':'A320', 'A319':'A319', 'A321':'A321', 'B738':'B738' };
+function openSimbrief(r) {
+  if (typeof r === 'string') r = JSON.parse(r.replace(/'/g, '"'));
+  const type = AC_SIMBRIEF[r.aircraft] || r.aircraft || 'B738';
+  const params = new URLSearchParams({
+    orig:    r.dep        || '',
+    dest:    r.arr        || '',
+    type:    type,
+    route:   r.route      || 'DCT',
+    fl:      r.plannedFL  || r.flightLevel || '350',
+    airline: 'BRV',
+    fltnum:  r.flightNumber || ''
+  });
+  window.open('https://www.simbrief.com/system/dispatch.php?' + params.toString(), '_blank');
 }
 
 /* ── MODAL ── */

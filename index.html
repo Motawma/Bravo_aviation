@@ -568,69 +568,8 @@
       <span data-pt="Aeronaves em" data-en="Aircraft in">Aeronaves em</span><br />
       <span style="color:var(--gold)" data-pt="operação" data-en="operation">operação</span>
     </h2>
-    <div class="fleet-grid">
-      <div class="fleet-card reveal reveal-delay-2">
-        <div class="fleet-visual">
-          <div class="plane-silhouette">
-            <svg class="plane-svg" width="220" height="80" viewBox="0 0 220 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M8 46 L180 38 L210 36 L210 40 L180 42 L50 60 Z" fill="#FF2080"/>
-              <path d="M180 38 L210 28 L215 36 L210 36 Z" fill="#FF2080"/>
-              <path d="M60 60 L80 46 L120 44 L110 60 Z" fill="#FF2080"/>
-              <path d="M150 42 L168 38 L170 46 L152 48 Z" fill="#FF2080"/>
-            </svg>
-            <span data-pt="Ilustração da aeronave" data-en="Aircraft illustration">Ilustração da aeronave</span>
-          </div>
-        </div>
-        <div class="fleet-info">
-          <div class="fleet-type" data-pt="Narrow Body · Curto–Médio Alcance" data-en="Narrow Body · Short–Medium Haul">Narrow Body · Curto–Médio Alcance</div>
-          <div class="fleet-name">Boeing 737-800</div>
-          <div class="fleet-specs">
-            <div class="spec-item">
-              <div class="spec-key" data-pt="Passageiros" data-en="Passengers">Passageiros</div>
-              <div class="spec-val">162</div>
-            </div>
-            <div class="spec-item">
-              <div class="spec-key" data-pt="Alcance" data-en="Range">Alcance</div>
-              <div class="spec-val">5.765 km</div>
-            </div>
-            <div class="spec-item">
-              <div class="spec-key" data-pt="Velocidade" data-en="Speed">Velocidade</div>
-              <div class="spec-val">Mach 0.79</div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="fleet-card reveal reveal-delay-3">
-        <div class="fleet-visual">
-          <div class="plane-silhouette">
-            <svg class="plane-svg" width="220" height="80" viewBox="0 0 220 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M8 46 L175 37 L208 35 L208 39 L175 41 L50 60 Z" fill="#FF2080"/>
-              <path d="M175 37 L208 26 L213 35 L208 35 Z" fill="#FF2080"/>
-              <path d="M58 60 L78 46 L116 44 L108 60 Z" fill="#FF2080"/>
-              <path d="M148 41 L164 37 L166 45 L150 47 Z" fill="#FF2080"/>
-            </svg>
-            <span data-pt="Ilustração da aeronave" data-en="Aircraft illustration">Ilustração da aeronave</span>
-          </div>
-        </div>
-        <div class="fleet-info">
-          <div class="fleet-type" data-pt="Narrow Body · Curto–Médio Alcance" data-en="Narrow Body · Short–Medium Haul">Narrow Body · Curto–Médio Alcance</div>
-          <div class="fleet-name">Airbus A320</div>
-          <div class="fleet-specs">
-            <div class="spec-item">
-              <div class="spec-key" data-pt="Passageiros" data-en="Passengers">Passageiros</div>
-              <div class="spec-val">150</div>
-            </div>
-            <div class="spec-item">
-              <div class="spec-key" data-pt="Alcance" data-en="Range">Alcance</div>
-              <div class="spec-val">6.100 km</div>
-            </div>
-            <div class="spec-item">
-              <div class="spec-key" data-pt="Velocidade" data-en="Speed">Velocidade</div>
-              <div class="spec-val">Mach 0.78</div>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div class="fleet-grid" id="fleet-grid">
+      <!-- preenchido dinamicamente pelo Firestore -->
     </div>
   </div>
 </section>
@@ -1054,8 +993,38 @@
     } catch(e) { console.warn('Staff:', e.message); }
   }
 
+  async function loadSiteFleet() {
+    try {
+      const snap = await _db.collection('fleet').where('active','==',true).orderBy('name').get();
+      const grid = document.getElementById('fleet-grid');
+      if (!grid) return;
+      if (snap.empty) { grid.innerHTML = '<p style="color:var(--text-dim);text-align:center;grid-column:1/-1;padding:40px 0;">Frota em atualização.</p>'; return; }
+      const svgPlane = `<svg class="plane-svg" width="220" height="80" viewBox="0 0 220 80" fill="none"><path d="M8 46 L180 38 L210 36 L210 40 L180 42 L50 60 Z" fill="#FF2080"/><path d="M180 38 L210 28 L215 36 L210 36 Z" fill="#FF2080"/><path d="M60 60 L80 46 L120 44 L110 60 Z" fill="#FF2080"/><path d="M150 42 L168 38 L170 46 L152 48 Z" fill="#FF2080"/></svg>`;
+      grid.innerHTML = snap.docs.map((doc, i) => {
+        const a = doc.data();
+        const delay = i === 0 ? 'reveal-delay-2' : i === 1 ? 'reveal-delay-3' : '';
+        const specs = [
+          { key: 'Passageiros', val: a.pax ? a.pax.toLocaleString('pt-BR') : '—' },
+          { key: 'Alcance',     val: a.range_km ? Number(a.range_km).toLocaleString('pt-BR') + ' km' : '—' },
+          { key: 'Velocidade',  val: a.cruise_speed || '—' },
+          { key: 'Teto',        val: a.ceiling_ft ? Number(a.ceiling_ft).toLocaleString('pt-BR') + ' ft' : '—' },
+          { key: 'MTOW',        val: a.mtow_kg ? (a.mtow_kg/1000).toFixed(1) + ' t' : '—' },
+        ].filter(s => s.val !== '—').slice(0, 3);
+        return `<div class="fleet-card reveal ${delay}">
+          <div class="fleet-visual"><div class="plane-silhouette">${svgPlane}<span>Ilustração da aeronave</span></div></div>
+          <div class="fleet-info">
+            <div class="fleet-type">${a.category || 'Narrow Body'}</div>
+            <div class="fleet-name">${a.name || '—'}</div>
+            <div class="fleet-specs">${specs.map(s=>`<div class="spec-item"><div class="spec-key">${s.key}</div><div class="spec-val">${s.val}</div></div>`).join('')}</div>
+          </div>
+        </div>`;
+      }).join('');
+    } catch(e) { console.warn('Fleet:', e.message); }
+  }
+
   loadSiteStats();
   loadSiteStaff();
+  loadSiteFleet();
 </script>
 
 </body>
