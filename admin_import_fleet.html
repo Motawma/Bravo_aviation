@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<title>Importar Frota — Admin BRV</title>
+<style>
+body{background:#080612;color:#F0EAF8;font-family:monospace;padding:30px;max-width:900px;margin:0 auto}
+h1{color:#00EEFF;margin-bottom:6px}
+p{color:#9A8FB8;margin-bottom:20px;font-size:13px}
+button{background:#00EEFF;color:#000;border:none;padding:10px 24px;font-size:14px;font-weight:700;cursor:pointer;border-radius:4px;margin-right:10px}
+button:disabled{opacity:0.4;cursor:not-allowed}
+#log{background:#0E0B1E;border:1px solid #1E1840;padding:16px;margin-top:20px;height:380px;overflow-y:auto;font-size:12px;line-height:1.8}
+.ok{color:#00EEFF}.skip{color:#9A8FB8}.err{color:#FF2080}.bold{color:#fff;font-weight:bold}
+#login-box{background:#0E0B1E;border:1px solid #1E1840;padding:20px;margin-bottom:20px}
+#login-box input{background:#080612;border:1px solid #1E1840;color:#F0EAF8;padding:8px 12px;font-size:13px;width:260px;margin:5px 0;display:block}
+#summary{background:#130F27;border:1px solid #1E1840;padding:14px;margin-top:14px;font-size:13px;display:none}
+</style>
+</head>
+<body>
+<h1>✈ Importar Frota — Bravo Aviation Admin</h1>
+<p>Insere 9 aeronaves na coleção <code>fleet</code> do Firestore. Duplicatas (mesmo código) são ignoradas.</p>
+
+<div id="login-box">
+  <p style="color:#00EEFF;margin-bottom:10px;font-size:13px">Login necessário:</p>
+  <input id="email" type="email" placeholder="Email admin" />
+  <input id="password" type="password" placeholder="Senha" />
+  <button id="btn-login" style="margin-top:8px">Entrar</button>
+  <span id="login-err" style="color:#FF2080;margin-left:10px;font-size:12px"></span>
+</div>
+
+<button id="btn-import" disabled>⏳ Aguardando login...</button>
+<button id="btn-check"  disabled>🔍 Ver frota atual</button>
+
+<div id="log"><span class="skip">Aguardando Firebase...</span></div>
+<div id="summary"></div>
+
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+<script>
+firebase.initializeApp({
+  apiKey: 'AIzaSyC2dDGhKjzHSclyFwUFNGA60DtXAjLEJ6I',
+  authDomain: 'bravo-aviation.firebaseapp.com',
+  projectId: 'bravo-aviation',
+  storageBucket: 'bravo-aviation.firebasestorage.app',
+  messagingSenderId: '712016002234',
+  appId: '1:712016002234:web:ce7a8e39c28bc6d8ca5683'
+});
+const auth = firebase.auth();
+const db   = firebase.firestore();
+
+const FLEET = [
+  {
+    name: 'Cessna C700 Citation Longitude',
+    code: 'C700',
+    simbrief_type: 'C700',
+    category: 'Business Jet · Médio Alcance',
+    pax: 12,
+    range_km: 7223,
+    ceiling_ft: 47000,
+    cruise_speed: 'Mach 0.84',
+    mtow_kg: 20230,
+    active: true
+  },
+  {
+    name: 'McDonnell Douglas MD-11',
+    code: 'MD11',
+    simbrief_type: 'MD11',
+    category: 'Wide Body · Longo Alcance',
+    pax: 293,
+    range_km: 12450,
+    ceiling_ft: 43000,
+    cruise_speed: 'Mach 0.87',
+    mtow_kg: 286000,
+    active: true
+  },
+  {
+    name: 'Cessna Citation X',
+    code: 'C750',
+    simbrief_type: 'C750',
+    category: 'Business Jet · Médio Alcance',
+    pax: 12,
+    range_km: 6300,
+    ceiling_ft: 51000,
+    cruise_speed: 'Mach 0.92',
+    mtow_kg: 16800,
+    active: true
+  },
+  {
+    name: 'TBM 930',
+    code: 'TBM9',
+    simbrief_type: 'TBM9',
+    category: 'Turboprop · Monomotor',
+    pax: 6,
+    range_km: 3700,
+    ceiling_ft: 31000,
+    cruise_speed: '330 kts',
+    mtow_kg: 3354,
+    active: true
+  },
+  {
+    name: 'Cessna Caravan 208',
+    code: 'C208',
+    simbrief_type: 'C208',
+    category: 'Turboprop · Regional',
+    pax: 14,
+    range_km: 1500,
+    ceiling_ft: 25000,
+    cruise_speed: '185 kts',
+    mtow_kg: 3970,
+    active: true
+  },
+  {
+    name: 'Cessna C172 Skyhawk',
+    code: 'C172',
+    simbrief_type: 'C172',
+    category: 'Piston · Treinamento',
+    pax: 4,
+    range_km: 1300,
+    ceiling_ft: 14000,
+    cruise_speed: '122 kts',
+    mtow_kg: 1157,
+    active: true
+  },
+  {
+    name: 'Beechcraft Baron 58',
+    code: 'BE58',
+    simbrief_type: 'BE58',
+    category: 'Piston · Leve Bimotor',
+    pax: 6,
+    range_km: 1900,
+    ceiling_ft: 20600,
+    cruise_speed: '202 kts',
+    mtow_kg: 2495,
+    active: true
+  },
+  {
+    name: 'ATR 72-600',
+    code: 'AT76',
+    simbrief_type: 'AT76',
+    category: 'Turboprop · Regional',
+    pax: 70,
+    range_km: 1528,
+    ceiling_ft: 25000,
+    cruise_speed: '275 kts',
+    mtow_kg: 23000,
+    active: true
+  },
+  {
+    name: 'Pilatus PC-24',
+    code: 'PC24',
+    simbrief_type: 'PC24',
+    category: 'Business Jet · Curto–Médio Alcance',
+    pax: 10,
+    range_km: 3330,
+    ceiling_ft: 45000,
+    cruise_speed: 'Mach 0.82',
+    mtow_kg: 8300,
+    active: true
+  }
+];
+
+const logEl      = document.getElementById('log');
+const btnImport  = document.getElementById('btn-import');
+const btnCheck   = document.getElementById('btn-check');
+const summaryEl  = document.getElementById('summary');
+
+function log(msg, cls='') {
+  const d = document.createElement('div');
+  d.className = cls; d.innerHTML = msg;
+  logEl.appendChild(d);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+auth.onAuthStateChanged(user => {
+  if (user) {
+    document.getElementById('login-box').style.display = 'none';
+    btnImport.disabled = false;
+    btnCheck.disabled  = false;
+    btnImport.textContent = `▶ Importar ${FLEET.length} aeronaves`;
+    log(`✅ Autenticado como <b>${user.email}</b>`, 'ok');
+    log(`Aeronaves a importar: <b>${FLEET.length}</b>`, 'bold');
+  } else {
+    btnImport.disabled = true;
+    btnCheck.disabled  = true;
+    btnImport.textContent = '⏳ Aguardando login...';
+  }
+});
+
+document.getElementById('btn-login').addEventListener('click', async () => {
+  const email = document.getElementById('email').value;
+  const pass  = document.getElementById('password').value;
+  const err   = document.getElementById('login-err');
+  try { await auth.signInWithEmailAndPassword(email, pass); err.textContent = ''; }
+  catch(e) { err.textContent = e.message; }
+});
+
+btnCheck.addEventListener('click', async () => {
+  btnCheck.disabled = true;
+  log('--- Frota atual no Firestore ---', 'bold');
+  try {
+    const snap = await db.collection('fleet').orderBy('name').get();
+    if (snap.empty) { log('  (vazia)', 'skip'); }
+    else snap.docs.forEach(d => {
+      const a = d.data();
+      log(`  ${a.active ? '✔' : '✗'} <b>${a.name}</b> [${a.code}] — ${a.category || ''}`, a.active ? 'ok' : 'skip');
+    });
+    log(`Total: ${snap.size} aeronaves`, 'bold');
+  } catch(e) { log('Erro: ' + e.message, 'err'); }
+  btnCheck.disabled = false;
+});
+
+btnImport.addEventListener('click', async () => {
+  btnImport.disabled = true;
+  btnCheck.disabled  = true;
+  summaryEl.style.display = 'none';
+  log('--- Iniciando importação... ---', 'bold');
+
+  let existingCodes = new Set();
+  try {
+    const snap = await db.collection('fleet').get();
+    snap.docs.forEach(d => { const c = d.data().code; if (c) existingCodes.add(c); });
+    log(`Firestore: ${snap.size} aeronaves existentes.`, 'skip');
+  } catch(e) { log('Erro ao ler fleet: ' + e.message, 'err'); btnImport.disabled = false; return; }
+
+  let added = 0, skipped = 0, errors = 0;
+  for (const ac of FLEET) {
+    if (existingCodes.has(ac.code)) {
+      log(`  ↷ SKIP  <b>${ac.name}</b> [${ac.code}]`, 'skip');
+      skipped++;
+      continue;
+    }
+    try {
+      await db.collection('fleet').add({ ...ac, createdAt: firebase.firestore.Timestamp.now() });
+      log(`  ✔ ADD   <b>${ac.name}</b> [${ac.code}] — ${ac.category}`, 'ok');
+      added++;
+    } catch(e) {
+      log(`  ✘ ERR   ${ac.name}: ${e.message}`, 'err');
+      errors++;
+    }
+  }
+
+  log('--- Concluído! ---', 'bold');
+  summaryEl.style.display = 'block';
+  summaryEl.innerHTML = `
+    <b>Resultado:</b><br>
+    ✅ Inseridas: <b style="color:#00EEFF">${added}</b><br>
+    ↷ Ignoradas (já existiam): <b style="color:#9A8FB8">${skipped}</b><br>
+    ❌ Erros: <b style="color:#FF2080">${errors}</b><br><br>
+    ${added > 0 ? '✅ Abra o <b>admin → Aeronaves</b> para ver a frota importada.' : ''}
+  `;
+  btnImport.textContent = `✅ Concluído (${added} inseridas)`;
+  btnCheck.disabled = false;
+});
+</script>
+</body>
+</html>
