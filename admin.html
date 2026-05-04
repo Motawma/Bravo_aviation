@@ -186,6 +186,10 @@ tr:hover td{background:rgba(255,255,255,.02);}
     <a class="nav-item" href="radar.html">
       <span class="nav-icon">🛰️</span> Radar ao vivo
     </a>
+    <div class="nav-section-label">Configuração</div>
+    <a class="nav-item" onclick="goTo('site',this)">
+      <span class="nav-icon">🌐</span> Site
+    </a>
   </nav>
   <div class="sidebar-user">
     <div class="user-avatar" id="admin-avatar">AD</div>
@@ -401,6 +405,62 @@ tr:hover td{background:rgba(255,255,255,.02);}
           <tbody id="routes-table"></tbody>
         </table>
       </div>
+    </div>
+
+    <!-- SITE CONFIG -->
+    <div class="page" id="page-site">
+      <div class="sec-header gap-b">
+        <div class="sec-title">Configurações do Site</div>
+      </div>
+
+      <!-- STAFF -->
+      <div class="route-form-card" style="margin-bottom:24px;">
+        <div style="font-size:13px;font-weight:600;margin-bottom:20px;color:var(--text-sec);">👤 Equipe Staff BRV</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;">
+
+          <div>
+            <div style="font-size:11px;letter-spacing:0.15em;text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:12px;">CEO</div>
+            <div class="form-group">
+              <label>Nome</label>
+              <input id="site-ceo-name" type="text" placeholder="Nome completo" />
+            </div>
+            <div class="form-group">
+              <label>VID IVAO</label>
+              <input id="site-ceo-vid" type="text" placeholder="123456" />
+            </div>
+          </div>
+
+          <div>
+            <div style="font-size:11px;letter-spacing:0.15em;text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:12px;">OPS</div>
+            <div class="form-group">
+              <label>Nome</label>
+              <input id="site-ops-name" type="text" placeholder="Nome completo" />
+            </div>
+            <div class="form-group">
+              <label>VID IVAO</label>
+              <input id="site-ops-vid" type="text" placeholder="123456" />
+            </div>
+          </div>
+
+          <div>
+            <div style="font-size:11px;letter-spacing:0.15em;text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:12px;">HR</div>
+            <div class="form-group">
+              <label>Nome</label>
+              <input id="site-hr-name" type="text" placeholder="Nome completo" />
+            </div>
+            <div class="form-group">
+              <label>VID IVAO</label>
+              <input id="site-hr-vid" type="text" placeholder="123456" />
+            </div>
+          </div>
+
+        </div>
+        <div style="margin-top:20px;display:flex;align-items:center;gap:12px;">
+          <button class="btn-primary" onclick="saveSiteStaff()">Salvar equipe</button>
+          <span id="site-staff-msg" style="font-size:12px;color:var(--text-dim);"></span>
+        </div>
+      </div>
+
     </div>
 
   </div>
@@ -1140,7 +1200,7 @@ async function rejectPirep(pirepId) {
 }
 
 /* ── NAV ── */
-const PAGE_TITLES = { overview:'Visão Geral', applications:'Candidaturas', pilots:'Pilotos', pireps:'PIREPs', routes:'Rotas' };
+const PAGE_TITLES = { overview:'Visão Geral', applications:'Candidaturas', pilots:'Pilotos', pireps:'PIREPs', routes:'Rotas', site:'Configurações do Site' };
 function goTo(id, el) {
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-'+id).classList.add('active');
@@ -1151,6 +1211,37 @@ function goTo(id, el) {
   });
   document.getElementById('topbar-title').textContent = PAGE_TITLES[id]||'';
   if (id === 'routes') loadRoutes();
+  if (id === 'site')   loadSiteStaff();
+}
+
+/* ── SITE CONFIG ── */
+async function loadSiteStaff() {
+  try {
+    const doc = await db.collection('siteConfig').doc('staff').get();
+    if (!doc.exists) return;
+    const d = doc.data();
+    const setVal = (id, v) => { const el = document.getElementById(id); if (el && v !== undefined) el.value = v; };
+    if (d.ceo) { setVal('site-ceo-name', d.ceo.name); setVal('site-ceo-vid', d.ceo.vid); }
+    if (d.ops) { setVal('site-ops-name', d.ops.name); setVal('site-ops-vid', d.ops.vid); }
+    if (d.hr)  { setVal('site-hr-name',  d.hr.name);  setVal('site-hr-vid',  d.hr.vid);  }
+  } catch(e) { toast('Erro ao carregar configurações.', 'err'); }
+}
+
+async function saveSiteStaff() {
+  const val = id => (document.getElementById(id)?.value || '').trim();
+  const data = {
+    ceo: { name: val('site-ceo-name'), vid: val('site-ceo-vid') },
+    ops: { name: val('site-ops-name'), vid: val('site-ops-vid') },
+    hr:  { name: val('site-hr-name'),  vid: val('site-hr-vid')  }
+  };
+  try {
+    await db.collection('siteConfig').doc('staff').set(data);
+    const msg = document.getElementById('site-staff-msg');
+    msg.textContent = '✓ Salvo com sucesso';
+    msg.style.color = 'var(--success)';
+    setTimeout(() => { msg.textContent = ''; }, 3000);
+    toast('Equipe atualizada no site!', 'ok');
+  } catch(e) { toast('Erro ao salvar: ' + e.message, 'err'); }
 }
 
 document.getElementById('topbar-date').textContent = new Date().toLocaleDateString('pt-BR',{weekday:'short',day:'numeric',month:'short',year:'numeric'});

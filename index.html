@@ -493,19 +493,19 @@
 <!-- STATS -->
 <div id="stats">
   <div class="stat-item reveal">
-    <div class="stat-num" data-count="47">0</div>
+    <div class="stat-num" id="stat-pilots" data-count="0">—</div>
     <div class="stat-label" data-pt="Pilotos ativos" data-en="Active pilots">Pilotos ativos</div>
   </div>
   <div class="stat-item reveal reveal-delay-1">
-    <div class="stat-num" data-count="1240">0</div>
+    <div class="stat-num" id="stat-hours" data-count="0">—</div>
     <div class="stat-label" data-pt="Horas voadas" data-en="Flight hours">Horas voadas</div>
   </div>
   <div class="stat-item reveal reveal-delay-2">
-    <div class="stat-num" data-count="380">0</div>
+    <div class="stat-num" id="stat-flights" data-count="0">—</div>
     <div class="stat-label" data-pt="Voos realizados" data-en="Flights flown">Voos realizados</div>
   </div>
   <div class="stat-item reveal reveal-delay-3">
-    <div class="stat-num" data-count="2">0</div>
+    <div class="stat-num" id="stat-aircraft" data-count="0">—</div>
     <div class="stat-label" data-pt="Tipos de aeronave" data-en="Aircraft types">Tipos de aeronave</div>
   </div>
 </div>
@@ -533,7 +533,7 @@
       <div class="about-visual reveal reveal-delay-3">
         <div class="info-row">
           <span class="info-key" data-pt="Nome" data-en="Name">Nome</span>
-          <span class="info-val">Bravo Virtual Airline</span>
+          <span class="info-val">Bravo Aviation</span>
         </div>
         <div class="info-row">
           <span class="info-key" data-pt="Código ICAO" data-en="ICAO Code">Código ICAO</span>
@@ -549,7 +549,7 @@
         </div>
         <div class="info-row">
           <span class="info-key" data-pt="Fundação" data-en="Founded">Fundação</span>
-          <span class="info-val">2024</span>
+          <span class="info-val">2025</span>
         </div>
         <div class="info-row">
           <span class="info-key" data-pt="Simuladores" data-en="Simulators">Simuladores</span>
@@ -759,21 +759,21 @@
     <div class="staff-grid">
       <div class="staff-card reveal reveal-delay-1">
         <div class="staff-avatar">CEO</div>
-        <div class="staff-name" data-pt="Nome do CEO" data-en="CEO Name">Nome do CEO</div>
+        <div class="staff-name" id="staff-ceo-name">—</div>
         <div class="staff-role">Chief Executive Officer</div>
-        <div class="staff-vid">VID: ######</div>
+        <div class="staff-vid" id="staff-ceo-vid">VID: —</div>
       </div>
       <div class="staff-card reveal reveal-delay-2">
         <div class="staff-avatar">OPS</div>
-        <div class="staff-name" data-pt="Nome do Ops" data-en="Ops Name">Nome do Ops</div>
+        <div class="staff-name" id="staff-ops-name">—</div>
         <div class="staff-role">Director of Operations</div>
-        <div class="staff-vid">VID: ######</div>
+        <div class="staff-vid" id="staff-ops-vid">VID: —</div>
       </div>
       <div class="staff-card reveal reveal-delay-3">
         <div class="staff-avatar">HR</div>
-        <div class="staff-name" data-pt="Nome do RH" data-en="HR Name">Nome do RH</div>
+        <div class="staff-name" id="staff-hr-name">—</div>
         <div class="staff-role">Human Resources</div>
-        <div class="staff-vid">VID: ######</div>
+        <div class="staff-vid" id="staff-hr-vid">VID: —</div>
       </div>
     </div>
   </div>
@@ -866,7 +866,7 @@
       <img src="assets/logo.png?v=1777246397516" alt="Bravo Virtual Airline" />
     </div>
     <div class="footer-copy">
-      © 2025 Bravo Virtual Airline — Callsign BRV — Hub SBGR<br />
+      © 2025 Bravo Aviation — Callsign BRV — Hub SBGR<br />
       Bravo Aviation - Em processo de homologação como Partner Virtual Airline da IVAO.<br />
       <a href="https://ivao.aero" target="_blank" rel="noopener" style="display:inline-block;margin-top:10px;">
         <img src="assets/img/ivao_logo.svg" alt="IVAO Partner" class="footer-ivao-logo" />
@@ -1019,6 +1019,48 @@
     messagingSenderId: '712016002234',
     appId: '1:712016002234:web:ce7a8e39c28bc6d8ca5683'
   });
+  const _db = firebase.firestore();
+
+  async function loadSiteStats() {
+    try {
+      const [userSnap, pirepSnap, routeSnap] = await Promise.all([
+        _db.collection('users').get(),
+        _db.collection('pireps').where('status','==','approved').get(),
+        _db.collection('routes').where('active','==',true).get()
+      ]);
+      const pilots  = userSnap.docs.filter(d => d.data().role !== 'admin');
+      const hours   = Math.round(pilots.reduce((s,d) => s + (d.data().hours || 0), 0));
+      const flights = pirepSnap.size;
+      const acTypes = new Set(routeSnap.docs.map(d => d.data().aircraft || d.data().ac).filter(Boolean)).size;
+
+      const setStat = (id, val) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.dataset.count = val;
+        if (typeof animateCounter === 'function') animateCounter(el, val);
+        else el.textContent = val.toLocaleString('pt-BR');
+      };
+      setStat('stat-pilots',   pilots.length);
+      setStat('stat-hours',    hours);
+      setStat('stat-flights',  flights);
+      setStat('stat-aircraft', acTypes || 2);
+    } catch(e) { console.warn('Stats:', e.message); }
+  }
+
+  async function loadSiteStaff() {
+    try {
+      const doc = await _db.collection('siteConfig').doc('staff').get();
+      if (!doc.exists) return;
+      const d = doc.data();
+      const setEl = (id, val) => { const el = document.getElementById(id); if (el && val) el.textContent = val; };
+      if (d.ceo) { setEl('staff-ceo-name', d.ceo.name); setEl('staff-ceo-vid', d.ceo.vid ? 'VID: ' + d.ceo.vid : null); }
+      if (d.ops) { setEl('staff-ops-name', d.ops.name); setEl('staff-ops-vid', d.ops.vid ? 'VID: ' + d.ops.vid : null); }
+      if (d.hr)  { setEl('staff-hr-name',  d.hr.name);  setEl('staff-hr-vid',  d.hr.vid  ? 'VID: ' + d.hr.vid  : null); }
+    } catch(e) { console.warn('Staff:', e.message); }
+  }
+
+  loadSiteStats();
+  loadSiteStaff();
 </script>
 
 </body>
