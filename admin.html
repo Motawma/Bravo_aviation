@@ -793,18 +793,20 @@ function updateBadges() {
 
 /* ── OVERVIEW ── */
 function renderOverview() {
-  const activePilots = allPilots.filter(p=>p.role!=='admin');
-  const totalHours   = activePilots.reduce((s,p)=>s+(p.hours||0),0);
-  const totalFlights = allPireps.filter(p=>p.status==='approved').length;
-  document.getElementById('ov-pilots').textContent  = activePilots.length;
+  const allMembers   = allPilots; // todos os usuários cadastrados, incluindo admins que também voam
+  const totalHours   = allMembers.reduce((s,p)=>s+(p.hours||0),0);
+  const totalFlights = allPireps.filter(p=>p.status==='approved'||p.status==='rejected').length;
+  const acTypes      = new Set(allPireps.map(p=>p.ac||p.aircraft).filter(Boolean)).size || 2;
+  document.getElementById('ov-pilots').textContent  = allMembers.length;
   document.getElementById('ov-hours').textContent   = totalHours.toFixed(1)+'h';
   document.getElementById('ov-flights').textContent = totalFlights;
 
   // Grava stats públicos para o site (lidos por index.html sem autenticação)
   db.collection('siteConfig').doc('stats').set({
-    pilots:   activePilots.length,
+    pilots:   allMembers.length,
     hours:    Math.round(totalHours),
     flights:  totalFlights,
+    aircraft: acTypes,
     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
   }).catch(() => {});
 
