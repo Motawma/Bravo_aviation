@@ -8,7 +8,7 @@
 <meta http-equiv="Expires" content="0" />
 <title>Voos — Bravo Virtual Airline</title>
 <script>
-  const PAGE_VERSION = '4';
+  const PAGE_VERSION = '5';
   const key = 'brv_v_flight';
   if (sessionStorage.getItem(key) !== PAGE_VERSION) {
     sessionStorage.setItem(key, PAGE_VERSION);
@@ -540,16 +540,20 @@ function toggleShowAll() {
 /* ── LOAD FLEET FOR FILTERS ── */
 async function loadFleetForFilters() {
   try {
-    const snap = await db.collection('fleet').where('active','==',true).get();
+    let snap = await db.collection('fleet').where('active','==',true).get();
+    if (snap.empty) snap = await db.collection('fleet').get(); // fallback: sem filtro
     fleetData = snap.docs.map(d => d.data());
+    console.log('[BRV] fleet carregado:', fleetData.length, 'aeronaves');
     fleetCategoryMap = {};
     fleetData.forEach(f => {
       if (!f.category) return;
-      const main = f.category.split('\xb7')[0].trim();
+      const main = f.category.split(/\s*[\xb7•‧|]\s*/)[0].trim() || f.category;
       if (f.name) fleetCategoryMap[norm(f.name)] = main;
       if (f.code) fleetCategoryMap[norm(f.code)]  = main;
     });
+    console.log('[BRV] categorias:', Object.values(fleetCategoryMap).filter((v,i,a)=>a.indexOf(v)===i));
   } catch(e) {
+    console.error('[BRV] erro ao carregar fleet:', e);
     fleetData = [];
     fleetCategoryMap = {};
   }
@@ -603,6 +607,7 @@ function buildFilters() {
     }
   });
 
+  console.log('[BRV] categoryAircraftMap:', JSON.stringify(Object.keys(categoryAircraftMap)));
   // sort: named categories first, Outros last
   const categories = Object.keys(categoryAircraftMap).filter(c => c !== 'Outros').sort();
   if (categoryAircraftMap['Outros']) categories.push('Outros');
