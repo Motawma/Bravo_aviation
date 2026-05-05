@@ -408,8 +408,9 @@ let activeCategory = 'ALL';
 let selectedRoute  = null;
 let pilotAirport   = HUB;
 let showAll        = false;
-let fleetCategoryMap  = {}; // aircraft name → main category
-let categoryAircraftMap = {}; // category → [aircraft names]
+let fleetData         = []; // full fleet docs
+let fleetCategoryMap  = {}; // normalized key → main category
+let categoryAircraftMap = {}; // category → [aircraft labels]
 let jumpSeatOption = 'hub';
 const JS_PENALTY   = 150;
 
@@ -486,16 +487,27 @@ function toggleShowAll() {
 async function loadFleetForFilters() {
   try {
     const snap = await db.collection('fleet').where('active','==',true).get();
+    fleetData = snap.docs.map(d => d.data());
     fleetCategoryMap = {};
-    snap.docs.forEach(d => {
-      const f = d.data();
-      if (f.name && f.category) {
-        fleetCategoryMap[f.name] = f.category.split('·')[0].trim();
-      }
+    fleetData.forEach(f => {
+      if (!f.category) return;
+      const main = f.category.split('\xb7')[0].trim();
+      if (f.name) fleetCategoryMap[norm(f.name)] = main;
+      if (f.code) fleetCategoryMap[norm(f.code)]  = main;
     });
   } catch(e) {
+    fleetData = [];
     fleetCategoryMap = {};
   }
+}
+
+function norm(s) { return (s||'').toLowerCase().replace(/[-\s]/g,''); }
+
+function flexMatch(routeAircraft, label) {
+  if (!routeAircraft || !label) return false;
+  if (norm(routeAircraft) === norm(label)) return true;
+  const entry = fleetData.find(f => norm(f.name) === norm(label));
+  return !!(entry && entry.code && norm(routeAircraft) === norm(entry.code));
 }
 
 /* ── LOAD ROUTES ── */
@@ -515,16 +527,31 @@ async function loadRoutes() {
 
 /* ── BUILD DYNAMIC FILTERS (cascade) ── */
 function buildFilters() {
-  const usedTypes = [...new Set(allRoutes.map(r => r.aircraft).filter(Boolean))].sort();
-
   categoryAircraftMap = {};
-  usedTypes.forEach(type => {
-    const cat = fleetCategoryMap[type] || 'Outros';
-    if (!categoryAircraftMap[cat]) categoryAircraftMap[cat] = [];
-    categoryAircraftMap[cat].push(type);
+
+  // 1. populate from fleet (all aircraft, even without routes)
+  fleetData.forEach(f => {
+    const main = f.category ? f.category.split('\xb7')[0].trim() : 'Outros';
+    if (!categoryAircraftMap[main]) categoryAircraftMap[main] = [];
+    const label = f.name || f.code;
+    if (label && !categoryAircraftMap[main].includes(label)) {
+      categoryAircraftMap[main].push(label);
+    }
   });
 
-  const categories = Object.keys(categoryAircraftMap).sort();
+  // 2. route aircraft not matched to any fleet entry → Outros
+  const routeTypes = [...new Set(allRoutes.map(r => r.aircraft).filter(Boolean))];
+  routeTypes.forEach(type => {
+    const inFleet = fleetData.some(f => flexMatch(type, f.name) || (f.code && norm(type) === norm(f.code)));
+    if (!inFleet) {
+      if (!categoryAircraftMap['Outros']) categoryAircraftMap['Outros'] = [];
+      if (!categoryAircraftMap['Outros'].includes(type)) categoryAircraftMap['Outros'].push(type);
+    }
+  });
+
+  // sort: named categories first, Outros last
+  const categories = Object.keys(categoryAircraftMap).filter(c => c !== 'Outros').sort();
+  if (categoryAircraftMap['Outros']) categories.push('Outros');
 
   const catContainer = document.getElementById('filter-tabs');
   catContainer.innerHTML = `<button class="filter-tab active" data-filter="ALL" onclick="setCategoryFilter('ALL',this)">Todos</button>`;
@@ -587,10 +614,13 @@ function renderRoutes() {
 
   let filtered = allRoutes;
   if (!showAll) filtered = filtered.filter(r => r.dep === pilotAirport);
-  if (activeCategory !== 'ALL' && categoryAircraftMap[activeCategory]) {
-    filtered = filtered.filter(r => categoryAircraftMap[activeCategory].includes(r.aircraft));
+  if (activeCategory !== 'ALL') {
+    const labels = categoryAircraftMap[activeCategory] || [];
+    filtered = filtered.filter(r => labels.some(lbl => flexMatch(r.aircraft, lbl) || r.aircraft === lbl));
   }
-  if (activeFilter !== 'ALL') filtered = filtered.filter(r => r.aircraft === activeFilter);
+  if (activeFilter !== 'ALL') {
+    filtered = filtered.filter(r => flexMatch(r.aircraft, activeFilter) || r.aircraft === activeFilter);
+  }
   if (q) filtered = filtered.filter(r =>
     (r.dep||'').includes(q) || (r.arr||'').includes(q) ||
     (r.flightNumber||'').toUpperCase().includes(q)
