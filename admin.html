@@ -307,6 +307,7 @@ tr:hover td{background:rgba(255,255,255,.02);}
         <div class="sec-title">Pilotos cadastrados</div>
         <div style="display:flex;align-items:center;gap:12px;">
           <span id="pilots-count" style="font-size:12px;color:var(--text-dim);"></span>
+          <button class="btn-sm" onclick="syncPublicRoster(this)" style="padding:8px 18px;font-size:11px;border-color:rgba(0,238,255,0.3);color:#00EEFF;">↻ Sincronizar Roster Público</button>
           <button class="btn-gold" onclick="openAddModal()" style="padding:8px 18px;font-size:11px;">+ Novo piloto</button>
         </div>
       </div>
@@ -991,6 +992,15 @@ async function approveApp(appId) {
 
     await db.collection('applications').doc(appId).update({ status: 'approved', approvedUid: newUid });
 
+    // Adiciona ao roster público (lido sem auth por pilots.html)
+    await db.collection('siteConfig').doc('roster').set({
+      pilots: firebase.firestore.FieldValue.arrayUnion({
+        firstName: app.name.split(' ')[0],
+        vid:       app.vid || '',
+        callsign:  'BRV' + (app.vid || '')
+      })
+    }, { merge: true });
+
     // Tenta enviar e-mail de redefinição (best effort)
     let emailSent = false;
     try { await auth.sendPasswordResetEmail(app.email); emailSent = true; } catch(_) {}
@@ -1070,6 +1080,26 @@ async function rejectApp(uid) {
   const app = allApplications.find(a=>a.id===uid);
   if (app) app.status = 'rejected';
   updateBadges(); renderOverview(); renderApps();
+}
+
+/* ── SYNC ROSTER PÚBLICO ── */
+async function syncPublicRoster(btn) {
+  if (btn) { btn.disabled = true; btn.textContent = 'Sincronizando...'; }
+  try {
+    const pilots = allPilots
+      .filter(p => p.vid)
+      .map(p => ({
+        firstName: (p.name || '').split(' ')[0],
+        vid:       p.vid,
+        callsign:  'BRV' + p.vid
+      }));
+    await db.collection('siteConfig').doc('roster').set({ pilots }, { merge: false });
+    toast('Roster público sincronizado — ' + pilots.length + ' pilotos.', 'ok');
+  } catch(e) {
+    toast('Erro ao sincronizar: ' + e.message, 'err');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '↻ Sincronizar Roster Público'; }
+  }
 }
 
 /* ── PILOTS ── */
