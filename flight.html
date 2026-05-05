@@ -363,7 +363,7 @@ main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
         <div>
           <div class="js-opt-title">Outro Aeroporto</div>
           <div class="js-opt-icao">Informe o ICAO abaixo</div>
-          <div class="js-opt-pts-bad">−10 pontos</div>
+          <div class="js-opt-pts-bad">−150 pontos</div>
         </div>
       </div>
     </div>
@@ -411,7 +411,7 @@ let showAll        = false;
 let fleetCategoryMap  = {}; // aircraft name → main category
 let categoryAircraftMap = {}; // category → [aircraft names]
 let jumpSeatOption = 'hub';
-const JS_PENALTY   = 10;
+const JS_PENALTY   = 150;
 
 const RANKS = [
   { name:'Cadete',           min:0,    max:50    },
