@@ -69,6 +69,7 @@
   let aircraftTitle = null;
   let flightActive  = false;
   let pendingFlightUnsub = null;
+  const activeAlerts = {};
 
   // Log de voo
   let logPrevState  = null;
@@ -113,6 +114,51 @@
 
   // ── Utilitários ───────────────────────────────────────────────────────────
   function $ (id) { return document.getElementById(id); }
+
+  // ── Sistema de alertas em tempo real ─────────────────────────────────────
+  function showAlert(key, icon, title, detail, secsLeft, total) {
+    const panel = $('alert-panel');
+    if (!panel) return;
+    let card = $('alert-' + key);
+    if (!card) {
+      card = document.createElement('div');
+      card.id = 'alert-' + key;
+      card.className = 'alert-card';
+      card.innerHTML =
+        `<span style="font-size:20px">${icon}</span>` +
+        `<div class="alert-body">` +
+          `<div class="alert-title">${title}</div>` +
+          `<div class="alert-detail" id="alert-det-${key}">${detail}</div>` +
+        `</div>` +
+        `<div class="alert-cd" id="alert-cd-${key}"></div>`;
+      panel.appendChild(card);
+      activeAlerts[key] = true;
+    }
+    const cdEl  = $('alert-cd-' + key);
+    const detEl = $('alert-det-' + key);
+    if (detEl) detEl.textContent = detail;
+    if (cdEl) {
+      if (secsLeft <= 0) {
+        cdEl.textContent = '✕';
+        card.classList.add('danger');
+        card.classList.remove('urgent');
+      } else {
+        cdEl.textContent = secsLeft + 's';
+        card.classList.toggle('urgent', secsLeft <= 10);
+        card.classList.toggle('danger', false);
+      }
+    }
+  }
+
+  function dismissAlert(key) {
+    const card = $('alert-' + key);
+    if (card) card.remove();
+    delete activeAlerts[key];
+  }
+
+  function clearAllAlerts() {
+    Object.keys(activeAlerts).forEach(k => dismissAlert(k));
+  }
 
   function showScreen(id) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -494,6 +540,7 @@
     logPrevState = null;
     logLastPhase = null;
     liveFlightPushed = false;
+    clearAllAlerts();
 
     $('panel-tele').style.display  = '';
     $('panel-viols').style.display = '';
@@ -660,11 +707,18 @@
     // ── Overspeed < 10.000 ft — tolerância 60s contínuos ────────────────────
     if (tookOff && !effectivelyOnGround && spd > 255 && alt < 10000) {
       overspeed10kSec++;
+      const secsLeft = Math.max(0, 60 - overspeed10kSec);
+      showAlert(
+        'overspeed_10k', '⚡', 'OVERSPEED < 10.000 ft',
+        `IAS ${Math.round(spd)} kts  •  Alt ${Math.round(alt).toLocaleString('pt-BR')} ft`,
+        secsLeft, 60
+      );
       if (overspeed10kSec === 60) {
         addFoqaViolation('overspeed_10k',
           `Velocidade > 255 kts abaixo de 10.000 ft por 60s — ${Math.round(spd)} kts`, 15, 'Ov');
       }
     } else {
+      if (overspeed10kSec > 0) dismissAlert('overspeed_10k');
       overspeed10kSec = 0;
     }
 

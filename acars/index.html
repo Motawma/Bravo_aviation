@@ -209,9 +209,44 @@
 
   /* ── SCREENS ────────────────────────── */
   .screen { display: none; }
-  #screen-main { display: none; flex-direction: column; flex: 1; overflow: hidden; }
+  #screen-main { display: none; flex-direction: column; flex: 1; overflow: hidden; position: relative; }
   #screen-main.active { display: flex; }
   .screen.active { display: flex; flex-direction: column; height: 100%; }
+
+  /* ── ALERT PANEL ────────────────────── */
+  #alert-panel {
+    position: absolute; top: 0; left: 0; right: 0;
+    z-index: 50; display: flex; flex-direction: column;
+    gap: 4px; padding: 8px 10px; pointer-events: none;
+  }
+  .alert-card {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px; border-radius: 5px;
+    border-left: 4px solid var(--amber);
+    background: rgba(16, 14, 37, 0.97);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+    pointer-events: all;
+    animation: alert-slide-in 0.18s ease;
+  }
+  .alert-card.danger {
+    border-left-color: var(--red);
+  }
+  .alert-body { flex: 1; min-width: 0; }
+  .alert-title {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--amber);
+  }
+  .alert-card.danger .alert-title { color: var(--red); }
+  .alert-detail { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .alert-cd {
+    font-size: 32px; font-weight: 700; font-variant-numeric: tabular-nums;
+    color: var(--amber); min-width: 52px; text-align: right; line-height: 1;
+    font-family: 'Courier New', monospace;
+  }
+  .alert-card.danger .alert-cd { color: var(--red); }
+  .alert-card.urgent .alert-cd { animation: alert-blink 0.6s infinite; }
+  @keyframes alert-slide-in { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes alert-blink { 0%,100% { opacity: 1; } 50% { opacity: 0.25; } }
 
   /* ── UPDATE BANNER ──────────────────── */
   #update-banner {
@@ -269,6 +304,7 @@
 
 <!-- ─── SCREEN: MAIN (pré-voo + voo) ────────────────────── -->
 <div id="screen-main" class="screen">
+  <div id="alert-panel"></div>
   <div id="main">
 
     <!-- Simulador -->
