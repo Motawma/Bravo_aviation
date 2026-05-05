@@ -21,7 +21,7 @@
     --pink-light: #FF60A8;
   --text: #F0EAF8;
   --text-sec: #9A8FB8;
-  --text-dim: #4A4068;
+  --text-dim: #8A7FA8;
   --radius: 4px;
   --blue: #00EEFF;
   --purple: #9B30FF;
@@ -232,6 +232,52 @@
   .info-key { font-size: 10px; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-dim); }
   .info-val { font-family: 'Barlow Condensed', sans-serif; font-size: 17px; font-weight: 600; color: var(--text); }
   .info-val.gold { color: var(--gold); }
+
+  /* ── DOWNLOADS ── */
+  #downloads { background: var(--bg); }
+  .dl-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 24px; margin-top: 56px; }
+  .dl-card {
+    border: 1px solid var(--border); border-radius: 8px;
+    background: var(--surface); padding: 32px 36px;
+    display: flex; flex-direction: column; gap: 20px;
+    transition: border-color 0.3s, transform 0.3s;
+    position: relative; overflow: hidden;
+  }
+  .dl-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, var(--gold), transparent);
+  }
+  .dl-card:hover { border-color: var(--gold-dim); transform: translateY(-4px); }
+  .dl-badge {
+    display: inline-block; font-size: 10px; font-weight: 700;
+    letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--gold); padding: 3px 10px;
+    border: 1px solid rgba(0,238,255,0.25); border-radius: 3px;
+    background: rgba(0,238,255,0.05); align-self: flex-start;
+  }
+  .dl-title { font-family: 'Barlow Condensed', sans-serif; font-size: 26px; font-weight: 700; }
+  .dl-desc { font-size: 14px; color: var(--text-sec); line-height: 1.6; }
+  .dl-meta { display: flex; flex-wrap: wrap; gap: 16px; }
+  .dl-meta-item { font-size: 11px; color: var(--text-dim); letter-spacing: 0.05em; }
+  .dl-meta-item strong { color: var(--text-sec); font-weight: 600; }
+  .dl-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--gold); color: #000; font-size: 13px; font-weight: 700;
+    padding: 12px 24px; border-radius: var(--radius); border: none;
+    cursor: pointer; letter-spacing: 0.06em; text-decoration: none;
+    align-self: flex-start; transition: opacity 0.2s;
+  }
+  .dl-btn:hover { opacity: 0.85; }
+  .dl-btn-ghost {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: transparent; color: var(--gold); font-size: 13px; font-weight: 700;
+    padding: 11px 24px; border-radius: var(--radius);
+    border: 1px solid rgba(0,238,255,0.35);
+    cursor: pointer; letter-spacing: 0.06em; text-decoration: none;
+    align-self: flex-start; transition: all 0.2s;
+  }
+  .dl-btn-ghost:hover { background: rgba(0,238,255,0.08); border-color: var(--gold); }
+  @media (max-width: 700px) { .dl-grid { grid-template-columns: 1fr; } }
 
   /* ── FLEET ── */
   #fleet { background: var(--surface); }
