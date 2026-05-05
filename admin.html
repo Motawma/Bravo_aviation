@@ -887,12 +887,58 @@ function renderOverview() {
   document.getElementById('ov-hours').textContent   = totalHours.toFixed(1)+'h';
   document.getElementById('ov-flights').textContent = totalFlights;
 
-  // Grava stats públicos para o site (lidos por index.html sem autenticação)
+  // Grava stats públicos expandidos (lidos por index.html e stats.html sem autenticação)
+  const approved = allPireps.filter(p => p.status === 'approved');
+  const now = new Date();
+  // Voos por mês — últimos 6 meses
+  const monthBuckets = {};
+  const MONTHS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const key = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+    monthBuckets[key] = { label: MONTHS[d.getMonth()], count: 0 };
+  }
+  approved.forEach(p => {
+    if (!p.date) return;
+    const d = p.date.toDate ? p.date.toDate() : new Date(p.date);
+    const key = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+    if (monthBuckets[key]) monthBuckets[key].count++;
+  });
+  const monthlyFlights = Object.values(monthBuckets);
+  // Voos este mês
+  const thisKey = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+  const flightsThisMonth = (monthBuckets[thisKey] || {}).count || 0;
+  // Últimos 10 voos aprovados
+  const recentFlights = approved
+    .filter(p => p.dep && p.arr)
+    .slice(-10).reverse()
+    .map(p => ({
+      dep: p.dep, arr: p.arr,
+      aircraft: p.aircraft || p.ac || '—',
+      dur: p.dur || '—',
+      date: p.date ? (p.date.toDate ? p.date.toDate().toLocaleDateString('pt-BR') : new Date(p.date).toLocaleDateString('pt-BR')) : '—'
+    }));
+  // Top rotas
+  const routeMap = {};
+  approved.forEach(p => {
+    if (!p.dep || !p.arr) return;
+    const r = p.dep + ' → ' + p.arr;
+    if (!routeMap[r]) routeMap[r] = { count: 0, aircraft: p.aircraft || p.ac || '—' };
+    routeMap[r].count++;
+  });
+  const topRoutes = Object.entries(routeMap)
+    .sort((a,b) => b[1].count - a[1].count).slice(0, 8)
+    .map(([route, v]) => ({ route, count: v.count, aircraft: v.aircraft }));
+
   db.collection('siteConfig').doc('stats').set({
     pilots:   allMembers.length,
     hours:    Math.round(totalHours),
     flights:  totalFlights,
+    flightsThisMonth,
     aircraft: acTypes,
+    monthlyFlights,
+    recentFlights,
+    topRoutes,
     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
   }).catch(() => {});
 
