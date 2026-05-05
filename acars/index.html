@@ -181,7 +181,7 @@
   .action-row { display: flex; gap: 10px; }
 
   /* ── SUMMARY SCREEN ─────────────────── */
-  #screen-summary { padding: 20px; }
+  #screen-summary { padding: 20px; overflow-y: auto; }
   .summary-score {
     font-size: 64px; font-weight: 700; text-align: center;
     margin: 16px 0 4px;
@@ -235,6 +235,7 @@
 <!-- ─── UPDATE BANNER ───────────────────────────────────── -->
 <div id="update-banner">
   <div class="upd-text">🔄 Atualização disponível <span id="update-version"></span></div>
+  <a id="btn-update-manual" href="#" target="_blank" style="display:none;font-size:11px;color:#00EEFF;margin-right:8px;">⬇ Baixar manual</a>
   <button id="btn-install-update" disabled onclick="window.acars.installUpdate()">Baixando...</button>
 </div>
 
@@ -298,6 +299,7 @@
         <div class="rf"><label>Partida (DEP)</label><input id="inp-dep" maxlength="4" placeholder="SBGR" /></div>
         <div class="rf"><label>Destino (ARR)</label><input id="inp-arr" maxlength="4" placeholder="SBBR" /></div>
         <div class="rf"><label>Nível de Voo</label><input id="inp-fl"  maxlength="5" placeholder="350"  /></div>
+        <div class="rf"><label>Nº Voo</label>      <input id="inp-fn"  maxlength="10" placeholder="BRV1001" /></div>
         <div class="rf"><label>Observações</label> <input id="inp-obs" placeholder="—"               /></div>
       </div>
       <div style="margin-top:10px;">

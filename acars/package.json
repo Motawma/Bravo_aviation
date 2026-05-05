@@ -1,6 +1,6 @@
 {
   "name": "bravo-acars",
-  "version": "1.2.30",
+  "version": "1.2.37",
   "description": "ACARS Bravo Aviation",
   "author": "Bravo Aviation <admin@bravo.aero>",
   "main": "main.js",
