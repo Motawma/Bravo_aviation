@@ -146,9 +146,18 @@ footer { text-align: center; padding: 32px; font-size: 12px; color: var(--text-d
   const db = firebase.firestore();
 
   async function load() {
-    const snap = await db.collection('siteConfig').doc('stats').get();
+    let snap;
+    try {
+      snap = await db.collection('siteConfig').doc('stats').get();
+    } catch (fetchErr) {
+      console.error('Firestore fetch error:', fetchErr);
+      const code = fetchErr?.code || 'unknown';
+      document.querySelectorAll('.empty').forEach(el => el.textContent = `Erro Firestore: ${code}`);
+      document.querySelectorAll('[id^="kpi-"]').forEach(el => el.textContent = 'ERR');
+      return;
+    }
     if (!snap.exists) {
-      document.querySelectorAll('.empty').forEach(el => el.textContent = 'Dados ainda não disponíveis. Aguarde o admin sincronizar.');
+      document.querySelectorAll('.empty').forEach(el => el.textContent = 'Dados ainda não disponíveis. Abra o admin para sincronizar.');
       return;
     }
     const s = snap.data();
@@ -198,8 +207,9 @@ footer { text-align: center; padding: 32px; font-size: 12px; color: var(--text-d
   }
 
   load().catch(e => {
-    console.error(e);
-    document.querySelectorAll('.empty').forEach(el => el.textContent = 'Erro ao carregar dados.');
+    console.error('stats load error:', e);
+    const msg = e?.code ? `Erro: ${e.code}` : (e?.message ? `Erro: ${e.message}` : 'Erro inesperado.');
+    document.querySelectorAll('.empty').forEach(el => el.textContent = msg);
   });
 </script>
 </body>
