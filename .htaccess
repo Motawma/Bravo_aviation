@@ -1,0 +1,11 @@
+# Desabilita cache para arquivos HTML e JS
+<FilesMatch "\.(html|htm|js)$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+    Header set Pragma "no-cache"
+    Header set Expires "0"
+</FilesMatch>
+
+# Permite cache normal para imagens, fontes e CSS
+<FilesMatch "\.(png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|css)$">
+    Header set Cache-Control "public, max-age=86400"
+</FilesMatch>
