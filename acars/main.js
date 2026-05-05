@@ -29,7 +29,9 @@ function createWindow() {
 
 app.whenReady().then(() => {
   createWindow();
-  autoUpdater.checkForUpdatesAndNotify();
+  win.webContents.on('did-finish-load', () => {
+    setTimeout(() => autoUpdater.checkForUpdatesAndNotify(), 3000);
+  });
 });
 
 app.on('window-all-closed', () => {
@@ -43,6 +45,11 @@ autoUpdater.on('update-available', (info) => {
     win.webContents.send('update:available', { version: info.version });
 });
 
+autoUpdater.on('download-progress', (progress) => {
+  if (win && !win.isDestroyed())
+    win.webContents.send('update:progress', Math.round(progress.percent));
+});
+
 autoUpdater.on('update-downloaded', () => {
   if (win && !win.isDestroyed())
     win.webContents.send('update:ready');
@@ -50,6 +57,8 @@ autoUpdater.on('update-downloaded', () => {
 
 autoUpdater.on('error', (err) => {
   console.error('AutoUpdater error:', err.message);
+  if (win && !win.isDestroyed())
+    win.webContents.send('update:error', err.message);
 });
 
 ipcMain.on('update:install', () => {

@@ -11,7 +11,9 @@ contextBridge.exposeInMainWorld('acars', {
   onSimData:      (cb) => ipcRenderer.on('sim:data',       (_e, d) => cb(d)),
   onSimStatus:    (cb) => ipcRenderer.on('sim:status',     (_e, s) => cb(s)),
   onUpdateAvail:  (cb) => ipcRenderer.on('update:available',(_e, i) => cb(i)),
-  onUpdateReady:  (cb) => ipcRenderer.on('update:ready',   () => cb()),
+  onUpdateReady:    (cb) => ipcRenderer.on('update:ready',    () => cb()),
+  onUpdateProgress: (cb) => ipcRenderer.on('update:progress', (_e, pct) => cb(pct)),
+  onUpdateError:    (cb) => ipcRenderer.on('update:error',    (_e, msg) => cb(msg)),
 
   removeListeners: () => {
     ipcRenderer.removeAllListeners('sim:data');

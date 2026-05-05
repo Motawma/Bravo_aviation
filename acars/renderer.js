@@ -68,6 +68,7 @@
   let simType       = null;
   let aircraftTitle = null;
   let flightActive  = false;
+  let pendingFlightUnsub = null;
 
   // Log de voo
   let logPrevState  = null;
@@ -320,13 +321,14 @@
     $('topbar-name').textContent = userData.name || currentUser.email;
     $('topbar-vid').textContent  = 'VID ' + (userData.vid || '—');
     showMain();
-    await loadPendingFlight();
+    setupPendingFlightListener();
     setupSimListeners();
   }
 
   // ── Logout ────────────────────────────────────────────────────────────────
   $('btn-logout').addEventListener('click', async () => {
     if (flightActive) { alert('Encerre o voo antes de sair.'); return; }
+    if (pendingFlightUnsub) { pendingFlightUnsub(); pendingFlightUnsub = null; }
     window.acars.removeListeners();
     await window.acars.disconnectSim();
     await auth.signOut();
@@ -335,27 +337,41 @@
     showScreen('screen-login');
   });
 
-  // ── Rota pendente (selecionada no dashboard) ──────────────────────────────
+  // ── Rota pendente — listener em tempo real ────────────────────────────────
+  function applyPendingFlight(pf) {
+    $('inp-dep').value = pf.dep          || '';
+    $('inp-arr').value = pf.arr          || '';
+    $('inp-fl').value  = pf.plannedFL    || '';
+    $('inp-fn').value  = pf.flightNumber || '';
+    $('inp-obs').value = pf.obs          || '';
+    const badge = $('route-loaded-badge');
+    if (badge) {
+      badge.textContent = '✓ ' + (pf.flightNumber || pf.dep + '→' + pf.arr) + ' carregado do site';
+      badge.style.display = '';
+    }
+    updateStartBtn();
+    db.collection('users').doc(currentUser.uid).update({
+      pendingFlight: firebase.firestore.FieldValue.delete()
+    }).catch(() => {});
+  }
+
+  function setupPendingFlightListener() {
+    if (pendingFlightUnsub) { pendingFlightUnsub(); pendingFlightUnsub = null; }
+    pendingFlightUnsub = db.collection('users').doc(currentUser.uid)
+      .onSnapshot(snap => {
+        if (!snap.exists || flightActive) return;
+        const pf = snap.data()?.pendingFlight;
+        if (!pf) return;
+        applyPendingFlight(pf);
+      }, () => {});
+  }
+
   async function loadPendingFlight() {
     try {
       const snap = await db.collection('users').doc(currentUser.uid).get();
       const pf   = snap.data()?.pendingFlight;
       if (!pf) return;
-      $('inp-dep').value = pf.dep          || '';
-      $('inp-arr').value = pf.arr          || '';
-      $('inp-fl').value  = pf.plannedFL    || '';
-      $('inp-fn').value  = pf.flightNumber || '';
-      $('inp-obs').value = pf.obs          || '';
-      const badge = $('route-loaded-badge');
-      if (badge) {
-        badge.textContent = '✓ ' + (pf.flightNumber || pf.dep + '→' + pf.arr) + ' carregado do site';
-        badge.style.display = '';
-      }
-      updateStartBtn();
-      // Apaga do Firestore para não reaparecer numa próxima abertura
-      await db.collection('users').doc(currentUser.uid).update({
-        pendingFlight: firebase.firestore.FieldValue.delete()
-      });
+      applyPendingFlight(pf);
     } catch (_) {}
   }
 

@@ -223,6 +223,13 @@ main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 .ff-field input:focus { outline: none; border-color: var(--gold-dim); }
 .ff-field input::placeholder { color: var(--text-dim); font-size: 16px; font-weight: 400; }
 .ff-ac-name { font-family: 'Barlow Condensed', sans-serif; font-size: 18px; font-weight: 700; color: var(--gold); margin-bottom: 18px; }
+.ff-callsign-row { margin-bottom: 16px; }
+.ff-callsign-row label { display: block; font-size: 10px; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 7px; }
+.ff-callsign-wrap { display: flex; align-items: stretch; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; transition: border-color 0.2s; }
+.ff-callsign-wrap:focus-within { border-color: var(--gold-dim); }
+.ff-callsign-prefix { padding: 10px 12px; background: rgba(0,238,255,0.07); border-right: 1px solid var(--border); font-family: 'Barlow Condensed', sans-serif; font-size: 22px; font-weight: 800; color: var(--gold); letter-spacing: 0.1em; user-select: none; }
+.ff-callsign-num { flex: 1; background: transparent; border: none; color: var(--text); padding: 10px 12px; font-family: 'Barlow Condensed', sans-serif; font-size: 22px; font-weight: 800; letter-spacing: 0.1em; outline: none; }
+.ff-callsign-num::placeholder { color: var(--text-dim); font-size: 16px; font-weight: 400; }
 
 /* RESPONSIVE */
 @media (max-width: 1100px) { .routes-grid { grid-template-columns: repeat(2, 1fr); } }
@@ -373,6 +380,13 @@ main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
     <div class="ff-type-toggle">
       <button class="ff-type-btn active" id="ff-btn-vfr" onclick="selectFlightType('vfr')">VFR</button>
       <button class="ff-type-btn" id="ff-btn-ifr" onclick="selectFlightType('ifr')">IFR</button>
+    </div>
+    <div class="ff-callsign-row">
+      <label>Callsign</label>
+      <div class="ff-callsign-wrap">
+        <span class="ff-callsign-prefix">BRV</span>
+        <input type="text" id="ff-callsign" class="ff-callsign-num" placeholder="1234" maxlength="6" />
+      </div>
     </div>
     <div class="ff-fields">
       <div class="ff-field">
@@ -918,6 +932,7 @@ function openFreeModal(code) {
   document.getElementById('ff-ac-name').textContent = f.name || f.code;
   document.getElementById('ff-btn-vfr').classList.add('active');
   document.getElementById('ff-btn-ifr').classList.remove('active');
+  document.getElementById('ff-callsign').value = '';
   document.getElementById('ff-dep').value = pilotAirport || '';
   document.getElementById('ff-arr').value = '';
   document.getElementById('ff-obs').value = '';
@@ -939,6 +954,8 @@ function closeFreeModal() {
 }
 
 async function confirmFreeFlight() {
+  const csNum = (document.getElementById('ff-callsign').value || '').trim().toUpperCase();
+  const callsign = csNum ? 'BRV' + csNum : '';
   const dep = (document.getElementById('ff-dep').value || '').trim().toUpperCase();
   const arr = (document.getElementById('ff-arr').value || '').trim().toUpperCase();
   const obs = (document.getElementById('ff-obs').value || '').trim();
@@ -958,6 +975,7 @@ async function confirmFreeFlight() {
         dep, arr,
         aircraft:  freeFlightAircraft.name || freeFlightAircraft.code,
         ac:        freeFlightAircraft.code,
+        flightNumber: callsign || null,
         type:      'vfr',
         obs,
         status:    'pending',
@@ -984,6 +1002,7 @@ async function confirmFreeFlight() {
           dep, arr,
           aircraft:  freeFlightAircraft.name || freeFlightAircraft.code,
           plannedFL: '',
+          flightNumber: callsign || null,
           type:      'ifr',
           obs,
           savedAt:   firebase.firestore.FieldValue.serverTimestamp()
