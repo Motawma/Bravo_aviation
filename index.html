@@ -490,7 +490,7 @@
         <span class="lang-code">EN</span>
       </button>
     </div>
-    <span class="nav-cta" style="opacity:0.4;cursor:not-allowed;" title="Inscrições em breve" data-pt="Junte-se" data-en="Join Us">Junte-se</span>
+    <a href="login.html" class="nav-cta" data-pt="Junte-se" data-en="Join Us">Junte-se</a>
     <button class="menu-btn" aria-label="Menu" onclick="toggleMobileMenu()">
       <span></span><span></span><span></span>
     </button>
@@ -504,7 +504,7 @@
   <a href="#news" class="mob-link" onclick="closeMobileMenu()" data-pt="Notícias" data-en="News">Notícias</a>
   <a href="#staff" class="mob-link" onclick="closeMobileMenu()" data-pt="Staff" data-en="Staff">Staff</a>
   <a href="#contact" class="mob-link" onclick="closeMobileMenu()" data-pt="Contato" data-en="Contact">Contato</a>
-  <span class="mob-cta" style="opacity:0.4;cursor:not-allowed;" data-pt="Junte-se" data-en="Join Us">Junte-se</span>
+  <a href="login.html" class="mob-cta" onclick="closeMobileMenu()" data-pt="Junte-se" data-en="Join Us">Junte-se</a>
   <div class="lang-switcher" style="margin-top:16px;">
     <button class="lang-btn" id="btn-pt-m" onclick="setLang('pt')" aria-label="Português">
       <span class="flag">🇧🇷</span><span class="lang-code">PT</span>
@@ -526,7 +526,7 @@
       A excelência em aviação virtual no <strong>IVAO</strong>.<br />Hub: São Paulo – Guarulhos (SBGR)
     </p>
     <div class="hero-actions">
-      <span class="btn-primary" style="opacity:0.4;cursor:not-allowed;" title="Inscrições em breve" data-pt="Junte-se" data-en="Join Us">Junte-se</span>
+      <a href="login.html" class="btn-primary" data-pt="Junte-se" data-en="Join Us">Junte-se</a>
       <a href="#about" class="btn-outline" data-pt="Saiba mais" data-en="Learn more">Saiba mais</a>
     </div>
   </div>
@@ -860,8 +860,10 @@
     <div class="footer-links">
       <a href="#about" data-pt="Sobre" data-en="About">Sobre</a>
       <a href="#fleet" data-pt="Frota" data-en="Fleet">Frota</a>
-      <span style="opacity:0.35;cursor:not-allowed;" data-pt="Junte-se" data-en="Join">Junte-se</span>
-      <a href="https://www.ivao.aero" target="_blank">IVAO</a>
+      <a href="login.html" data-pt="Junte-se" data-en="Join Us">Junte-se</a>
+      <a href="https://www.ivao.aero" target="_blank" rel="noopener" style="display:flex;align-items:center;">
+        <img src="assets/img/ivao_logo.svg" alt="IVAO" style="height:18px;opacity:0.75;filter:brightness(0) invert(1);transition:opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.75'" />
+      </a>
     </div>
   </div>
 </footer>
