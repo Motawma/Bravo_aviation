@@ -15,6 +15,7 @@
     location.reload(true);
   }
 </script>
+<link rel="icon" href="assets/logo.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
@@ -543,7 +544,6 @@ async function loadFleetForFilters() {
     let snap = await db.collection('fleet').where('active','==',true).get();
     if (snap.empty) snap = await db.collection('fleet').get(); // fallback: sem filtro
     fleetData = snap.docs.map(d => d.data());
-    console.log('[BRV] fleet carregado:', fleetData.length, 'aeronaves');
     fleetCategoryMap = {};
     fleetData.forEach(f => {
       if (!f.category) return;
@@ -551,7 +551,6 @@ async function loadFleetForFilters() {
       if (f.name) fleetCategoryMap[norm(f.name)] = main;
       if (f.code) fleetCategoryMap[norm(f.code)]  = main;
     });
-    console.log('[BRV] categorias:', Object.values(fleetCategoryMap).filter((v,i,a)=>a.indexOf(v)===i));
   } catch(e) {
     console.error('[BRV] erro ao carregar fleet:', e);
     fleetData = [];
@@ -607,7 +606,6 @@ function buildFilters() {
     }
   });
 
-  console.log('[BRV] categoryAircraftMap:', JSON.stringify(Object.keys(categoryAircraftMap)));
   // sort: named categories first, Outros last
   const categories = Object.keys(categoryAircraftMap).filter(c => c !== 'Outros').sort();
   if (categoryAircraftMap['Outros']) categories.push('Outros');
