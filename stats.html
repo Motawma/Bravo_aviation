@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Estatísticas — Bravo Virtual Airline</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<style>
+:root {
+  --bg: #080612; --surface: #0E0B1E; --surface2: #130F27;
+  --border: #1E1840; --gold: #00EEFF; --gold-light: #60F5FF;
+  --gold-dim: #007A99; --text: #F0EAF8; --text-sec: #9A8FB8;
+  --text-dim: #C0BAD8; --radius: 4px; --green: #3db07a; --pink: #FF2080;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { min-height: 100%; }
+body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; font-size: 14px; }
+
+nav { height: 64px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 40px; gap: 24px; }
+.nav-logo img { height: 32px; mix-blend-mode: screen; }
+.nav-back { margin-left: auto; color: var(--text-dim); text-decoration: none; font-size: 12px; font-weight: 600; letter-spacing: 0.08em; border: 1px solid var(--border); padding: 6px 16px; border-radius: var(--radius); transition: all 0.2s; }
+.nav-back:hover { color: var(--gold); border-color: var(--gold-dim); }
+
+.content { max-width: 1060px; margin: 0 auto; padding: 56px 24px 80px; }
+.page-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.25em; text-transform: uppercase; color: var(--gold); margin-bottom: 12px; }
+h1 { font-family: 'Barlow Condensed', sans-serif; font-size: 42px; font-weight: 800; margin-bottom: 8px; }
+.sub { color: var(--text-sec); font-size: 14px; margin-bottom: 48px; line-height: 1.6; }
+
+/* KPI GRID */
+.kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 40px; }
+.kpi-card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 24px 20px; position: relative; overflow: hidden; }
+.kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, var(--gold), transparent); }
+.kpi-val { font-family: 'Barlow Condensed', sans-serif; font-size: 40px; font-weight: 800; color: var(--gold); line-height: 1; margin-bottom: 6px; }
+.kpi-lbl { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-dim); }
+
+/* ACTIVITY TABLE */
+.section-title { font-size: 11px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 16px; }
+.table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; margin-bottom: 32px; }
+.table-head { display: grid; padding: 12px 20px; background: var(--surface2); border-bottom: 1px solid var(--border); }
+.table-head.cols-4 { grid-template-columns: 2fr 1fr 1fr 1fr; }
+.table-head.cols-3 { grid-template-columns: 2fr 1fr 1fr; }
+.table-head span { font-size: 10px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-dim); }
+.table-row { display: grid; padding: 13px 20px; border-bottom: 1px solid var(--border); align-items: center; transition: background 0.15s; }
+.table-row.cols-4 { grid-template-columns: 2fr 1fr 1fr 1fr; }
+.table-row.cols-3 { grid-template-columns: 2fr 1fr 1fr; }
+.table-row:last-child { border-bottom: none; }
+.table-row:hover { background: rgba(0,238,255,0.03); }
+.row-main { font-weight: 600; }
+.row-sec { color: var(--text-sec); font-size: 13px; }
+.row-hi { font-family: 'Barlow Condensed', sans-serif; font-size: 18px; font-weight: 700; color: var(--gold); }
+.badge { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: 0.1em; padding: 2px 8px; border-radius: 3px; text-transform: uppercase; }
+.badge-ok { background: rgba(61,176,122,.15); color: var(--green); }
+
+/* BAR CHART */
+.chart-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 24px 20px; margin-bottom: 32px; }
+.chart-bars { display: flex; align-items: flex-end; gap: 8px; height: 120px; margin-top: 16px; }
+.bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.bar { width: 100%; background: rgba(0,238,255,0.15); border-radius: 3px 3px 0 0; border: 1px solid rgba(0,238,255,0.25); min-height: 4px; transition: height 0.4s ease; position: relative; }
+.bar:hover { background: rgba(0,238,255,0.3); }
+.bar-num { font-size: 11px; font-weight: 700; color: var(--gold); }
+.bar-lbl { font-size: 10px; color: var(--text-dim); letter-spacing: 0.05em; }
+
+.empty { padding: 32px; text-align: center; color: var(--text-dim); }
+
+footer { text-align: center; padding: 32px; font-size: 12px; color: var(--text-dim); border-top: 1px solid var(--border); margin-top: 40px; }
+
+@media (max-width: 700px) { .kpi-grid { grid-template-columns: repeat(2,1fr); } }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo"><img src="assets/logo.png" alt="Bravo Aviation" /></div>
+  <a href="index.html" class="nav-back">← Voltar ao site</a>
+</nav>
+
+<div class="content">
+  <div class="page-tag">Bravo Virtual Airline — BRV</div>
+  <h1>Estatísticas de <span style="color:var(--gold)">Atividade</span></h1>
+  <p class="sub">Histórico de atividade da Bravo Aviation. Dados atualizados em tempo real a partir dos PIREPs aprovados pelo staff.</p>
+
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-val" id="kpi-pilots">—</div>
+      <div class="kpi-lbl">Pilotos ativos</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-val" id="kpi-flights">—</div>
+      <div class="kpi-lbl">Voos totais</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-val" id="kpi-hours">—</div>
+      <div class="kpi-lbl">Horas voadas</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-val" id="kpi-month">—</div>
+      <div class="kpi-lbl">Voos este mês</div>
+    </div>
+  </div>
+
+  <!-- Gráfico de voos por mês -->
+  <div class="section-title">Voos por mês (últimos 6 meses)</div>
+  <div class="chart-wrap">
+    <div class="chart-bars" id="chart-bars"><div class="empty">Carregando...</div></div>
+  </div>
+
+  <!-- Voos recentes -->
+  <div class="section-title">Últimos voos aprovados</div>
+  <div class="table-wrap">
+    <div class="table-head cols-4">
+      <span>Rota</span>
+      <span>Aeronave</span>
+      <span>Duração</span>
+      <span>Data</span>
+    </div>
+    <div id="recent-flights"><div class="empty">Carregando...</div></div>
+  </div>
+
+  <!-- Rotas mais voadas -->
+  <div class="section-title">Rotas mais voadas</div>
+  <div class="table-wrap">
+    <div class="table-head cols-3">
+      <span>Rota</span>
+      <span>Voos</span>
+      <span>Aeronave</span>
+    </div>
+    <div id="top-routes"><div class="empty">Carregando...</div></div>
+  </div>
+</div>
+
+<footer>© 2025 Bravo Aviation — ICAO: BRV — Hub: SBGR</footer>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+  firebase.initializeApp({
+    apiKey: 'AIzaSyC2dDGhKjzHSclyFwUFNGA60DtXAjLEJ6I',
+    authDomain: 'bravo-aviation.firebaseapp.com',
+    projectId: 'bravo-aviation',
+    storageBucket: 'bravo-aviation.firebasestorage.app',
+    messagingSenderId: '712016002234',
+    appId: '1:712016002234:web:ce7a8e39c28bc6d8ca5683'
+  });
+  const db = firebase.firestore();
+
+  const MONTH_NAMES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+  function fmtDate(ts) {
+    if (!ts) return '—';
+    const d = ts.toDate ? ts.toDate() : new Date(ts);
+    return d.toLocaleDateString('pt-BR', { day:'2-digit', month:'short', year:'numeric' });
+  }
+
+  async function load() {
+    const [usersSnap, pirepsSnap] = await Promise.all([
+      db.collection('users').get(),
+      db.collection('pireps').where('status','==','approved').orderBy('date','desc').get()
+    ]);
+
+    const now = new Date();
+    const thisMonth = now.getMonth();
+    const thisYear  = now.getFullYear();
+
+    // KPIs
+    document.getElementById('kpi-pilots').textContent  = usersSnap.size;
+    document.getElementById('kpi-flights').textContent = pirepsSnap.size;
+
+    // Calcular horas totais e voos deste mês
+    let totalMins = 0, flightsThisMonth = 0;
+    const monthBuckets = {};
+    const routeCount   = {};
+
+    pirepsSnap.docs.forEach(doc => {
+      const d = doc.data();
+
+      // Duração
+      if (d.dur) {
+        const parts = String(d.dur).split(':');
+        const h = parseInt(parts[0]) || 0;
+        const m = parseInt(parts[1]) || 0;
+        totalMins += h * 60 + m;
+      }
+
+      // Voos este mês
+      if (d.date) {
+        const date = d.date.toDate ? d.date.toDate() : new Date(d.date);
+        if (date.getMonth() === thisMonth && date.getFullYear() === thisYear) flightsThisMonth++;
+
+        // Bucket por mês
+        const key = date.getFullYear() + '-' + String(date.getMonth()+1).padStart(2,'0');
+        monthBuckets[key] = (monthBuckets[key] || 0) + 1;
+      }
+
+      // Rotas
+      if (d.dep && d.arr) {
+        const route = d.dep + ' → ' + d.arr;
+        if (!routeCount[route]) routeCount[route] = { count: 0, aircraft: d.aircraft || d.ac || '—' };
+        routeCount[route].count++;
+      }
+    });
+
+    const totalH = Math.floor(totalMins / 60);
+    const totalM = totalMins % 60;
+    document.getElementById('kpi-hours').textContent = totalH + 'h' + String(totalM).padStart(2,'0');
+    document.getElementById('kpi-month').textContent = flightsThisMonth;
+
+    // Gráfico — últimos 6 meses
+    const months = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(thisYear, thisMonth - i, 1);
+      const key = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+      months.push({ key, label: MONTH_NAMES[d.getMonth()], count: monthBuckets[key] || 0 });
+    }
+    const maxCount = Math.max(...months.map(m => m.count), 1);
+    document.getElementById('chart-bars').innerHTML = months.map(m => `
+      <div class="bar-col">
+        <div class="bar-num">${m.count}</div>
+        <div class="bar" style="height:${Math.round((m.count/maxCount)*100)}px"></div>
+        <div class="bar-lbl">${m.label}</div>
+      </div>`).join('');
+
+    // Últimos voos
+    const recentEl = document.getElementById('recent-flights');
+    const recent = pirepsSnap.docs.slice(0, 10);
+    if (recent.length === 0) {
+      recentEl.innerHTML = '<div class="empty">Nenhum voo registrado.</div>';
+    } else {
+      recentEl.innerHTML = recent.map(doc => {
+        const d = doc.data();
+        return `<div class="table-row cols-4">
+          <span class="row-main">${d.dep || '?'} → ${d.arr || '?'}</span>
+          <span class="row-sec">${d.aircraft || d.ac || '—'}</span>
+          <span class="row-sec">${d.dur || '—'}</span>
+          <span class="row-sec">${fmtDate(d.date)}</span>
+        </div>`;
+      }).join('');
+    }
+
+    // Top rotas
+    const topRoutes = Object.entries(routeCount)
+      .sort((a,b) => b[1].count - a[1].count)
+      .slice(0, 8);
+    const topEl = document.getElementById('top-routes');
+    if (topRoutes.length === 0) {
+      topEl.innerHTML = '<div class="empty">Nenhuma rota registrada.</div>';
+    } else {
+      topEl.innerHTML = topRoutes.map(([route, info]) => `
+        <div class="table-row cols-3">
+          <span class="row-main">${route}</span>
+          <span class="row-hi">${info.count}</span>
+          <span class="row-sec">${info.aircraft}</span>
+        </div>`).join('');
+    }
+  }
+
+  load().catch(e => {
+    console.error(e);
+    document.querySelectorAll('.empty').forEach(el => el.textContent = 'Erro ao carregar dados.');
+  });
+</script>
+</body>
+</html>

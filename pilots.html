@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Lista de Pilotos — Bravo Virtual Airline</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<style>
+:root {
+  --bg: #080612; --surface: #0E0B1E; --surface2: #130F27;
+  --border: #1E1840; --gold: #00EEFF; --gold-light: #60F5FF;
+  --gold-dim: #007A99; --text: #F0EAF8; --text-sec: #9A8FB8;
+  --text-dim: #C0BAD8; --radius: 4px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { min-height: 100%; }
+body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; font-size: 14px; }
+
+/* NAV */
+nav { height: 64px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 40px; gap: 24px; }
+.nav-logo img { height: 32px; mix-blend-mode: screen; }
+.nav-back { margin-left: auto; color: var(--text-dim); text-decoration: none; font-size: 12px; font-weight: 600; letter-spacing: 0.08em; border: 1px solid var(--border); padding: 6px 16px; border-radius: var(--radius); transition: all 0.2s; }
+.nav-back:hover { color: var(--gold); border-color: var(--gold-dim); }
+
+/* CONTENT */
+.content { max-width: 960px; margin: 0 auto; padding: 56px 24px 80px; }
+.page-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.25em; text-transform: uppercase; color: var(--gold); margin-bottom: 12px; }
+h1 { font-family: 'Barlow Condensed', sans-serif; font-size: 42px; font-weight: 800; margin-bottom: 8px; }
+.sub { color: var(--text-sec); font-size: 14px; margin-bottom: 40px; line-height: 1.6; }
+.gdpr-note { display: inline-flex; align-items: center; gap: 8px; font-size: 11px; color: var(--text-dim); background: var(--surface); border: 1px solid var(--border); padding: 8px 14px; border-radius: var(--radius); margin-bottom: 32px; }
+
+/* STATS BAR */
+.stats-bar { display: flex; gap: 32px; margin-bottom: 40px; }
+.stat-item { }
+.stat-val { font-family: 'Barlow Condensed', sans-serif; font-size: 32px; font-weight: 800; color: var(--gold); }
+.stat-lbl { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-dim); margin-top: 2px; }
+
+/* TABLE */
+.table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+.table-head { display: grid; grid-template-columns: 2fr 2fr 1fr; padding: 12px 20px; background: var(--surface2); border-bottom: 1px solid var(--border); }
+.table-head span { font-size: 10px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-dim); }
+.table-row { display: grid; grid-template-columns: 2fr 2fr 1fr; padding: 14px 20px; border-bottom: 1px solid var(--border); transition: background 0.15s; align-items: center; }
+.table-row:last-child { border-bottom: none; }
+.table-row:hover { background: rgba(0,238,255,0.03); }
+.pilot-name { font-weight: 600; font-size: 14px; }
+.pilot-cs { font-family: 'Barlow Condensed', sans-serif; font-size: 16px; font-weight: 700; color: var(--gold); letter-spacing: 0.08em; }
+.pilot-vid { font-size: 13px; color: var(--text-sec); font-variant-numeric: tabular-nums; }
+.empty { padding: 48px; text-align: center; color: var(--text-dim); }
+#loading { padding: 48px; text-align: center; color: var(--text-dim); }
+
+footer { text-align: center; padding: 32px; font-size: 12px; color: var(--text-dim); border-top: 1px solid var(--border); margin-top: 40px; }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo"><img src="assets/logo.png" alt="Bravo Aviation" /></div>
+  <a href="index.html" class="nav-back">← Voltar ao site</a>
+</nav>
+
+<div class="content">
+  <div class="page-tag">Bravo Virtual Airline — BRV</div>
+  <h1>Lista de <span style="color:var(--gold)">Pilotos</span></h1>
+  <p class="sub">Pilotos ativos da Bravo Aviation. Em conformidade com o RGPD/GDPR, apenas o primeiro nome, indicativo de chamada e VID são exibidos.</p>
+  <div class="gdpr-note">🔒 GDPR compliant — sobrenomes omitidos conforme Regulamento Geral de Proteção de Dados</div>
+
+  <div class="stats-bar">
+    <div class="stat-item">
+      <div class="stat-val" id="total-pilots">—</div>
+      <div class="stat-lbl">Pilotos ativos</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-val" id="total-flights">—</div>
+      <div class="stat-lbl">Voos registrados</div>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <div class="table-head">
+      <span>Nome</span>
+      <span>Callsign</span>
+      <span>VID IVAO</span>
+    </div>
+    <div id="pilots-list"><div id="loading">Carregando...</div></div>
+  </div>
+</div>
+
+<footer>© 2025 Bravo Aviation — ICAO: BRV — Hub: SBGR</footer>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+  firebase.initializeApp({
+    apiKey: 'AIzaSyC2dDGhKjzHSclyFwUFNGA60DtXAjLEJ6I',
+    authDomain: 'bravo-aviation.firebaseapp.com',
+    projectId: 'bravo-aviation',
+    storageBucket: 'bravo-aviation.firebasestorage.app',
+    messagingSenderId: '712016002234',
+    appId: '1:712016002234:web:ce7a8e39c28bc6d8ca5683'
+  });
+  const db = firebase.firestore();
+
+  async function load() {
+    const [usersSnap, pirepsSnap] = await Promise.all([
+      db.collection('users').orderBy('name').get(),
+      db.collection('pireps').where('status','==','approved').get()
+    ]);
+
+    document.getElementById('total-pilots').textContent = usersSnap.size;
+    document.getElementById('total-flights').textContent = pirepsSnap.size;
+
+    const list = document.getElementById('pilots-list');
+    if (usersSnap.empty) {
+      list.innerHTML = '<div class="empty">Nenhum piloto encontrado.</div>';
+      return;
+    }
+
+    list.innerHTML = usersSnap.docs.map(doc => {
+      const d = doc.data();
+      const firstName = (d.name || '').split(' ')[0] || '—';
+      const vid = d.vid || '—';
+      const callsign = 'BRV' + (vid !== '—' ? vid : '');
+      return `<div class="table-row">
+        <span class="pilot-name">${firstName}</span>
+        <span class="pilot-cs">${callsign}</span>
+        <span class="pilot-vid">${vid}</span>
+      </div>`;
+    }).join('');
+  }
+
+  load().catch(() => {
+    document.getElementById('pilots-list').innerHTML = '<div class="empty">Erro ao carregar pilotos.</div>';
+  });
+</script>
+</body>
+</html>
