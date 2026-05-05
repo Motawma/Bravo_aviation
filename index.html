@@ -696,41 +696,36 @@
       <div class="join-form-side" style="position:relative;">
         <h3 data-pt="Candidatura" data-en="Application">Candidatura</h3>
         <p class="sub" data-pt="Preencha os campos abaixo" data-en="Fill in the fields below">Preencha os campos abaixo</p>
-        <form id="joinForm" onsubmit="return false;" style="pointer-events:none;user-select:none;filter:blur(3px);opacity:0.35;">
+        <form id="joinForm" onsubmit="handleJoin(event)">
           <div class="form-row">
             <div class="form-group">
               <label>Nome</label>
-              <input type="text" placeholder="João" disabled />
+              <input type="text" id="jf-nome" placeholder="João" required />
             </div>
             <div class="form-group">
               <label>Sobrenome</label>
-              <input type="text" placeholder="Silva" disabled />
+              <input type="text" id="jf-sobrenome" placeholder="Silva" required />
             </div>
           </div>
           <div class="form-group">
             <label>VID IVAO</label>
-            <input type="text" placeholder="123456" disabled />
+            <input type="text" id="jf-vid" placeholder="123456" required />
           </div>
           <div class="form-group">
             <label>E-mail</label>
-            <input type="email" placeholder="email@exemplo.com" disabled />
+            <input type="email" id="jf-email" placeholder="email@exemplo.com" required />
           </div>
           <div class="form-group">
             <label>Aeronave preferida</label>
-            <select disabled>
-              <option>Selecione</option>
+            <select id="jf-aircraft">
+              <option value="">Selecione</option>
               <option>Boeing 737-800</option>
               <option>Airbus A320</option>
             </select>
           </div>
-          <button type="button" class="btn-submit" disabled>Enviar candidatura</button>
+          <button type="submit" class="btn-submit" id="jf-btn">Enviar candidatura</button>
         </form>
-        <!-- OVERLAY EM DESENVOLVIMENTO -->
-        <div style="position:absolute;inset:40px 0 0 0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:10;">
-          <div style="font-size:48px;line-height:1;">🔒</div>
-          <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700;color:var(--gold);text-align:center;" data-pt="Inscrições em breve" data-en="Applications opening soon">Inscrições em breve</div>
-          <div style="font-size:13px;color:var(--text-sec);text-align:center;max-width:260px;line-height:1.6;" data-pt="Estamos finalizando o sistema. As inscrições serão abertas em breve." data-en="We are finalizing our systems. Applications will open soon.">Estamos finalizando o sistema. As inscrições serão abertas em breve.</div>
-        </div>
+        <div class="success-msg" id="joinSuccess" data-pt="✓ Candidatura enviada! Entraremos em contato em breve." data-en="✓ Application submitted! We'll be in touch soon.">✓ Candidatura enviada! Entraremos em contato em breve.</div>
       </div>
     </div>
   </div>
