@@ -41,9 +41,23 @@
       $('update-version').textContent = 'v' + info.version;
       banner.classList.add('show');
     });
+    window.acars.onUpdateProgress((pct) => {
+      const btn = $('btn-install-update');
+      if (btn && btn.disabled) btn.textContent = `Baixando... ${pct}%`;
+    });
     window.acars.onUpdateReady(() => {
       const btn = $('btn-install-update');
       if (btn) { btn.textContent = '↺ Reiniciar e atualizar'; btn.disabled = false; }
+    });
+    window.acars.onUpdateError(() => {
+      const btn = $('btn-install-update');
+      if (btn) { btn.textContent = 'Erro'; btn.disabled = true; }
+      const link = $('btn-update-manual');
+      if (link) {
+        const ver = $('update-version')?.textContent?.replace('v','') || '';
+        link.href = `https://github.com/Motawma/Bravo_aviation/releases/latest`;
+        link.style.display = 'inline';
+      }
     });
   }
 
@@ -149,10 +163,10 @@
   const AC_LIMITS = {
     A320: { mtow:77000, mlw:66000, maxAlt:39100, maxTailwind:10, maxSpdbrake:315,
             validDepFlaps:[1,2,3], minFob:1600, maxGear:280,
-            flapsMaxSpd:{ 1:230, 2:215, 3:200, 4:185, 5:177 } },
+            flapsMaxSpd:{ 1:235, 2:220, 3:190, 4:182 } },
     B737: { mtow:79016, mlw:66361, maxAlt:41000, maxTailwind:15, maxSpdbrake:320,
             validDepFlaps:[1,5,10,15,25], minFob:1500, maxGear:270,
-            flapsMaxSpd:{ 1:260, 5:250, 10:210, 15:200, 25:185, 30:170, 40:160 } }
+            flapsMaxSpd:{ 1:265, 5:255, 10:215, 15:205, 25:190, 30:175, 40:165 } }
   };
   function getAcLimits(title) {
     const t = (title || '').toUpperCase();
@@ -327,10 +341,11 @@
       const snap = await db.collection('users').doc(currentUser.uid).get();
       const pf   = snap.data()?.pendingFlight;
       if (!pf) return;
-      $('inp-dep').value = pf.dep        || '';
-      $('inp-arr').value = pf.arr        || '';
-      $('inp-fl').value  = pf.plannedFL  || '';
-      $('inp-obs').value = pf.obs        || '';
+      $('inp-dep').value = pf.dep          || '';
+      $('inp-arr').value = pf.arr          || '';
+      $('inp-fl').value  = pf.plannedFL    || '';
+      $('inp-fn').value  = pf.flightNumber || '';
+      $('inp-obs').value = pf.obs          || '';
       const badge = $('route-loaded-badge');
       if (badge) {
         badge.textContent = '✓ ' + (pf.flightNumber || pf.dep + '→' + pf.arr) + ' carregado do site';
@@ -626,12 +641,12 @@
       }
     }
 
-    // ── Overspeed < 10.000 ft (250 kts) ──────────────────────────────────────
-    if (tookOff && !effectivelyOnGround && spd > 250 && alt < 10000) {
+    // ── Overspeed < 10.000 ft — tolerância 60s contínuos ────────────────────
+    if (tookOff && !effectivelyOnGround && spd > 255 && alt < 10000) {
       overspeed10kSec++;
-      if (overspeed10kSec % 5 === 0) {
-        addFoqaViolation(`overspeed_10k_${overspeed10kSec}`,
-          `Velocidade > 250 kts abaixo de 10.000 ft — ${Math.round(spd)} kts (${overspeed10kSec}s)`, 5, 'Ov');
+      if (overspeed10kSec === 60) {
+        addFoqaViolation('overspeed_10k',
+          `Velocidade > 255 kts abaixo de 10.000 ft por 60s — ${Math.round(spd)} kts`, 15, 'Ov');
       }
     } else {
       overspeed10kSec = 0;
@@ -784,6 +799,7 @@
     const dep     = $('inp-dep').value.trim().toUpperCase();
     const arr     = $('inp-arr').value.trim().toUpperCase();
     const fl      = $('inp-fl').value.trim();
+    const fn      = $('inp-fn').value.trim().toUpperCase();
     const obs     = $('inp-obs').value.trim();
     const netEl   = document.querySelector('input[name="network"]:checked');
     const network = netEl ? netEl.value : 'Offline';
@@ -795,7 +811,7 @@
       pilotVid:     userData.vid  || '',
       dep, arr,
       ac:           userData.aircraft || aircraftTitle || '',
-      fl, obs,
+      fl, fn, obs,
       dur:          fmtDur(dur),
       date:         new Date().toISOString().split('T')[0],
       sim:          simType === 'msfs' ? 'MSFS' : 'X-Plane',
