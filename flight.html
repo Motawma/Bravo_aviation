@@ -202,6 +202,27 @@ main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 .btn-confirm-jump { flex: 1; padding: 12px; background: #f0a500; color: #000; border: none; border-radius: var(--radius); font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; }
 .btn-confirm-jump:disabled { opacity: 0.5; cursor: not-allowed; }
 
+/* FLEET CARD (sem rotas) */
+.fleet-card { border-style: dashed; }
+.fleet-card:hover { border-color: rgba(155,48,255,0.35) !important; }
+.fleet-specs { display: flex; gap: 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 10px 0; margin-bottom: 14px; }
+.fleet-spec { flex: 1; text-align: center; display: flex; flex-direction: column; gap: 2px; border-right: 1px solid var(--border); padding: 0 8px; }
+.fleet-spec:last-child { border-right: none; }
+.fleet-spec-label { font-size: 9px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-dim); }
+.fleet-spec-val { font-family: 'Barlow Condensed', sans-serif; font-size: 14px; font-weight: 700; color: var(--text); }
+
+/* FREE FLIGHT MODAL */
+.ff-type-toggle { display: flex; gap: 0; margin-bottom: 20px; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.ff-type-btn { flex: 1; padding: 11px; background: transparent; border: none; color: var(--text-sec); font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer; letter-spacing: 0.1em; transition: all 0.2s; }
+.ff-type-btn:first-child { border-right: 1px solid var(--border); }
+.ff-type-btn.active { background: rgba(0,238,255,0.12); color: var(--gold); }
+.ff-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+.ff-field label { display: block; font-size: 10px; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 7px; }
+.ff-field input { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 10px 12px; border-radius: var(--radius); font-family: 'Barlow Condensed', sans-serif; font-size: 22px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; transition: border-color 0.2s; }
+.ff-field input:focus { outline: none; border-color: var(--gold-dim); }
+.ff-field input::placeholder { color: var(--text-dim); font-size: 16px; font-weight: 400; }
+.ff-ac-name { font-family: 'Barlow Condensed', sans-serif; font-size: 18px; font-weight: 700; color: var(--gold); margin-bottom: 18px; }
+
 /* RESPONSIVE */
 @media (max-width: 1100px) { .routes-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 700px) { .routes-grid { grid-template-columns: 1fr; } :root { --sidebar: 0px; } aside { display: none; } }
@@ -343,6 +364,37 @@ main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
   </div>
 </div>
 
+<!-- FREE FLIGHT MODAL -->
+<div class="modal-overlay" id="modal-free">
+  <div class="modal">
+    <div class="modal-title">Criar Voo</div>
+    <div class="ff-ac-name" id="ff-ac-name">—</div>
+    <div class="ff-type-toggle">
+      <button class="ff-type-btn active" id="ff-btn-vfr" onclick="selectFlightType('vfr')">VFR</button>
+      <button class="ff-type-btn" id="ff-btn-ifr" onclick="selectFlightType('ifr')">IFR</button>
+    </div>
+    <div class="ff-fields">
+      <div class="ff-field">
+        <label>Origem</label>
+        <input type="text" id="ff-dep" placeholder="SBGR" maxlength="4" />
+      </div>
+      <div class="ff-field">
+        <label>Destino</label>
+        <input type="text" id="ff-arr" placeholder="SBCT" maxlength="4" />
+      </div>
+    </div>
+    <div class="modal-obs">
+      <label>Observações (opcional)</label>
+      <input type="text" id="ff-obs" placeholder="Ex: voo panorâmico..." />
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeFreeModal()">Cancelar</button>
+      <button class="btn-confirm" id="ff-confirm" onclick="confirmFreeFlight()">▶ Voar</button>
+    </div>
+    <div class="modal-success" id="ff-success"></div>
+  </div>
+</div>
+
 <!-- JUMPSEAT MODAL -->
 <div class="modal-overlay" id="modal-jumpseat">
   <div class="modal">
@@ -411,8 +463,10 @@ let showAll        = false;
 let fleetData         = []; // full fleet docs
 let fleetCategoryMap  = {}; // normalized key → main category
 let categoryAircraftMap = {}; // category → [aircraft labels]
-let jumpSeatOption = 'hub';
-const JS_PENALTY   = 150;
+let jumpSeatOption    = 'hub';
+const JS_PENALTY      = 150;
+let freeFlightAircraft = null;
+let freeFlightType     = 'vfr';
 
 const RANKS = [
   { name:'Cadete',           min:0,    max:50    },
@@ -628,7 +682,10 @@ function renderRoutes() {
 
   document.getElementById('routes-count').textContent = filtered.length + ' rota' + (filtered.length !== 1 ? 's' : '');
 
-  if (!filtered.length) {
+  // Fleet cards: fleet aircraft (matching current filter) that have no routes
+  const fleetCards = buildFleetCards(filtered);
+
+  if (!filtered.length && !fleetCards.length) {
     const noRoutesHere = !showAll && allRoutes.filter(r => r.dep === pilotAirport).length === 0;
     grid.innerHTML = noRoutesHere
       ? `<div class="empty-state">
@@ -640,7 +697,7 @@ function renderRoutes() {
     return;
   }
 
-  grid.innerHTML = filtered.map(r => `
+  const routeHTML = filtered.map(r => `
     <div class="route-card" style="animation:fadeIn 0.3s ease">
       <div class="rc-top">
         <div class="rc-flight">${r.flightNumber || '—'}</div>
@@ -670,7 +727,43 @@ function renderRoutes() {
       </div>
       <div class="rc-actions">
         <button class="btn-fly" onclick="openModal(${JSON.stringify(r).split('"').join("'")})">▶ Voar</button>
-        <button class="btn-simbrief" onclick="openSimbrief(${JSON.stringify(r).split('"').join("'")})">SimBrief ↗</button>
+      </div>
+    </div>`).join('');
+
+  grid.innerHTML = routeHTML + fleetCards;
+}
+
+function buildFleetCards(filteredRoutes) {
+  // Determine which fleet aircraft to show based on current filter
+  let candidates = [];
+  if (activeFilter !== 'ALL') {
+    const f = fleetData.find(x => norm(x.name) === norm(activeFilter) || norm(x.code||'') === norm(activeFilter));
+    if (f) candidates = [f];
+  } else if (activeCategory !== 'ALL') {
+    const labels = categoryAircraftMap[activeCategory] || [];
+    labels.forEach(lbl => {
+      const f = fleetData.find(x => norm(x.name) === norm(lbl));
+      if (f) candidates.push(f);
+    });
+  }
+
+  // Only show fleet cards for aircraft that have no routes in current filtered set
+  return candidates.filter(f => {
+    return !filteredRoutes.some(r => flexMatch(r.aircraft, f.name) || norm(r.aircraft) === norm(f.code||''));
+  }).map(f => `
+    <div class="route-card fleet-card" style="animation:fadeIn 0.3s ease">
+      <div class="rc-top">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;color:var(--text);line-height:1.2">${f.name || f.code}</div>
+        <span style="background:rgba(155,48,255,0.12);border:1px solid rgba(155,48,255,0.3);color:#B070FF;font-size:9px;font-weight:700;letter-spacing:.15em;padding:2px 7px;border-radius:2px;">VOO LIVRE</span>
+      </div>
+      <div style="font-size:11px;color:var(--text-dim);margin-bottom:12px">${f.category||''}</div>
+      <div class="fleet-specs">
+        <div class="fleet-spec"><div class="fleet-spec-label">PAX</div><div class="fleet-spec-val">${f.pax||'—'}</div></div>
+        <div class="fleet-spec"><div class="fleet-spec-label">Alcance</div><div class="fleet-spec-val">${f.range_km ? f.range_km+'km' : '—'}</div></div>
+        <div class="fleet-spec"><div class="fleet-spec-label">Velocidade</div><div class="fleet-spec-val">${f.cruise_speed||'—'}</div></div>
+      </div>
+      <div class="rc-actions">
+        <button class="btn-fly" onclick="openFreeModal('${f.code}')">▶ Criar Voo</button>
       </div>
     </div>`).join('');
 }
@@ -810,6 +903,96 @@ async function confirmJumpseat() {
     toast('Erro ao processar jumpseat.', 'err');
     btn.disabled = false;
     btn.textContent = '✈ Confirmar';
+  }
+}
+
+/* ── FREE FLIGHT MODAL ── */
+function openFreeModal(code) {
+  const f = fleetData.find(x => x.code === code);
+  if (!f) return;
+  freeFlightAircraft = f;
+  freeFlightType = 'vfr';
+  document.getElementById('ff-ac-name').textContent = f.name || f.code;
+  document.getElementById('ff-btn-vfr').classList.add('active');
+  document.getElementById('ff-btn-ifr').classList.remove('active');
+  document.getElementById('ff-dep').value = pilotAirport || '';
+  document.getElementById('ff-arr').value = '';
+  document.getElementById('ff-obs').value = '';
+  document.getElementById('ff-success').classList.remove('show');
+  document.getElementById('ff-success').textContent = '';
+  document.getElementById('ff-confirm').disabled = false;
+  document.getElementById('ff-confirm').textContent = '▶ Voar';
+  document.getElementById('modal-free').classList.add('open');
+}
+
+function selectFlightType(type) {
+  freeFlightType = type;
+  document.getElementById('ff-btn-vfr').classList.toggle('active', type === 'vfr');
+  document.getElementById('ff-btn-ifr').classList.toggle('active', type === 'ifr');
+}
+
+function closeFreeModal() {
+  document.getElementById('modal-free').classList.remove('open');
+}
+
+async function confirmFreeFlight() {
+  const dep = (document.getElementById('ff-dep').value || '').trim().toUpperCase();
+  const arr = (document.getElementById('ff-arr').value || '').trim().toUpperCase();
+  const obs = (document.getElementById('ff-obs').value || '').trim();
+
+  if (dep.length < 3) { toast('Informe um aeroporto de origem válido.', 'err'); return; }
+  if (arr.length < 3) { toast('Informe um aeroporto de destino válido.', 'err'); return; }
+
+  const btn = document.getElementById('ff-confirm');
+  btn.disabled = true;
+  btn.textContent = 'Salvando...';
+
+  if (freeFlightType === 'vfr') {
+    try {
+      await db.collection('pireps').add({
+        uid:       currentUser.uid,
+        pilotName: currentUser.name || '',
+        dep, arr,
+        aircraft:  freeFlightAircraft.name || freeFlightAircraft.code,
+        ac:        freeFlightAircraft.code,
+        type:      'vfr',
+        obs,
+        status:    'pending',
+        source:    'manual',
+        date:      firebase.firestore.Timestamp.now(),
+        createdAt: firebase.firestore.Timestamp.now()
+      });
+      await db.collection('users').doc(currentUser.uid).update({ currentAirport: arr });
+      pilotAirport = arr;
+      updatePositionBar();
+      const succ = document.getElementById('ff-success');
+      succ.textContent = '✓ Voo VFR registrado! Posição atualizada para ' + arr + '.';
+      succ.classList.add('show');
+      setTimeout(() => closeFreeModal(), 2200);
+    } catch(e) {
+      toast('Erro ao salvar voo.', 'err');
+      btn.disabled = false;
+      btn.textContent = '▶ Voar';
+    }
+  } else {
+    try {
+      await db.collection('users').doc(currentUser.uid).update({
+        pendingFlight: {
+          dep, arr,
+          aircraft:  freeFlightAircraft.name || freeFlightAircraft.code,
+          plannedFL: '',
+          type:      'ifr',
+          obs,
+          savedAt:   firebase.firestore.FieldValue.serverTimestamp()
+        }
+      });
+      btn.textContent = '✔ Confirmado';
+      setTimeout(() => { window.location.href = 'brief.html'; }, 800);
+    } catch(e) {
+      toast('Erro ao salvar voo.', 'err');
+      btn.disabled = false;
+      btn.textContent = '▶ Voar';
+    }
   }
 }
 
