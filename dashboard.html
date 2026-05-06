@@ -736,7 +736,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
     <label style="display:block;font-size:10px;font-weight:600;letter-spacing:0.15em;text-transform:uppercase;color:#C0BAD8;margin-bottom:8px">Callsign</label>
     <div style="display:flex;margin-bottom:20px;">
       <span style="background:#1E1840;color:#00EEFF;font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;letter-spacing:0.08em;padding:11px 16px;border:1px solid #1E1840;border-right:none;border-radius:4px 0 0 4px;white-space:nowrap;">BRV</span>
-      <input type="text" id="cs-number" placeholder="1234" maxlength="4" style="flex:1;background:#080612;border:1px solid #1E1840;border-left:none;color:#F0EAF8;padding:11px 14px;border-radius:0 4px 4px 0;font-size:16px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.05em;" oninput="this.value=this.value.replace(/\D/g,'').slice(0,4)" />
+      <input type="text" id="cs-number" placeholder="0101" maxlength="4" style="flex:1;background:#080612;border:1px solid #1E1840;border-left:none;color:#F0EAF8;padding:11px 14px;border-radius:0 4px 4px 0;font-size:16px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.05em;" oninput="this.value=this.value.replace(/\D/g,'').slice(0,4)" />
     </div>
     <div id="cs-error" style="display:none;color:#e05555;font-size:12px;margin-bottom:14px;"></div>
     <button id="cs-btn" onclick="saveCallsign()" style="width:100%;padding:12px;background:#00EEFF;color:#000;border:none;font-weight:700;font-size:13px;border-radius:4px;cursor:pointer;font-family:'Inter',sans-serif;">Salvar e entrar</button>
@@ -1418,16 +1418,31 @@ async function saveCallsign() {
   const errEl = document.getElementById('cs-error');
   const btn   = document.getElementById('cs-btn');
 
+  const BLOCKED = ['1234', '0000', '1111', '2222', '3333', '4444', '5555', '6666', '7777', '8888', '9999'];
   errEl.style.display = 'none';
+
   if (num.length !== 4) {
-    errEl.textContent = 'O callsign deve ter exatamente 4 dígitos (ex: BRV1234).';
+    errEl.textContent = 'O callsign deve ter exatamente 4 dígitos.';
+    errEl.style.display = 'block'; return;
+  }
+  if (BLOCKED.includes(num)) {
+    errEl.textContent = 'Este callsign não é permitido. Escolha outro número.';
     errEl.style.display = 'block'; return;
   }
 
   const callsign = 'BRV' + num;
-  btn.disabled = true; btn.textContent = 'Salvando...';
+  btn.disabled = true; btn.textContent = 'Verificando...';
 
   try {
+    // Verifica se o callsign já está em uso por outro piloto
+    const taken = await db.collection('users').where('callsign', '==', callsign).get();
+    if (!taken.empty) {
+      btn.disabled = false; btn.textContent = 'Salvar e entrar';
+      errEl.textContent = 'Este callsign já está em uso. Escolha outro número.';
+      errEl.style.display = 'block'; return;
+    }
+
+    btn.textContent = 'Salvando...';
     await db.collection('users').doc(user.uid).update({ callsign });
 
     // Atualiza no roster público se o piloto já estiver lá
