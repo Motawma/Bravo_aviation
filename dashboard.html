@@ -563,6 +563,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
               <div class="profile-stat-row"><span class="k">VID IVAO</span><span class="v" id="pf-vid">—</span></div>
               <div class="profile-stat-row"><span class="k">E-mail</span><span class="v" id="pf-email">—</span></div>
               <div class="profile-stat-row"><span class="k">Aeronave principal</span><span class="v" id="pf-aircraft">—</span></div>
+              <div class="profile-stat-row"><span class="k">SimBrief Username</span><span class="v" id="pf-simbrief" style="color:var(--accent);">—</span></div>
               <div class="profile-stat-row"><span class="k">Membro desde</span><span class="v" id="pf-join">—</span></div>
               <div class="profile-stat-row"><span class="k">Total de horas</span><span class="v" id="pf-hours">—</span></div>
               <div class="profile-stat-row"><span class="k">Total de voos</span><span class="v" id="pf-flights">—</span></div>
@@ -585,6 +586,10 @@ tr:hover td { background: rgba(255,255,255,0.02); }
                   <option>Airbus A320</option>
                 </select>
               </div>
+            </div>
+            <div class="form-group">
+              <label>SimBrief Username <span style="font-size:11px;color:var(--text-dim);font-weight:400;">(para importar rotas AIRAC)</span></label>
+              <input type="text" id="edit-simbrief" placeholder="seu_usuario_simbrief" />
             </div>
             <div class="form-group"><label>Nova senha (deixe em branco para manter)</label><input type="password" placeholder="••••••••" /></div>
             <button type="submit" class="btn-gold">Salvar alterações</button>
@@ -1116,6 +1121,7 @@ function initUserUI() {
   document.getElementById('pf-vid').textContent = user.vid;
   document.getElementById('pf-email').textContent = user.email;
   document.getElementById('pf-aircraft').textContent = user.aircraft;
+  document.getElementById('pf-simbrief').textContent = user.simbriefUsername || '—';
   document.getElementById('pf-join').textContent = new Date(user.joinDate).toLocaleDateString('pt-BR');
   document.getElementById('pf-hours').textContent = user.hours.toFixed(1) + 'h';
   document.getElementById('pf-flights').textContent = user.flights;
@@ -1124,6 +1130,7 @@ function initUserUI() {
   document.getElementById('edit-email').value = user.email;
   document.getElementById('edit-vid').value = user.vid;
   document.getElementById('edit-aircraft').value = user.aircraft;
+  document.getElementById('edit-simbrief').value = user.simbriefUsername || '';
 
   // Full flights table
   const ftbody = document.getElementById('flights-table');
@@ -1277,18 +1284,21 @@ async function submitPirep(e) {
 /* ── PROFILE SAVE ── */
 async function saveProfile(e) {
   e.preventDefault();
-  user.name     = document.getElementById('edit-name').value;
-  user.email    = document.getElementById('edit-email').value;
-  user.aircraft = document.getElementById('edit-aircraft').value;
+  user.name             = document.getElementById('edit-name').value;
+  user.email            = document.getElementById('edit-email').value;
+  user.aircraft         = document.getElementById('edit-aircraft').value;
+  user.simbriefUsername = document.getElementById('edit-simbrief').value.trim();
   try {
     await db.collection('users').doc(user.uid).update({
-      name: user.name, email: user.email, aircraft: user.aircraft
+      name: user.name, email: user.email, aircraft: user.aircraft,
+      simbriefUsername: user.simbriefUsername || null
     });
   } catch(_) {}
   document.getElementById('profile-success').classList.add('show');
-  document.getElementById('pf-name').textContent    = user.name;
-  document.getElementById('pf-email').textContent   = user.email;
-  document.getElementById('pf-aircraft').textContent= user.aircraft;
+  document.getElementById('pf-name').textContent     = user.name;
+  document.getElementById('pf-email').textContent    = user.email;
+  document.getElementById('pf-aircraft').textContent = user.aircraft;
+  document.getElementById('pf-simbrief').textContent = user.simbriefUsername || '—';
   document.getElementById('sidebar-name').textContent = user.name;
   setTimeout(() => document.getElementById('profile-success').classList.remove('show'), 4000);
 }

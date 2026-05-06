@@ -84,6 +84,8 @@ body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-ser
 .int-btn.vatsim:hover { background: rgba(0,238,255,0.15); }
 .int-btn.ivao { background: rgba(155,48,255,0.1); border-color: rgba(155,48,255,0.3); color: #B070FF; }
 .int-btn.ivao:hover { background: rgba(155,48,255,0.2); }
+.int-btn.import { background: rgba(200,150,28,0.1); border-color: rgba(200,150,28,0.3); color: var(--gold); grid-column: 1 / -1; }
+.int-btn.import:hover { background: rgba(200,150,28,0.2); }
 
 /* METAR */
 .metar-section { margin-bottom: 20px; }
@@ -341,6 +343,9 @@ function renderBrief(pf, userData) {
           <a class="int-btn ivao" href="${buildIvaoUrl(dep,arr,fl,fn,ac,route,eet)}" target="_blank">
             🟣 IVAO Prefile
           </a>
+          <button class="int-btn import" onclick="importFromSimbrief('${dep}','${arr}')">
+            ↙ Importar rota do SimBrief (AIRAC atual)
+          </button>
         </div>
 
         <!-- METAR -->
@@ -472,6 +477,56 @@ function parseTime(r){
 }
 
 /* ── HELPERS ── */
+async function importFromSimbrief(dep, arr) {
+  const btn = document.querySelector('.int-btn.import');
+  const fbUser = auth.currentUser;
+  if (!fbUser) { alert('Usuário não autenticado.'); return; }
+
+  const snap = await db.collection('users').doc(fbUser.uid).get();
+  const username = snap.data()?.simbriefUsername;
+  if (!username) {
+    alert('Cadastre seu SimBrief Username no Meu Perfil do dashboard antes de importar.');
+    return;
+  }
+
+  btn.textContent = '⏳ Buscando OFP...';
+  btn.style.pointerEvents = 'none';
+
+  try {
+    const res  = await fetch(`https://www.simbrief.com/api/xml.fetcher.php?username=${encodeURIComponent(username)}&json=1`);
+    const data = await res.json();
+
+    if (data.fetch?.status === 'Error' || !data.general) {
+      throw new Error(data.fetch?.message || 'Nenhum OFP encontrado. Gere um plano no SimBrief primeiro.');
+    }
+
+    const ofpDep = data.origin?.icao_code || '';
+    const ofpArr = data.destination?.icao_code || '';
+    if (ofpDep !== dep || ofpArr !== arr) {
+      const ok = confirm(`O último OFP do SimBrief é ${ofpDep}→${ofpArr}, mas esta rota é ${dep}→${arr}.\nImportar mesmo assim?`);
+      if (!ok) { btn.textContent = '↙ Importar rota do SimBrief (AIRAC atual)'; btn.style.pointerEvents = ''; return; }
+    }
+
+    const route   = data.general.route       || '';
+    const fl      = data.general.initial_altitude ? String(Math.round(parseInt(data.general.initial_altitude) / 100)) : '';
+    const eetSec  = parseInt(data.times?.est_time_enroute || 0);
+    const eetStr  = eetSec ? `${Math.floor(eetSec/3600)}h${String(Math.floor((eetSec%3600)/60)).padStart(2,'0')}` : '';
+    const dist    = data.general.distance_nm  ? parseInt(data.general.distance_nm) : null;
+
+    await db.collection('users').doc(fbUser.uid).set({
+      pendingFlight: { dep: ofpDep, arr: ofpArr, route, plannedFL: fl, eet: eetStr, distance: dist }
+    }, { merge: true });
+
+    btn.textContent = '✓ Rota importada! Recarregando...';
+    setTimeout(() => location.reload(), 1000);
+
+  } catch(e) {
+    alert('Erro: ' + e.message);
+    btn.textContent = '↙ Importar rota do SimBrief (AIRAC atual)';
+    btn.style.pointerEvents = '';
+  }
+}
+
 function buildIvaoUrl(dep, arr, fl, fn, ac, route, eet) {
   const fp = {
     callsign:          fn  || '',
