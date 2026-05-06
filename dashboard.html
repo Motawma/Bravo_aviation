@@ -728,6 +728,21 @@ tr:hover td { background: rgba(255,255,255,0.02); }
   </div>
 </div>
 
+<!-- Modal: definir callsign -->
+<div id="modal-set-callsign" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:99998;align-items:center;justify-content:center;">
+  <div style="background:#100E25;border:1px solid #1E1840;border-radius:6px;padding:36px;max-width:400px;width:90%;">
+    <div style="font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:700;color:#00EEFF;margin-bottom:6px">Definir seu Callsign</div>
+    <p style="color:#9A8FB8;font-size:13px;margin-bottom:24px;line-height:1.6">Escolha o número do seu callsign BRV. Ele será exibido na lista de pilotos e nos seus voos.</p>
+    <label style="display:block;font-size:10px;font-weight:600;letter-spacing:0.15em;text-transform:uppercase;color:#C0BAD8;margin-bottom:8px">Callsign</label>
+    <div style="display:flex;margin-bottom:20px;">
+      <span style="background:#1E1840;color:#00EEFF;font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;letter-spacing:0.08em;padding:11px 16px;border:1px solid #1E1840;border-right:none;border-radius:4px 0 0 4px;white-space:nowrap;">BRV</span>
+      <input type="text" id="cs-number" placeholder="101" maxlength="6" style="flex:1;background:#080612;border:1px solid #1E1840;border-left:none;color:#F0EAF8;padding:11px 14px;border-radius:0 4px 4px 0;font-size:16px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.05em;" oninput="this.value=this.value.replace(/\D/g,'')" />
+    </div>
+    <div id="cs-error" style="display:none;color:#e05555;font-size:12px;margin-bottom:14px;"></div>
+    <button id="cs-btn" onclick="saveCallsign()" style="width:100%;padding:12px;background:#00EEFF;color:#000;border:none;font-weight:700;font-size:13px;border-radius:4px;cursor:pointer;font-family:'Inter',sans-serif;">Salvar e entrar</button>
+  </div>
+</div>
+
 <!-- Modal: confirmar rota para o ACARS -->
 <div id="modal-route" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center;">
   <div style="background:#100E25;border:1px solid #1E1840;border-radius:6px;padding:32px;max-width:380px;width:90%;">
@@ -825,6 +840,13 @@ auth.onAuthStateChanged(async (fbUser) => {
     if (data.mustChangePassword) {
       document.body.style.visibility = '';
       document.getElementById('modal-first-pwd').style.display = 'flex';
+      return;
+    }
+
+    // Sem callsign: solicita antes de liberar o dashboard
+    if (!data.callsign) {
+      document.body.style.visibility = '';
+      document.getElementById('modal-set-callsign').style.display = 'flex';
       return;
     }
 
@@ -1386,6 +1408,45 @@ async function changeFirstPassword() {
     errEl.textContent = e.code === 'auth/requires-recent-login'
       ? 'Sessão expirada. Faça login novamente.'
       : 'Erro: ' + e.message;
+    errEl.style.display = 'block';
+  }
+}
+
+/* ── CALLSIGN SETUP ── */
+async function saveCallsign() {
+  const num   = (document.getElementById('cs-number').value || '').replace(/\D/g, '').trim();
+  const errEl = document.getElementById('cs-error');
+  const btn   = document.getElementById('cs-btn');
+
+  errEl.style.display = 'none';
+  if (!num) {
+    errEl.textContent = 'Digite o número do seu callsign.';
+    errEl.style.display = 'block'; return;
+  }
+
+  const callsign = 'BRV' + num;
+  btn.disabled = true; btn.textContent = 'Salvando...';
+
+  try {
+    await db.collection('users').doc(user.uid).update({ callsign });
+
+    // Atualiza no roster público se o piloto já estiver lá
+    const rosterSnap = await db.collection('siteConfig').doc('roster').get();
+    if (rosterSnap.exists) {
+      const pilots = (rosterSnap.data().pilots || []).map(p =>
+        p.vid === user.vid ? { ...p, callsign } : p
+      );
+      await db.collection('siteConfig').doc('roster').update({ pilots });
+    }
+
+    user.callsign = callsign;
+    document.getElementById('modal-set-callsign').style.display = 'none';
+    initUserUI();
+    applyPermissions(user.permissions);
+    setupLiveFlights();
+  } catch(e) {
+    btn.disabled = false; btn.textContent = 'Salvar e entrar';
+    errEl.textContent = 'Erro ao salvar: ' + (e.code || e.message);
     errEl.style.display = 'block';
   }
 }
