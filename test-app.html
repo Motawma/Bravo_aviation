@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<title>Criar candidatura de teste</title>
+</head>
+<body>
+<h2>Criar candidatura de teste</h2>
+<button onclick="criar()" style="padding:12px 24px;font-size:16px;cursor:pointer;">Criar candidatura de teste</button>
+<p id="msg" style="margin-top:20px;font-size:14px;"></p>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+firebase.initializeApp({
+  apiKey: "AIzaSyC2dDGhKjzHSclyFwUFNGA60DtXAjLEJ6I",
+  authDomain: "bravo-aviation.firebaseapp.com",
+  projectId: "bravo-aviation",
+  storageBucket: "bravo-aviation.firebasestorage.app",
+  messagingSenderId: "712016002234",
+  appId: "1:712016002234:web:ce7a8e39c28bc6d8ca5683"
+});
+const db = firebase.firestore();
+
+async function criar() {
+  const msg = document.getElementById('msg');
+  msg.textContent = 'Criando...';
+  try {
+    const ref = await db.collection('applications').add({
+      name: 'Willian Teste',
+      email: 'mota.wma@gmail.com',
+      vid: '12345',
+      callsign: 'BRV001',
+      aircraft: 'Boeing 737-800',
+      foraMalha: null,
+      status: 'pending',
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    msg.textContent = '✓ Candidatura criada! ID: ' + ref.id + ' — Agora vá para o admin e aprove.';
+    msg.style.color = 'green';
+  } catch(e) {
+    msg.textContent = 'Erro: ' + e.message;
+    msg.style.color = 'red';
+  }
+}
+</script>
+</body>
+</html>
