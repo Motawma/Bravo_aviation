@@ -497,7 +497,7 @@ function buildIvaoUrl(dep, arr, fl, fn, ac, route, eet) {
 function buildSimBriefUrl(dep, arr, fl, fn, ac, route) {
   const type = toICAOType(ac);
   const num  = (fn || '').replace(/^BRV/i, '').trim() || '001';
-  let url = `https://dispatch.simbrief.com/options/custom`
+  let url = `https://www.simbrief.com/system/dispatch.php`
           + `?orig=${dep}&dest=${arr}&type=${type}`
           + `&airline=BRV&fltnum=${num}`
           + `&fl=${fl}00`;

@@ -797,7 +797,8 @@ function openSimbrief(r) {
     route:   r.route      || 'DCT',
     fl:      r.plannedFL  || r.flightLevel || '350',
     airline: 'BRV',
-    fltnum:  r.flightNumber || ''
+    fltnum:  r.flightNumber || '',
+    rmk:     'TCAS WWW.BRAVOAVIATION.SITE IVAOVA/BRV'
   });
   window.open('https://www.simbrief.com/system/dispatch.php?' + params.toString(), '_blank');
 }
