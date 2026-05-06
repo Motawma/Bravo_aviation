@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Candidatura — Bravo Aviation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;400;500;600;700;800;900&family=Barlow:wght@300;400;500;600&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<style>
+:root {
+  --bg: #080612;
+  --surface: #0E0B1E;
+  --surface2: #130F27;
+  --border: #1E1840;
+  --gold: #00EEFF;
+  --gold-light: #60F5FF;
+  --gold-dim: #007A99;
+  --pink: #FF2080;
+  --text: #F0EAF8;
+  --text-sec: #9A8FB8;
+  --text-dim: #C0BAD8;
+  --radius: 4px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* NAV */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 48px; height: 68px;
+  background: rgba(8,6,18,0.92);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(12px);
+}
+.nav-logo { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+.nav-logo img { height: 36px; }
+.nav-logo span { font-family: 'Barlow Condensed', sans-serif; font-size: 20px; font-weight: 700; letter-spacing: 0.08em; color: var(--text); }
+.nav-back {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; font-weight: 500; color: var(--text-sec);
+  text-decoration: none; padding: 7px 16px;
+  border: 1px solid var(--border); border-radius: var(--radius);
+  transition: border-color 0.2s, color 0.2s;
+}
+.nav-back:hover { border-color: var(--gold); color: var(--gold); }
+
+/* HERO */
+.page-hero {
+  padding: 140px 48px 60px;
+  text-align: center;
+  background: radial-gradient(ellipse 80% 40% at 50% 0%, rgba(0,238,255,0.07) 0%, transparent 70%);
+}
+.section-tag {
+  display: inline-block;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--gold); border: 1px solid var(--gold-dim);
+  padding: 4px 12px; border-radius: 2px; margin-bottom: 20px;
+}
+.page-hero h1 {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: clamp(40px, 6vw, 72px); font-weight: 800;
+  line-height: 1.05; letter-spacing: -0.01em; margin-bottom: 16px;
+}
+.page-hero p {
+  color: var(--text-sec); font-size: 16px; max-width: 520px; margin: 0 auto;
+}
+
+/* MAIN LAYOUT */
+.join-wrap {
+  max-width: 1100px; margin: 0 auto; padding: 0 48px 100px;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 0;
+  background: var(--surface2);
+  border: 1px solid var(--border); border-radius: 8px;
+  overflow: hidden;
+}
+
+/* STEPS */
+.join-steps { padding: 56px; }
+.join-steps .lead { color: var(--text-sec); font-size: 15px; margin-bottom: 40px; line-height: 1.7; margin-top: 12px; }
+.steps-list { display: flex; flex-direction: column; gap: 28px; }
+.step { display: flex; gap: 20px; align-items: flex-start; }
+.step-num {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 32px; font-weight: 800; color: var(--gold);
+  line-height: 1; min-width: 36px;
+}
+.step-content h4 { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+.step-content p { color: var(--text-sec); font-size: 13px; line-height: 1.6; }
+
+/* FORM SIDE */
+.join-form-side {
+  background: var(--surface); border-left: 1px solid var(--border);
+  padding: 56px; display: flex; flex-direction: column; justify-content: center;
+}
+.join-form-side h3 { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+.join-form-side .sub { color: var(--text-sec); font-size: 13px; margin-bottom: 32px; }
+.form-group { margin-bottom: 16px; }
+.form-group label { display: block; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-sec); margin-bottom: 8px; }
+.form-group input, .form-group select {
+  width: 100%; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius); color: var(--text); padding: 10px 14px;
+  font-family: 'Inter', sans-serif; font-size: 14px; outline: none;
+  transition: border-color 0.2s;
+}
+.form-group input:focus, .form-group select:focus { border-color: var(--gold); }
+.form-group select option { background: var(--surface2); }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.cs-wrap { display: flex; align-items: center; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; transition: border-color 0.2s; }
+.cs-wrap:focus-within { border-color: var(--gold); }
+.cs-prefix { padding: 10px 12px; font-size: 14px; font-weight: 700; color: var(--gold); background: rgba(0,238,255,0.06); border-right: 1px solid var(--border); white-space: nowrap; }
+.cs-wrap input { border: none; background: transparent; flex: 1; padding: 10px 12px; color: var(--text); font-size: 14px; outline: none; }
+.btn-submit {
+  width: 100%; margin-top: 8px; padding: 13px;
+  background: var(--gold); color: #080612;
+  font-family: 'Barlow Condensed', sans-serif; font-size: 15px; font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  border: none; border-radius: var(--radius); cursor: pointer;
+  transition: opacity 0.2s;
+}
+.btn-submit:hover { opacity: 0.85; }
+.btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+.success-msg {
+  display: none; margin-top: 20px; padding: 16px;
+  background: rgba(0,238,255,0.08); border: 1px solid var(--gold-dim);
+  border-radius: var(--radius); color: var(--gold); font-size: 14px; text-align: center;
+}
+.success-msg.show { display: block; }
+
+/* FOOTER */
+footer {
+  text-align: center; padding: 40px 48px;
+  border-top: 1px solid var(--border);
+  color: var(--text-sec); font-size: 12px;
+}
+
+@media (max-width: 768px) {
+  nav { padding: 0 20px; }
+  .page-hero { padding: 120px 24px 40px; }
+  .join-wrap { grid-template-columns: 1fr; padding: 0 24px 60px; }
+  .join-steps { padding: 40px 0 0; }
+  .join-form-side { border-left: none; border-top: 1px solid var(--border); padding: 40px 0; }
+  .form-row { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="nav-logo">
+    <img src="assets/logo.png" alt="Bravo Aviation" />
+    <span>BRAVO AVIATION</span>
+  </a>
+  <a href="index.html" class="nav-back">← Voltar ao site</a>
+</nav>
+
+<div class="page-hero">
+  <div class="section-tag">Recrutamento</div>
+  <h1>Faça parte da<br /><span style="color:var(--gold)">Bravo Aviation</span></h1>
+  <p>Preencha o formulário abaixo e nossa equipe irá analisar sua candidatura em até 72 horas.</p>
+</div>
+
+<div class="join-wrap">
+  <div class="join-steps">
+    <p class="lead">Seja bem-vindo à nossa família virtual. O processo de ingresso é simples — basta ter uma conta ativa no IVAO e preencher o formulário ao lado.</p>
+    <div class="steps-list">
+      <div class="step">
+        <div class="step-num">01</div>
+        <div class="step-content">
+          <h4>Conta IVAO ativa</h4>
+          <p>Você precisa ter uma conta registrada e ativa na rede IVAO (ivao.aero).</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <div class="step-content">
+          <h4>Preencha o formulário</h4>
+          <p>Informe seu VID IVAO, nome e preferências de aeronave no formulário ao lado.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <div class="step-content">
+          <h4>Aprovação pelo staff</h4>
+          <p>Nosso staff analisa e aprova sua candidatura em até 72 horas.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">04</div>
+        <div class="step-content">
+          <h4>Bem-vindo a bordo!</h4>
+          <p>Receba seu callsign BRV e comece a voar representando a Bravo Aviation.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="join-form-side">
+    <h3>Candidatura</h3>
+    <p class="sub">Preencha os campos abaixo</p>
+    <form id="joinForm" onsubmit="handleJoin(event)">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Nome</label>
+          <input type="text" id="jf-nome" placeholder="João" required />
+        </div>
+        <div class="form-group">
+          <label>Sobrenome</label>
+          <input type="text" id="jf-sobrenome" placeholder="Silva" required />
+        </div>
+      </div>
+      <div class="form-group">
+        <label>VID IVAO</label>
+        <input type="text" id="jf-vid" placeholder="123456" required />
+      </div>
+      <div class="form-group">
+        <label>E-mail</label>
+        <input type="email" id="jf-email" placeholder="email@exemplo.com" required />
+      </div>
+      <div class="form-group">
+        <label>Aeronave preferida</label>
+        <select id="jf-aircraft">
+          <option value="">Selecione</option>
+          <option>Boeing 737-800</option>
+          <option>Airbus A320</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Callsign desejado</label>
+          <div class="cs-wrap">
+            <span class="cs-prefix">BRV</span>
+            <input type="text" id="jf-callsign" placeholder="0101" maxlength="4" oninput="this.value=this.value.replace(/\D/g,'').slice(0,4)" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Voos fora da malha</label>
+          <select id="jf-fora-malha">
+            <option value="">Selecione</option>
+            <option value="executiva">Executiva / Charter</option>
+            <option value="cargueiro">Cargueiro</option>
+            <option value="ambos">Executiva + Cargueiro</option>
+          </select>
+        </div>
+      </div>
+      <button type="submit" class="btn-submit" id="jf-btn">Enviar candidatura</button>
+    </form>
+    <div class="success-msg" id="joinSuccess">✓ Candidatura enviada! Entraremos em contato em breve.</div>
+  </div>
+</div>
+
+<footer>
+  © 2025 Bravo Aviation · Todos os direitos reservados
+</footer>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+  firebase.initializeApp({
+    apiKey: 'AIzaSyC2dDGhKjzHSclyFwUFNGA60DtXAjLEJ6I',
+    authDomain: 'bravo-aviation.firebaseapp.com',
+    projectId: 'bravo-aviation',
+    storageBucket: 'bravo-aviation.firebasestorage.app',
+    messagingSenderId: '712016002234',
+    appId: '1:712016002234:web:ce7a8e39c28bc6d8ca5683'
+  });
+
+  async function handleJoin(e) {
+    e.preventDefault();
+    const firstName = document.getElementById('jf-nome').value.trim();
+    const lastName  = document.getElementById('jf-sobrenome').value.trim();
+    const vid       = document.getElementById('jf-vid').value.trim();
+    const email     = document.getElementById('jf-email').value.trim();
+    const aircraft  = document.getElementById('jf-aircraft').value;
+    const csNum     = document.getElementById('jf-callsign').value.trim().replace(/\D/g, '').slice(0, 4);
+    const callsign  = csNum.length === 4 ? 'BRV' + csNum : null;
+    const foraMalha = document.getElementById('jf-fora-malha').value || null;
+
+    const btn = document.getElementById('jf-btn');
+    btn.disabled = true;
+    btn.textContent = '...';
+
+    try {
+      await firebase.firestore().collection('applications').add({
+        name: firstName + ' ' + lastName,
+        vid, email, aircraft,
+        callsign,
+        foraMalha,
+        status: 'pending',
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      document.getElementById('joinForm').style.display = 'none';
+      document.getElementById('joinSuccess').classList.add('show');
+    } catch(err) {
+      btn.disabled = false;
+      btn.textContent = 'Enviar candidatura';
+      alert('Erro ao enviar a candidatura. Tente novamente.\n' + err.message);
+    }
+  }
+</script>
+</body>
+</html>
