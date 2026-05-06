@@ -814,7 +814,7 @@ async function loadAll() {
     db.collection('applications').get(),
     db.collection('users').get(),
     db.collection('pireps').get(),
-    db.collection('siteConfig').doc('discord').get()
+    db.collection('siteConfig').doc('1501341988757311528').get()
   ]);
 
   allApplications = appsSnap.docs.map(d=>({ id:d.id, ...d.data() }));
