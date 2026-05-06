@@ -631,6 +631,73 @@ tr:hover td{background:rgba(255,255,255,.02);}
   </div>
 </div>
 
+<!-- Modal: log do voo (PIREP) -->
+<div id="modal-pirep-log" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:9999;align-items:flex-start;justify-content:center;overflow-y:auto;padding:32px 16px;">
+  <div style="background:#100E25;border:1px solid #1E1840;border-radius:8px;width:100%;max-width:560px;padding:28px 28px 24px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <div>
+        <div style="font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:#9A8FB8;margin-bottom:4px">LOG DO VOO</div>
+        <div id="plog-route" style="font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:800;color:#00EEFF;line-height:1"></div>
+        <div id="plog-meta" style="font-size:12px;color:#6A5F8A;margin-top:4px"></div>
+      </div>
+      <div id="plog-score-wrap" style="text-align:center;">
+        <div id="plog-score" style="font-family:'Barlow Condensed',sans-serif;font-size:40px;font-weight:800;line-height:1"></div>
+        <div style="font-size:9px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#6A5F8A">FOQA</div>
+      </div>
+    </div>
+
+    <!-- Telemetria -->
+    <div id="plog-tele-section">
+      <div style="font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#6A5F8A;margin-bottom:10px">Telemetria</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px;">
+        <div style="background:#0A0818;border:1px solid #1E1840;border-radius:4px;padding:12px 10px;text-align:center;">
+          <div id="plog-lr" style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800"></div>
+          <div style="font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#6A5F8A;margin-top:3px">Taxa Pouso</div>
+        </div>
+        <div style="background:#0A0818;border:1px solid #1E1840;border-radius:4px;padding:12px 10px;text-align:center;">
+          <div id="plog-alt" style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:#C0BAD8"></div>
+          <div style="font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#6A5F8A;margin-top:3px">Alt. Máx.</div>
+        </div>
+        <div style="background:#0A0818;border:1px solid #1E1840;border-radius:4px;padding:12px 10px;text-align:center;">
+          <div id="plog-spd" style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:#C0BAD8"></div>
+          <div style="font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#6A5F8A;margin-top:3px">Vel. Máx.</div>
+        </div>
+        <div style="background:#0A0818;border:1px solid #1E1840;border-radius:4px;padding:12px 10px;text-align:center;">
+          <div id="plog-dist" style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:#C0BAD8"></div>
+          <div style="font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#6A5F8A;margin-top:3px">Distância</div>
+        </div>
+        <div style="background:#0A0818;border:1px solid #1E1840;border-radius:4px;padding:12px 10px;text-align:center;">
+          <div id="plog-fuel" style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:#C0BAD8"></div>
+          <div style="font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#6A5F8A;margin-top:3px">Combustível</div>
+        </div>
+        <div style="background:#0A0818;border:1px solid #1E1840;border-radius:4px;padding:12px 10px;text-align:center;">
+          <div id="plog-fl" style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:#C0BAD8"></div>
+          <div style="font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#6A5F8A;margin-top:3px">FL / Duração</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Violações -->
+    <div id="plog-viols-section" style="margin-bottom:20px;">
+      <div style="font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#6A5F8A;margin-bottom:8px">Violações FOQA</div>
+      <div id="plog-viols"></div>
+    </div>
+
+    <!-- Obs piloto -->
+    <div id="plog-obs-wrap" style="display:none;margin-bottom:20px;">
+      <div style="font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#6A5F8A;margin-bottom:6px">Observações do piloto</div>
+      <div id="plog-obs" style="font-size:13px;color:#C0BAD8;background:#0A0818;border:1px solid #1E1840;border-radius:4px;padding:10px 12px;line-height:1.6"></div>
+    </div>
+
+    <!-- Ações -->
+    <div id="plog-actions" style="display:flex;gap:10px;margin-top:4px;">
+      <button id="plog-approve-btn" style="flex:1;padding:11px;background:#3db07a;color:#fff;border:none;font-weight:700;font-size:13px;border-radius:4px;cursor:pointer;font-family:'Inter',sans-serif;letter-spacing:.05em;" onclick="pirepLogAction('approve')">✔ Aprovar</button>
+      <button id="plog-reject-btn"  style="flex:1;padding:11px;background:#e05555;color:#fff;border:none;font-weight:700;font-size:13px;border-radius:4px;cursor:pointer;font-family:'Inter',sans-serif;letter-spacing:.05em;" onclick="pirepLogAction('reject')">✗ Recusar</button>
+      <button style="padding:11px 18px;background:transparent;color:#9A8FB8;border:1px solid #1E1840;font-size:13px;border-radius:4px;cursor:pointer;" onclick="closePirepLog()">Fechar</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -1339,7 +1406,10 @@ function renderPireps() {
       <td style="font-size:11px;">${p.sim||'—'}${netBadge(p.network)}</td>
       <td style="font-size:11px;font-weight:700;color:${p.foqaScore===100?'#4ade80':p.foqaScore>=75?'#f59e0b':'#ff4d4d'}">${p.foqaScore != null ? p.foqaScore+'%' : (p.source==='acars'?'—':'N/A')}</td>
       <td><span class="badge ${p.status}">${p.status==='pending'?'Pendente':p.status==='approved'?'Aprovado':'Recusado'}</span></td>
-      <td style="display:flex;gap:6px;">${actions}</td>
+      <td style="display:flex;gap:6px;">
+        <button class="btn-sm" onclick="openPirepLog('${p.id}')" title="Ver log do voo">📋</button>
+        ${actions}
+      </td>
     </tr>`;}).join('');
 }
 
@@ -1356,7 +1426,6 @@ function durToHours(dur) {
 }
 
 async function approvePirep(pirepId, userId, dur) {
-  if (!confirm('Aprovar este PIREP?')) return;
   const hours = durToHours(dur);
   const pilot = allPilots.find(p=>p.id===userId);
   const newHours   = ((pilot?.hours||0) + hours);
@@ -1373,11 +1442,112 @@ async function approvePirep(pirepId, userId, dur) {
 }
 
 async function rejectPirep(pirepId) {
-  if (!confirm('Recusar este PIREP?')) return;
   await db.collection('pireps').doc(pirepId).update({ status: 'rejected' });
   const pirep = allPireps.find(p=>p.id===pirepId);
   if (pirep) pirep.status = 'rejected';
   updateBadges(); renderOverview(); renderPireps();
+}
+
+/* ── PIREP LOG MODAL ── */
+let _logPirepId = null;
+
+function openPirepLog(pirepId) {
+  const p = allPireps.find(x => x.id === pirepId);
+  if (!p) return;
+  const pilot = allPilots.find(u => u.id === p.userId);
+  _logPirepId = pirepId;
+
+  const dt = p.date ? new Date(p.date).toLocaleDateString('pt-BR') : '—';
+  document.getElementById('plog-route').textContent = `${p.dep} → ${p.arr}`;
+  document.getElementById('plog-meta').textContent  =
+    `${pilot ? pilot.name : '—'}  ·  ${p.ac || '—'}  ·  ${dt}  ·  ${p.sim || '—'}`;
+
+  // FOQA score
+  const scoreEl = document.getElementById('plog-score');
+  if (p.foqaScore != null) {
+    scoreEl.textContent = p.foqaScore + '%';
+    scoreEl.style.color = p.foqaScore === 100 ? '#4ade80' : p.foqaScore >= 75 ? '#f59e0b' : '#ff4d4d';
+  } else {
+    scoreEl.textContent = p.source === 'acars' ? '—' : 'N/A';
+    scoreEl.style.color = '#6A5F8A';
+  }
+
+  // Telemetria (apenas ACARS)
+  const teleSection = document.getElementById('plog-tele-section');
+  if (p.source === 'acars') {
+    teleSection.style.display = '';
+    const lr = p.landingRate || 0;
+    const lrEl = document.getElementById('plog-lr');
+    lrEl.textContent = '-' + lr + ' FPM';
+    lrEl.style.color = lr <= 200 ? '#4ade80' : lr <= 400 ? '#f59e0b' : '#ff4d4d';
+    document.getElementById('plog-alt').textContent  = (p.maxAlt  ? p.maxAlt.toLocaleString('pt-BR')  + ' ft'  : '—');
+    document.getElementById('plog-spd').textContent  = (p.maxSpd  ? p.maxSpd  + ' kts' : '—');
+    document.getElementById('plog-dist').textContent = (p.distance ? p.distance + ' nm' : '—');
+    document.getElementById('plog-fuel').textContent = (p.fuelUsed ? p.fuelUsed.toLocaleString('pt-BR') + ' gal' : '—');
+    document.getElementById('plog-fl').textContent   = `FL${p.fl || '—'} · ${p.dur || '—'}`;
+  } else {
+    teleSection.style.display = 'none';
+  }
+
+  // Violações
+  const violsSection = document.getElementById('plog-viols-section');
+  const violsEl = document.getElementById('plog-viols');
+  const viols = p.foqaViolations || [];
+  if (viols.length) {
+    violsSection.style.display = '';
+    violsEl.innerHTML = viols.map(v => {
+      const isCoc = v.cat === 'CoC';
+      return `<div style="display:flex;gap:8px;align-items:flex-start;padding:7px 10px;background:${isCoc?'rgba(224,85,85,0.1)':'rgba(240,165,0,0.08)'};border:1px solid ${isCoc?'rgba(224,85,85,0.3)':'rgba(240,165,0,0.25)'};border-radius:3px;margin-bottom:5px;font-size:12px;">
+        <span style="font-weight:700;color:${isCoc?'#e05555':'#f59e0b'};min-width:36px;">[${v.cat}]</span>
+        <span style="color:#C0BAD8;flex:1">${v.desc}</span>
+        ${v.pts ? `<span style="color:${isCoc?'#e05555':'#f59e0b'};font-weight:700;font-size:11px;">−${v.pts}pts</span>` : ''}
+      </div>`;
+    }).join('');
+  } else {
+    violsSection.style.display = '';
+    violsEl.innerHTML = '<div style="font-size:12px;color:#4ade80;padding:7px 0">✓ Nenhuma violação registrada</div>';
+  }
+
+  // Obs piloto
+  const obsWrap = document.getElementById('plog-obs-wrap');
+  if (p.obs) {
+    obsWrap.style.display = '';
+    document.getElementById('plog-obs').textContent = p.obs;
+  } else {
+    obsWrap.style.display = 'none';
+  }
+
+  // Ações: mostrar/ocultar conforme status
+  const actionsEl = document.getElementById('plog-actions');
+  const approveBtn = document.getElementById('plog-approve-btn');
+  const rejectBtn  = document.getElementById('plog-reject-btn');
+  if (p.status === 'pending') {
+    actionsEl.style.display = 'flex';
+    approveBtn.style.display = '';
+    rejectBtn.style.display  = '';
+  } else {
+    approveBtn.style.display = 'none';
+    rejectBtn.style.display  = 'none';
+  }
+
+  document.getElementById('modal-pirep-log').style.display = 'flex';
+}
+
+function closePirepLog() {
+  document.getElementById('modal-pirep-log').style.display = 'none';
+  _logPirepId = null;
+}
+
+async function pirepLogAction(action) {
+  if (!_logPirepId) return;
+  const p = allPireps.find(x => x.id === _logPirepId);
+  if (!p) return;
+  closePirepLog();
+  if (action === 'approve') {
+    await approvePirep(p.id, p.userId, p.dur);
+  } else {
+    await rejectPirep(p.id);
+  }
 }
 
 /* ── FLEET ADMIN ── */
