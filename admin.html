@@ -512,7 +512,8 @@ tr:hover td{background:rgba(255,255,255,.02);}
       <button onclick="navigator.clipboard.writeText(document.getElementById('access-modal-pwd').textContent).then(()=>toast('Senha copiada!'))" style="background:none;border:1px solid var(--border);color:var(--text-sec);padding:5px 12px;border-radius:4px;font-size:11px;cursor:pointer;">Copiar senha</button>
     </div>
     <p style="font-size:11px;color:var(--text-dim);margin-bottom:20px;">No primeiro acesso o piloto será obrigado a definir uma nova senha.</p>
-    <div class="modal-actions">
+    <div class="modal-actions" style="gap:8px;">
+      <button class="btn-gold" id="access-modal-resend-btn" onclick="resendWelcomeEmailFromModal()" style="background:var(--surface3);color:var(--text);border:1px solid var(--border);">Reenviar e-mail</button>
       <button class="btn-gold" onclick="document.getElementById('accessModal').classList.remove('open')">Fechar</button>
     </div>
   </div>
@@ -701,6 +702,7 @@ tr:hover td{background:rgba(255,255,255,.02);}
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script>
 firebase.initializeApp({
   apiKey: "AIzaSyC2dDGhKjzHSclyFwUFNGA60DtXAjLEJ6I",
@@ -712,6 +714,14 @@ firebase.initializeApp({
 });
 const auth = firebase.auth();
 const db   = firebase.firestore();
+
+/* ── EMAILJS CONFIG ── Preencha após criar o serviço SMTP e template */
+const EMAILJS_PUBLIC_KEY  = 'd39OaaYIgoVP7L9Fo';
+const EMAILJS_SERVICE_ID  = 'service_q8hk388';
+const EMAILJS_TEMPLATE_ID = 'template_mhwt2jr';
+if (EMAILJS_PUBLIC_KEY !== 'COLE_SUA_PUBLIC_KEY_AQUI') {
+  emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
+}
 
 let adminUser = null;
 let allApplications = [];
@@ -1097,6 +1107,22 @@ function filterApps(status, el) {
   renderApps();
 }
 
+async function sendWelcomeEmail(pilotName, pilotEmail, tempPassword) {
+  if (EMAILJS_PUBLIC_KEY === 'COLE_SUA_PUBLIC_KEY_AQUI') return false;
+  try {
+    await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+      pilot_name:    pilotName,
+      pilot_email:   pilotEmail,
+      temp_password: tempPassword,
+      site_url:      window.location.origin + '/dashboard.html'
+    });
+    return true;
+  } catch(e) {
+    console.warn('EmailJS error:', e);
+    return false;
+  }
+}
+
 async function approveApp(appId) {
   if (!confirm('Aprovar esta candidatura?')) return;
   const app = allApplications.find(a => a.id === appId);
@@ -1135,9 +1161,8 @@ async function approveApp(appId) {
       })
     }, { merge: true });
 
-    // Tenta enviar e-mail de redefinição (best effort)
-    let emailSent = false;
-    try { await auth.sendPasswordResetEmail(app.email); emailSent = true; } catch(_) {}
+    // Envia e-mail de boas-vindas com credenciais via EmailJS
+    const emailSent = await sendWelcomeEmail(app.name, app.email, tempPwd);
 
     app.status = 'approved';
     allPilots.push({ id: newUid, name: app.name, vid: app.vid, email: app.email,
@@ -1188,7 +1213,23 @@ async function approveApp(appId) {
   }
 }
 
+let _accessModalData = {};
+async function resendWelcomeEmailFromModal() {
+  const btn = document.getElementById('access-modal-resend-btn');
+  btn.disabled = true; btn.textContent = 'Enviando...';
+  const ok = await sendWelcomeEmail(_accessModalData.name, _accessModalData.email, _accessModalData.pwd);
+  btn.disabled = false; btn.textContent = 'Reenviar e-mail';
+  if (ok) {
+    toast('E-mail reenviado para ' + _accessModalData.email);
+    document.getElementById('access-modal-email-status').textContent = '✓ E-mail reenviado para ' + _accessModalData.email;
+    document.getElementById('access-modal-email-status').style.color = 'var(--success)';
+  } else {
+    toast('Falha ao reenviar. Configure o EmailJS primeiro.', 'err');
+  }
+}
+
 function showAccessModal(name, email, pwd, emailSent) {
+  _accessModalData = { name, email, pwd };
   document.getElementById('access-modal-name').textContent  = name;
   document.getElementById('access-modal-email').textContent = email;
   document.getElementById('access-modal-pwd').textContent   = pwd;
