@@ -1483,7 +1483,6 @@ async function approvePirep(pirepId, userId, dur) {
     userId ? db.collection('users').doc(userId).update({ hours: newHours, flights: newFlights }) : Promise.resolve()
   ]);
   const pirep = allPireps.find(p=>p.id===pirepId);
-  const pirep = allPireps.find(p=>p.id===pirepId);
   if (pirep) pirep.status = 'approved';
   if (pilot) { pilot.hours = newHours; pilot.flights = newFlights; }
   updateBadges(); renderOverview(); renderPireps(); renderPilots();
