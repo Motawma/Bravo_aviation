@@ -827,7 +827,8 @@ function closeModal() {
 }
 
 async function confirmRoute() {
-  if (!selectedRoute || !currentUser) return;
+  if (!selectedRoute) { toast('Nenhuma rota selecionada.', 'err'); return; }
+  if (!currentUser)   { toast('Usuário não autenticado.', 'err'); return; }
   const btn = document.getElementById('btn-confirm');
   btn.disabled = true;
   btn.textContent = 'Salvando...';
@@ -836,7 +837,7 @@ async function confirmRoute() {
   const obs      = document.getElementById('modal-obs').value.trim();
 
   try {
-    await db.collection('users').doc(currentUser.uid).update({
+    await db.collection('users').doc(currentUser.uid).set({
       pendingFlight: {
         dep:         selectedRoute.dep,
         arr:         selectedRoute.arr,
@@ -850,12 +851,13 @@ async function confirmRoute() {
         obs:         obs,
         savedAt:     firebase.firestore.FieldValue.serverTimestamp()
       }
-    });
+    }, { merge: true });
     btn.textContent = '✔ Confirmado';
-    setTimeout(() => { window.location.href = 'brief.html'; }, 800);
+    setTimeout(() => { window.location.href = 'brief.html'; }, 600);
   } catch(e) {
-    console.error(e);
-    toast('Erro ao salvar rota.', 'err');
+    console.error('[BRV] confirmRoute error:', e);
+    const msg = e?.code ? `Erro Firestore: ${e.code}` : (e?.message || 'Erro ao salvar rota.');
+    toast(msg, 'err');
     btn.disabled = false;
     btn.textContent = '✔ Confirmar';
   }
