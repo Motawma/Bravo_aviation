@@ -733,7 +733,7 @@
               <label>Callsign desejado</label>
               <div class="cs-wrap">
                 <span class="cs-prefix">BRV</span>
-                <input type="text" id="jf-callsign" placeholder="101" maxlength="6" />
+                <input type="text" id="jf-callsign" placeholder="1234" maxlength="4" oninput="this.value=this.value.replace(/\D/g,'').slice(0,4)" />
               </div>
             </div>
             <div class="form-group">
@@ -982,8 +982,8 @@
     const vid        = document.getElementById('jf-vid').value.trim();
     const email      = document.getElementById('jf-email').value.trim();
     const aircraft   = document.getElementById('jf-aircraft').value;
-    const csNum      = document.getElementById('jf-callsign').value.trim().replace(/\D/g, '');
-    const callsign   = csNum ? 'BRV' + csNum : null;
+    const csNum      = document.getElementById('jf-callsign').value.trim().replace(/\D/g, '').slice(0, 4);
+    const callsign   = csNum.length === 4 ? 'BRV' + csNum : null;
     const foraMalha  = document.getElementById('jf-fora-malha').value || null;
 
     const btn = e.target.querySelector('.btn-submit');
