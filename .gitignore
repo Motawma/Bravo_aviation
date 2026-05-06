@@ -1,3 +1,4 @@
 *.zip
 uploads/*
 !uploads/.gitkeep
+discord-setup/
