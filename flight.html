@@ -743,7 +743,7 @@ function renderRoutes() {
         </div>
       </div>
       <div class="rc-actions">
-        <button class="btn-fly" onclick="openModal(${JSON.stringify(r).split('"').join("'")})">▶ Voar</button>
+        <button class="btn-fly" onclick="openModal('${r.id}')">▶ Voar</button>
       </div>
     </div>`).join('');
 
@@ -803,10 +803,11 @@ function openSimbrief(r) {
 }
 
 /* ── MODAL ── */
-function openModal(r) {
-  if (typeof r === 'string') {
-    r = JSON.parse(r.replace(/'/g, '"'));
-  }
+function openModal(rOrId) {
+  const r = typeof rOrId === 'string'
+    ? allRoutes.find(x => x.id === rOrId)
+    : rOrId;
+  if (!r) return;
   selectedRoute = r;
   document.getElementById('mp-dep').textContent    = r.dep || '—';
   document.getElementById('mp-arr').textContent    = r.arr || '—';
