@@ -255,6 +255,7 @@ function renderBrief(pf, userData) {
   const ac    = pf.aircraft || userData.aircraft || 'A320';
   const fn    = pf.flightNumber || 'BRV';
   const route = pf.route || '';
+  const ivaoPrefileUrl = pf.ivaoPrefileUrl || null;
   const depApt = getApt(dep);
   const arrApt = getApt(arr);
 
@@ -340,8 +341,8 @@ function renderBrief(pf, userData) {
           <a class="int-btn vatsim" href="https://my.vatsim.net/pilots/flightplan/create?callsign=${fn}&dep=${dep}&arr=${arr}&aircraft=${encodeURIComponent(ac)}&altitude=${fl}00&route=${encodeURIComponent(route||'DCT')}" target="_blank">
             🔵 VATSIM Prefile
           </a>
-          <a class="int-btn ivao" href="${buildIvaoUrl(dep,arr,fl,fn,ac,route,eet)}" target="_blank">
-            🟣 IVAO Prefile
+          <a class="int-btn ivao" href="${ivaoPrefileUrl || buildIvaoUrl(dep,arr,fl,fn,ac,route,eet)}" target="_blank">
+            🟣 IVAO Prefile${ivaoPrefileUrl ? ' ✓ SimBrief' : ''}
           </a>
           <button class="int-btn import" onclick="importFromSimbrief('${dep}','${arr}')">
             ↙ Importar rota do SimBrief (AIRAC atual)
@@ -513,8 +514,11 @@ async function importFromSimbrief(dep, arr) {
     const eetStr  = eetSec ? `${Math.floor(eetSec/3600)}h${String(Math.floor((eetSec%3600)/60)).padStart(2,'0')}` : '';
     const dist    = data.general.distance_nm  ? parseInt(data.general.distance_nm) : null;
 
+    // Captura link IVAO Prefile gerado pelo SimBrief (campo 18 completo)
+    const ivaoPrefileUrl = data.prefile?.ivao?.link || data.links?.ivao || null;
+
     await db.collection('users').doc(fbUser.uid).set({
-      pendingFlight: { dep: ofpDep, arr: ofpArr, route, plannedFL: fl, eet: eetStr, distance: dist }
+      pendingFlight: { dep: ofpDep, arr: ofpArr, route, plannedFL: fl, eet: eetStr, distance: dist, ivaoPrefileUrl: ivaoPrefileUrl || null }
     }, { merge: true });
 
     btn.textContent = '✓ Rota importada! Recarregando...';
