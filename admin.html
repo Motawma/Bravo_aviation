@@ -26,7 +26,7 @@
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 html,body{height:100%;}
-body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:14px;display:flex;overflow:hidden;}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:14px;display:flex;overflow:hidden;visibility:hidden;}
 
 /* SIDEBAR */
 aside{width:var(--sidebar);min-height:100vh;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;z-index:10;}
@@ -718,6 +718,13 @@ let allApplications = [];
 let allPilots = [];
 let allPireps = [];
 let discordWebhookUrl = null;
+
+function sanitize(s) {
+  if (s == null) return '—';
+  const el = document.createElement('div');
+  el.textContent = String(s);
+  return el.innerHTML;
+}
 let currentAppFilter   = 'pending';
 let currentPirepFilter = 'pending';
 
@@ -738,6 +745,7 @@ auth.onAuthStateChanged(async (u) => {
     window.location.href = 'dashboard.html'; return;
   }
   adminUser = { uid: u.uid, ...snap.data() };
+  document.body.style.visibility = 'visible';
   const av = (adminUser.name || 'AD').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
   document.getElementById('admin-avatar').textContent = av;
   document.getElementById('admin-name').textContent = adminUser.name || 'Admin';
@@ -847,12 +855,12 @@ function renderRoutes() {
   }
   tbody.innerHTML = allRoutes.map(r => `
     <tr>
-      <td class="td-main">${r.flightNumber || '—'}</td>
-      <td><span class="route-tag-ac">${r.aircraft || '—'}</span></td>
-      <td>${r.dep || '?'} → ${r.arr || '?'}</td>
-      <td>FL${r.plannedFL || '—'}</td>
-      <td>${r.eet || '—'}</td>
-      <td>${r.distance ? r.distance + ' NM' : '—'}</td>
+      <td class="td-main">${sanitize(r.flightNumber)}</td>
+      <td><span class="route-tag-ac">${sanitize(r.aircraft)}</span></td>
+      <td>${sanitize(r.dep)} → ${sanitize(r.arr)}</td>
+      <td>FL${sanitize(r.plannedFL)}</td>
+      <td>${sanitize(r.eet)}</td>
+      <td>${r.distance ? sanitize(r.distance) + ' NM' : '—'}</td>
       <td>
         <span class="badge ${r.active !== false ? 'approved' : 'rejected'}">
           ${r.active !== false ? 'Ativa' : 'Inativa'}
@@ -1020,8 +1028,8 @@ function renderOverview() {
   } else {
     tbody.innerHTML = recent.map(a=>`
       <tr>
-        <td class="td-main">${a.name||'—'}</td>
-        <td>${a.vid||'—'}</td>
+        <td class="td-main">${sanitize(a.name)}</td>
+        <td>${sanitize(a.vid)}</td>
         <td><span class="badge pending">Pendente</span></td>
         <td style="display:flex;gap:6px;">
           <button class="btn-sm approve" onclick="approveApp('${a.id}')">Aprovar</button>
@@ -1039,9 +1047,9 @@ function renderOverview() {
     ptbody.innerHTML = pendPireps.map(p=>{
       const pilot = allPilots.find(u=>u.id===p.userId);
       return `<tr>
-        <td class="td-main">${pilot?pilot.name:'—'}</td>
-        <td>${p.dep}→${p.arr}</td>
-        <td>${p.dur}</td>
+        <td class="td-main">${sanitize(pilot?.name)}</td>
+        <td>${sanitize(p.dep)}→${sanitize(p.arr)}</td>
+        <td>${sanitize(p.dur)}</td>
         <td style="display:flex;gap:6px;">
           <button class="btn-sm approve" onclick="approvePirep('${p.id}','${p.userId}','${p.dur}')">Aprovar</button>
           <button class="btn-sm reject"  onclick="rejectPirep('${p.id}')">Recusar</button>
@@ -1070,12 +1078,12 @@ function renderApps() {
                   : a.foraMalha === 'ambos'     ? 'Exec + Cargo'
                   : '—';
     return `<tr>
-      <td class="td-main">${a.name||'—'}</td>
-      <td>${a.vid||'—'}</td>
-      <td style="font-family:'Barlow Condensed',sans-serif;font-weight:700;color:var(--gold);">${csLabel}</td>
-      <td style="font-size:12px;">${fmLabel}</td>
-      <td>${a.email||'—'}</td>
-      <td>${a.aircraft||'—'}</td>
+      <td class="td-main">${sanitize(a.name)}</td>
+      <td>${sanitize(a.vid)}</td>
+      <td style="font-family:'Barlow Condensed',sans-serif;font-weight:700;color:var(--gold);">${sanitize(csLabel)}</td>
+      <td style="font-size:12px;">${sanitize(fmLabel)}</td>
+      <td>${sanitize(a.email)}</td>
+      <td>${sanitize(a.aircraft)}</td>
       <td>${dt}</td>
       <td><span class="badge ${a.status}">${a.status==='pending'?'Pendente':a.status==='approved'?'Aprovada':'Recusada'}</span></td>
       <td style="display:flex;gap:6px;">${actions}</td>
@@ -1191,7 +1199,10 @@ function showAccessModal(name, email, pwd, emailSent) {
   document.getElementById('accessModal').classList.add('open');
 }
 
-async function resendAccessEmail(email) {
+async function resendAccessEmail(uid) {
+  const pilot = allPilots.find(p => p.id === uid);
+  const email = pilot?.email || '';
+  if (!email) { toast('E-mail do piloto não encontrado.', 'err'); return; }
   try {
     await auth.sendPasswordResetEmail(email);
     toast('E-mail de acesso reenviado para ' + email);
@@ -1238,17 +1249,17 @@ function renderPilots() {
   }
   tbody.innerHTML = allPilots.sort((a,b)=>(b.hours||0)-(a.hours||0)).map(p=>`
     <tr>
-      <td class="td-main">${p.name||'—'}</td>
-      <td>${p.vid||'—'}</td>
-      <td style="font-size:12px;">${p.email||'—'}</td>
-      <td>${getRank(p.hours||0).name}</td>
+      <td class="td-main">${sanitize(p.name)}</td>
+      <td>${sanitize(p.vid)}</td>
+      <td style="font-size:12px;">${sanitize(p.email)}</td>
+      <td>${sanitize(getRank(p.hours||0).name)}</td>
       <td><strong style="color:var(--gold)">${(p.hours||0).toFixed(1)}h</strong></td>
       <td>${p.flights||0}</td>
       <td><span class="badge ${p.role==='admin'?'admin':'pilot'}">${p.role==='admin'?'Admin':'Pilot'}</span></td>
       <td style="display:flex;gap:6px;">
         <button class="btn-sm" onclick="openEditModal('${p.id}')">Editar</button>
-        <button class="btn-sm" onclick="resendAccessEmail('${p.email||''}')">Reenviar acesso</button>
-        <button class="btn-sm reject" onclick="deletePilot('${p.id}','${(p.name||'').replace(/'/g,'')}')">Excluir</button>
+        <button class="btn-sm" onclick="resendAccessEmail('${p.id}')">Reenviar acesso</button>
+        <button class="btn-sm reject" onclick="deletePilot('${p.id}')">Excluir</button>
       </td>
     </tr>`).join('');
 }
@@ -1281,8 +1292,9 @@ function toast(msg, type='ok') {
 }
 
 /* ── DELETE PILOT ── */
-async function deletePilot(uid, name) {
+async function deletePilot(uid) {
   const pilot = allPilots.find(p => p.id === uid);
+  const name  = pilot?.name  || uid;
   const email = pilot?.email || '';
   if (!confirm(`Excluir o piloto "${name}"?\n\nO perfil será removido e o acesso bloqueado.\n\nATENÇÃO: para reutilizar o e-mail "${email}" em nova conta, exclua também em:\nFirebase Console → Authentication → usuários`)) return;
   try {
@@ -1400,13 +1412,13 @@ function renderPireps() {
          <button class="btn-sm reject"  onclick="rejectPirep('${p.id}')">Recusar</button>`
       : `<span style="font-size:12px;color:var(--text-dim);">${p.status==='approved'?'Aprovado':'Recusado'}</span>`;
     return `<tr>
-      <td class="td-main">${pilot?pilot.name:'—'}</td>
-      <td>${p.dep}→${p.arr}</td>
-      <td>${p.ac}</td>
-      <td>${p.dur}</td>
-      <td>FL${p.fl||'—'}</td>
+      <td class="td-main">${sanitize(pilot?.name)}</td>
+      <td>${sanitize(p.dep)}→${sanitize(p.arr)}</td>
+      <td>${sanitize(p.ac)}</td>
+      <td>${sanitize(p.dur)}</td>
+      <td>FL${sanitize(p.fl)}</td>
       <td>${dt}</td>
-      <td style="font-size:11px;">${p.sim||'—'}${netBadge(p.network)}</td>
+      <td style="font-size:11px;">${sanitize(p.sim)}${netBadge(p.network)}</td>
       <td style="font-size:11px;font-weight:700;color:${p.foqaScore===100?'#4ade80':p.foqaScore>=75?'#f59e0b':'#ff4d4d'}">${p.foqaScore != null ? p.foqaScore+'%' : (p.source==='acars'?'—':'N/A')}</td>
       <td><span class="badge ${p.status}">${p.status==='pending'?'Pendente':p.status==='approved'?'Aprovado':'Recusado'}</span></td>
       <td style="display:flex;gap:6px;">

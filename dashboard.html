@@ -786,6 +786,13 @@ const DAYS_CAL  = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 // Oculta tudo até confirmar auth
 document.body.style.visibility = 'hidden';
 
+function sanitize(s) {
+  if (s == null) return '—';
+  const el = document.createElement('div');
+  el.textContent = String(s);
+  return el.innerHTML;
+}
+
 // Flag para evitar double-redirect caso onAuthStateChanged dispare mais de uma vez
 let _authHandled = false;
 
@@ -1074,9 +1081,9 @@ function initUserUI() {
   } else {
     tbody.innerHTML = recent.map(f => `
       <tr>
-        <td class="td-main">${f.dep} → ${f.arr}</td>
-        <td>${f.ac}</td>
-        <td>${f.dur}</td>
+        <td class="td-main">${sanitize(f.dep)} → ${sanitize(f.arr)}</td>
+        <td>${sanitize(f.ac)}</td>
+        <td>${sanitize(f.dur)}</td>
         <td>${netBadge(f.network)}<span class="status-badge ${f.status}">${f.status==='approved'?'Aprovado':f.status==='pending'?'Pendente':'Recusado'}</span></td>
       </tr>`).join('');
   }
@@ -1126,12 +1133,12 @@ function initUserUI() {
     ftbody.innerHTML = flights.map((f,i) => `
       <tr>
         <td>${flights.length - i}</td>
-        <td class="td-main">${f.dep} → ${f.arr}</td>
-        <td>${f.ac}</td>
-        <td>${f.dur}</td>
-        <td>FL${f.fl}</td>
+        <td class="td-main">${sanitize(f.dep)} → ${sanitize(f.arr)}</td>
+        <td>${sanitize(f.ac)}</td>
+        <td>${sanitize(f.dur)}</td>
+        <td>FL${sanitize(f.fl)}</td>
         <td>${new Date(f.date).toLocaleDateString('pt-BR')}</td>
-        <td><span class="tag-sim">${f.sim}</span>${netBadge(f.network)}</td>
+        <td><span class="tag-sim">${sanitize(f.sim)}</span>${netBadge(f.network)}</td>
         <td><span class="status-badge ${f.status}">${f.status==='approved'?'Aprovado':f.status==='pending'?'Pendente':'Recusado'}</span></td>
       </tr>`).join('');
   }
