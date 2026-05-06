@@ -717,6 +717,7 @@ let adminUser = null;
 let allApplications = [];
 let allPilots = [];
 let allPireps = [];
+let discordWebhookUrl = null;
 let currentAppFilter   = 'pending';
 let currentPirepFilter = 'pending';
 
@@ -801,15 +802,17 @@ function setupLiveFlights() {
 
 /* ── LOAD DATA ── */
 async function loadAll() {
-  const [appsSnap, pilotsSnap, pirepsSnap] = await Promise.all([
+  const [appsSnap, pilotsSnap, pirepsSnap, cfgSnap] = await Promise.all([
     db.collection('applications').get(),
     db.collection('users').get(),
-    db.collection('pireps').get()
+    db.collection('pireps').get(),
+    db.collection('siteConfig').doc('discord').get()
   ]);
 
   allApplications = appsSnap.docs.map(d=>({ id:d.id, ...d.data() }));
   allPilots = pilotsSnap.docs.map(d=>({ id:d.id, ...d.data() }));
   allPireps = pirepsSnap.docs.map(d=>({ id:d.id, ...d.data() }));
+  if (cfgSnap.exists) discordWebhookUrl = cfgSnap.data().webhookUrl || null;
 
   updateBadges();
   renderOverview();
@@ -1425,6 +1428,39 @@ function durToHours(dur) {
   return (h||0) + (m||0)/60;
 }
 
+async function notifyDiscordPirep(pirep, pilot, action) {
+  if (!discordWebhookUrl) return;
+  const approved = action === 'approve';
+  const color = approved ? 0x28A745 : 0xDC3545;
+  const icon  = approved ? '✅' : '❌';
+  const label = approved ? 'Aprovado' : 'Recusado';
+  const embed = {
+    title: `${icon} PIREP ${label}`,
+    color,
+    fields: [
+      { name: '👤 Piloto',    value: pilot?.name  || '—', inline: true },
+      { name: '🪪 Callsign',  value: pilot?.callsign || '—', inline: true },
+      { name: '✈️ Aeronave',  value: pirep.ac     || '—', inline: true },
+      { name: '🛫 Rota',      value: `${pirep.dep} → ${pirep.arr}`, inline: true },
+      { name: '⏱️ Duração',   value: pirep.dur    || '—', inline: true },
+      { name: '📅 Data',      value: pirep.date ? new Date(pirep.date).toLocaleDateString('pt-BR') : '—', inline: true },
+    ],
+    footer: { text: 'Bravo Aviation · Sistema de PIREPs' },
+    timestamp: new Date().toISOString()
+  };
+  if (approved && pirep.landingRate != null)
+    embed.fields.push({ name: '🛬 Taxa de pouso', value: `${pirep.landingRate} FPM`, inline: true });
+  if (approved && pirep.score != null)
+    embed.fields.push({ name: '🏆 Score FOQA', value: `${pirep.score}/100`, inline: true });
+  try {
+    await fetch(discordWebhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ embeds: [embed] })
+    });
+  } catch(e) { console.warn('Discord webhook:', e.message); }
+}
+
 async function approvePirep(pirepId, userId, dur) {
   const hours = durToHours(dur);
   const pilot = allPilots.find(p=>p.id===userId);
@@ -1435,17 +1471,21 @@ async function approvePirep(pirepId, userId, dur) {
     userId ? db.collection('users').doc(userId).update({ hours: newHours, flights: newFlights }) : Promise.resolve()
   ]);
   const pirep = allPireps.find(p=>p.id===pirepId);
+  const pirep = allPireps.find(p=>p.id===pirepId);
   if (pirep) pirep.status = 'approved';
   if (pilot) { pilot.hours = newHours; pilot.flights = newFlights; }
   updateBadges(); renderOverview(); renderPireps(); renderPilots();
   toast('PIREP aprovado! Horas atualizadas.');
+  notifyDiscordPirep(pirep || { dep:'?', arr:'?' }, pilot, 'approve');
 }
 
 async function rejectPirep(pirepId) {
   await db.collection('pireps').doc(pirepId).update({ status: 'rejected' });
   const pirep = allPireps.find(p=>p.id===pirepId);
+  const pilot = allPilots.find(p=>p.id===pirep?.userId);
   if (pirep) pirep.status = 'rejected';
   updateBadges(); renderOverview(); renderPireps();
+  notifyDiscordPirep(pirep || { dep:'?', arr:'?' }, pilot, 'reject');
 }
 
 /* ── PIREP LOG MODAL ── */
