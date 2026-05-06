@@ -502,6 +502,7 @@ function buildSimBriefUrl(dep, arr, fl, fn, ac, route) {
           + `&airline=BRV&fltnum=${num}`
           + `&fl=${fl}00`;
   if (route && route.trim()) url += `&route=${encodeURIComponent(route.trim())}`;
+  url += `&rmk=${encodeURIComponent('IVAOVA/BRV')}`;
   return url;
 }
 
