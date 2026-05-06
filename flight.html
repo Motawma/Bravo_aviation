@@ -935,7 +935,12 @@ function openFreeModal(code) {
   document.getElementById('ff-ac-name').textContent = f.name || f.code;
   document.getElementById('ff-btn-vfr').classList.add('active');
   document.getElementById('ff-btn-ifr').classList.remove('active');
-  document.getElementById('ff-callsign').value = '';
+  // Pré-preenche com callsign pessoal do piloto (apenas os dígitos após BRV)
+  const pilotCsNum = (currentUser?.callsign || '').replace(/^BRV/i, '');
+  const csInput = document.getElementById('ff-callsign');
+  csInput.value    = pilotCsNum;
+  csInput.readOnly = !!pilotCsNum;
+  csInput.style.opacity = pilotCsNum ? '0.7' : '1';
   document.getElementById('ff-dep').value = pilotAirport || '';
   document.getElementById('ff-arr').value = '';
   document.getElementById('ff-obs').value = '';
