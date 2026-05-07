@@ -302,6 +302,58 @@ auth.onAuthStateChanged(async (fbUser) => {
 });
 
 /* ── MODAL ROTA MANUAL ── */
+function fpdbNodesToRoute(nodes, dep, arr) {
+  if (!Array.isArray(nodes) || !nodes.length) return '';
+  const parts = [];
+  for (let i = 0; i < nodes.length; i++) {
+    const n = nodes[i];
+    const ident = n.ident || n.name || '';
+    if (!ident || ident === dep || ident === arr) continue;
+    const via = n.via?.ident || '';
+    if (via && via !== 'DCT' && !parts.includes(via)) {
+      if (parts[parts.length - 1] !== via) parts.push(via);
+    }
+    parts.push(ident);
+  }
+  // Remove duplicados consecutivos
+  return parts.filter((v, i) => v !== parts[i - 1]).join(' ');
+}
+
+async function fetchFPDBRoute(dep, arr) {
+  const inp = document.getElementById('mrm-route');
+  if (!inp) return;
+  inp.value = 'Buscando rota...';
+  inp.disabled = true;
+  try {
+    const hdrs = { 'Accept': 'application/json' };
+    // Tenta buscar planos submetidos por usuários (têm SID/STAR)
+    const sRes = await fetch(
+      `https://api.flightplandatabase.com/search/plans?fromICAO=${dep}&toICAO=${arr}&limit=5&sort=popularity`,
+      { headers: hdrs }
+    );
+    if (sRes.ok) {
+      const list = await sRes.json();
+      if (Array.isArray(list) && list.length) {
+        for (const item of list) {
+          const dRes = await fetch(`https://api.flightplandatabase.com/plan/${item.id}`, { headers: hdrs });
+          if (!dRes.ok) continue;
+          const plan = await dRes.json();
+          const nodes = plan.route?.nodes || [];
+          const routeStr = fpdbNodesToRoute(nodes, dep, arr);
+          if (routeStr) {
+            inp.value = routeStr;
+            inp.disabled = false;
+            return;
+          }
+        }
+      }
+    }
+  } catch(_) {}
+  // Fallback: rota já salva no pendingFlight
+  inp.value = _pf?.route || '';
+  inp.disabled = false;
+}
+
 function openRouteModal() {
   document.getElementById('mrm-title').textContent = _pf
     ? 'Rota ' + _pf.dep + ' → ' + _pf.arr
@@ -310,7 +362,8 @@ function openRouteModal() {
   document.getElementById('mrm-fl').value    = _pf?.plannedFL || '';
   document.getElementById('mrm-eet').value   = _pf?.eet || '';
   document.getElementById('modal-route-edit').classList.add('open');
-  setTimeout(() => document.getElementById('mrm-route').focus(), 80);
+  // Busca rota atualizada do FPDB automaticamente
+  if (_pf?.dep && _pf?.arr) fetchFPDBRoute(_pf.dep, _pf.arr);
 }
 function closeRouteModal() {
   document.getElementById('modal-route-edit').classList.remove('open');
