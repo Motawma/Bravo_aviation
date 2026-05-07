@@ -828,17 +828,18 @@ auth.onAuthStateChanged(async (fbUser) => {
     const data = snap.data();
 
     user = {
-      uid:         fbUser.uid,
-      name:        data.name        || fbUser.email,
-      email:       data.email       || fbUser.email,
-      vid:         data.vid         || '000000',
-      hours:       data.hours       || 0,
-      flights:     data.flights     || 0,
-      aircraft:    data.aircraft    || '',
-      joinDate:    data.joinDate    || '',
-      role:        data.role        || 'pilot',
-      permissions: data.permissions || {},
-      opPoints:    data.opPoints    || 0
+      uid:              fbUser.uid,
+      name:             data.name             || fbUser.email,
+      email:            data.email            || fbUser.email,
+      vid:              data.vid              || '000000',
+      hours:            data.hours            || 0,
+      flights:          data.flights          || 0,
+      aircraft:         data.aircraft         || '',
+      joinDate:         data.joinDate         || '',
+      role:             data.role             || 'pilot',
+      permissions:      data.permissions      || {},
+      opPoints:         data.opPoints         || 0,
+      simbriefUsername: data.simbriefUsername || ''
     };
 
     if (user.role === 'admin') {
@@ -1284,31 +1285,44 @@ async function submitPirep(e) {
 /* ── PROFILE SAVE ── */
 async function saveProfile(e) {
   e.preventDefault();
-  user.name             = document.getElementById('edit-name').value;
-  user.email            = document.getElementById('edit-email').value;
+  user.name             = document.getElementById('edit-name').value.trim();
+  user.email            = document.getElementById('edit-email').value.trim();
   user.aircraft         = document.getElementById('edit-aircraft').value;
   user.simbriefUsername = document.getElementById('edit-simbrief').value.trim();
   const newPwd          = document.getElementById('edit-password').value;
-  try {
-    await db.collection('users').doc(user.uid).update({
-      name: user.name, email: user.email, aircraft: user.aircraft,
-      simbriefUsername: user.simbriefUsername || null
-    });
-    if (newPwd.length >= 6) {
-      await firebase.auth().currentUser.updatePassword(newPwd);
-      document.getElementById('edit-password').value = '';
-    } else if (newPwd.length > 0) {
-      alert('A senha deve ter pelo menos 6 caracteres.');
-      return;
-    }
-  } catch(err) {
-    if (err.code === 'auth/requires-recent-login') {
-      alert('Sessão expirada. Faça logout e login novamente para trocar a senha.');
-    } else {
-      alert('Erro ao salvar: ' + err.message);
-    }
+
+  if (newPwd.length > 0 && newPwd.length < 6) {
+    alert('A senha deve ter pelo menos 6 caracteres.');
     return;
   }
+
+  // Salva dados do perfil no Firestore
+  try {
+    await db.collection('users').doc(user.uid).update({
+      name: user.name,
+      email: user.email,
+      aircraft: user.aircraft,
+      simbriefUsername: user.simbriefUsername
+    });
+  } catch(err) {
+    alert('Erro ao salvar perfil: ' + err.message);
+    return;
+  }
+
+  // Troca senha (operação separada)
+  if (newPwd.length >= 6) {
+    try {
+      await firebase.auth().currentUser.updatePassword(newPwd);
+      document.getElementById('edit-password').value = '';
+    } catch(err) {
+      if (err.code === 'auth/requires-recent-login') {
+        alert('Sessão expirada. Faça logout e login novamente para trocar a senha.');
+      } else {
+        alert('Erro ao trocar senha: ' + err.message);
+      }
+    }
+  }
+
   document.getElementById('profile-success').classList.add('show');
   document.getElementById('pf-name').textContent     = user.name;
   document.getElementById('pf-email').textContent    = user.email;
