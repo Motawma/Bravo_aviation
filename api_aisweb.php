@@ -147,18 +147,21 @@ function fpdbRoutes(string $dep, string $arr, int $fl = 350): array {
         $raw  = @file_get_contents(FPDB_BASE . '/auto/generate', false, $ctx);
         $plan = $raw ? json_decode($raw, true) : null;
 
-        if ($plan && !isset($plan['message'])) {
-            // Tenta route como string direta primeiro
+        if ($plan && !isset($plan['message']) && isset($plan['id'])) {
+            // /auto/generate retorna apenas metadados (sem route.nodes).
+            // Busca o detalhe do plano gerado para obter os waypoints.
+            $detail   = httpGet(FPDB_BASE . '/plan/' . $plan['id'], ['Accept: application/json', $authHdr]);
+            $fullPlan = $detail ? json_decode($detail, true) : null;
             $routeStr = '';
-            if (is_string($plan['route'] ?? null) && trim($plan['route']) !== '') {
-                $routeStr = trim(strtoupper($plan['route']));
-                // Remove DEP e ARR se presentes
-                $routeStr = trim(preg_replace('/^' . $dep . '\s+/', '', $routeStr));
-                $routeStr = trim(preg_replace('/\s+' . $arr . '$/', '', $routeStr));
-            }
-            // Senão converte via nodes
-            if (!$routeStr && is_array($plan['route']['nodes'] ?? null)) {
-                $routeStr = nodesToRouteString($plan['route']['nodes'], $dep, $arr);
+            if ($fullPlan) {
+                if (is_string($fullPlan['route'] ?? null) && trim($fullPlan['route']) !== '') {
+                    $routeStr = trim(strtoupper($fullPlan['route']));
+                    $routeStr = trim(preg_replace('/^' . $dep . '\s+/', '', $routeStr));
+                    $routeStr = trim(preg_replace('/\s+' . $arr . '$/', '', $routeStr));
+                }
+                if (!$routeStr && is_array($fullPlan['route']['nodes'] ?? null)) {
+                    $routeStr = nodesToRouteString($fullPlan['route']['nodes'], $dep, $arr);
+                }
             }
             if ($routeStr) {
                 return [[
@@ -335,15 +338,24 @@ switch ($action) {
         $ctx = stream_context_create(['http'=>['method'=>'POST','timeout'=>25,'header'=>implode("\r\n",array_filter(['User-Agent: BravoAviationVA/1.0','Content-Type: application/json','Accept: application/json',$authHdr]))."\r\n",'content'=>$body],'ssl'=>$sslCtx]);
         $genRaw = @file_get_contents(FPDB_BASE . '/auto/generate', false, $ctx);
         $genData = $genRaw ? json_decode($genRaw, true) : null;
+        // Busca detalhe do plano gerado
+        $planId = $genData['id'] ?? null;
+        $detailRaw = $planId ? httpGet(FPDB_BASE . '/plan/' . $planId, array_filter(['Accept: application/json', $authHdr])) : null;
+        $detailData = $detailRaw ? json_decode($detailRaw, true) : null;
+        $nodes = $detailData['route']['nodes'] ?? null;
+        $routeStr = $nodes ? nodesToRouteString($nodes, $dep, $arr) : null;
         echo json_encode([
-            'key_set'       => !empty(FPDB_KEY),
-            'search_ok'     => $searchData !== null,
-            'search_count'  => is_array($searchData) ? count($searchData) : 0,
-            'search_raw'    => $searchRaw ? substr($searchRaw, 0, 300) : null,
-            'generate_ok'   => $genData !== null,
-            'generate_keys' => $genData ? array_keys($genData) : null,
-            'generate_route'=> $genData['route'] ?? null,
-            'generate_raw'  => $genRaw ? substr($genRaw, 0, 500) : null,
+            'key_set'        => !empty(FPDB_KEY),
+            'search_ok'      => $searchData !== null,
+            'search_count'   => is_array($searchData) ? count($searchData) : 0,
+            'generate_ok'    => $genData !== null,
+            'generate_id'    => $planId,
+            'generate_keys'  => $genData ? array_keys($genData) : null,
+            'detail_ok'      => $detailData !== null,
+            'detail_keys'    => $detailData ? array_keys($detailData) : null,
+            'nodes_count'    => is_array($nodes) ? count($nodes) : 0,
+            'route_string'   => $routeStr,
+            'detail_route'   => is_string($detailData['route'] ?? null) ? $detailData['route'] : '(object/null)',
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
         break;
 
