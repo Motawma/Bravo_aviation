@@ -1306,11 +1306,14 @@ async function saveProfile(e) {
 /* ── RANKING ── */
 async function loadRanking() {
   try {
-    const snap = await db.collection('users').where('role','!=','admin').get();
-    PILOTS = snap.docs.map(doc => {
-      const d = doc.data();
-      return { name: d.name || '', vid: d.vid || '', rank: getRank(d.hours||0).name, flights: d.flights||0, hours: d.hours||0, aircraft: d.aircraft||'' };
-    }).sort((a,b) => b.hours - a.hours);
+    const snap = await db.collection('users').get();
+    // Filtra no JS: != no Firestore exclui docs sem o campo role (pilotos sem role definido)
+    PILOTS = snap.docs
+      .filter(doc => doc.data().role !== 'admin')
+      .map(doc => {
+        const d = doc.data();
+        return { name: d.name || '', vid: d.vid || '', rank: getRank(d.hours||0).name, flights: d.flights||0, hours: d.hours||0, aircraft: d.aircraft||'' };
+      }).sort((a,b) => b.hours - a.hours);
   } catch(_) {
     PILOTS = [{ name: user.name, vid: user.vid, rank: getRank(user.hours).name, flights: user.flights, hours: user.hours, aircraft: user.aircraft }];
   }
