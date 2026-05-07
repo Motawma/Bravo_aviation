@@ -73,13 +73,19 @@ function cachePut(string $key, array $payload): void {
 
 // ─── HTTP helper ──────────────────────────────────────────────────────────────
 function httpGet(string $url, array $headers = []): ?string {
-    $ctx = stream_context_create(['http' => [
-        'timeout' => 15,
-        'header'  => implode("\r\n", array_merge(
-            ['User-Agent: BravoAviationVA/1.0'],
-            $headers
-        )) . "\r\n",
-    ]]);
+    $ctx = stream_context_create([
+        'http' => [
+            'timeout' => 20,
+            'header'  => implode("\r\n", array_merge(
+                ['User-Agent: BravoAviationVA/1.0'],
+                $headers
+            )) . "\r\n",
+        ],
+        'ssl' => [
+            'verify_peer'      => false,
+            'verify_peer_name' => false,
+        ],
+    ]);
     $raw = @file_get_contents($url, false, $ctx);
     return $raw === false ? null : $raw;
 }
@@ -112,47 +118,63 @@ function nodesToRouteString(array $nodes, string $dep, string $arr): string {
 
 // ─── Flightplandatabase.com ───────────────────────────────────────────────────
 function fpdbRoutes(string $dep, string $arr, int $fl = 350): array {
+    $authHdr  = 'Authorization: Basic ' . base64_encode(FPDB_KEY . ':');
+    $sslCtx   = ['verify_peer' => false, 'verify_peer_name' => false];
+
     if (FPDB_KEY) {
         // COM key: POST /auto/generate — rota AIRAC atual (server-side, sem CORS)
         $body = json_encode([
             'fromICAO'   => $dep,   'toICAO'    => $arr,
-            'useAWYHI'   => true,   'useAWYLO'  => false,
+            'useAWYHI'   => true,   'useAWYLO'  => true,
             'useNAT'     => false,  'usePACOT'  => false,
             'cruiseAlt'  => $fl * 100,
             'cruiseSpeed'=> 460,
         ]);
-        $ctx = stream_context_create(['http' => [
-            'method'  => 'POST',
-            'timeout' => 20,
-            'header'  => implode("\r\n", [
-                'User-Agent: BravoAviationVA/1.0',
-                'Content-Type: application/json',
-                'Accept: application/json',
-                'Authorization: Basic ' . base64_encode(FPDB_KEY . ':'),
-            ]) . "\r\n",
-            'content' => $body,
-        ]]);
+        $ctx = stream_context_create([
+            'http' => [
+                'method'  => 'POST',
+                'timeout' => 25,
+                'header'  => implode("\r\n", [
+                    'User-Agent: BravoAviationVA/1.0',
+                    'Content-Type: application/json',
+                    'Accept: application/json',
+                    $authHdr,
+                ]) . "\r\n",
+                'content' => $body,
+            ],
+            'ssl' => $sslCtx,
+        ]);
         $raw  = @file_get_contents(FPDB_BASE . '/auto/generate', false, $ctx);
         $plan = $raw ? json_decode($raw, true) : null;
 
-        if (!$plan || isset($plan['message'])) {
-            return ['error' => 'Falha no auto/generate: ' . ($plan['message'] ?? 'sem resposta')];
+        if ($plan && !isset($plan['message'])) {
+            // Tenta route como string direta primeiro
+            $routeStr = '';
+            if (is_string($plan['route'] ?? null) && trim($plan['route']) !== '') {
+                $routeStr = trim(strtoupper($plan['route']));
+                // Remove DEP e ARR se presentes
+                $routeStr = trim(preg_replace('/^' . $dep . '\s+/', '', $routeStr));
+                $routeStr = trim(preg_replace('/\s+' . $arr . '$/', '', $routeStr));
+            }
+            // Senão converte via nodes
+            if (!$routeStr && is_array($plan['route']['nodes'] ?? null)) {
+                $routeStr = nodesToRouteString($plan['route']['nodes'], $dep, $arr);
+            }
+            if ($routeStr) {
+                return [[
+                    'route'    => $routeStr,
+                    'level'    => isset($plan['maxAltitude']) ? (string)(int)($plan['maxAltitude'] / 100) : null,
+                    'distance' => isset($plan['distance'])    ? (int)round($plan['distance']) : null,
+                    'source'   => 'fpdb_generate',
+                ]];
+            }
         }
-
-        $nodes    = $plan['route']['nodes'] ?? [];
-        $routeStr = nodesToRouteString($nodes, $dep, $arr);
-        if (!$routeStr) return ['error' => 'Rota gerada sem waypoints para ' . $dep . '→' . $arr];
-
-        return [[
-            'route'    => $routeStr,
-            'level'    => isset($plan['maxAltitude']) ? (string)(int)($plan['maxAltitude'] / 100) : null,
-            'distance' => isset($plan['distance'])    ? (int)round($plan['distance']) : null,
-            'source'   => 'fpdb_generate',
-        ]];
+        // Fallback: tenta search+detail com key
     }
 
-    // SEM key: GET /search/plans + GET /plan/{id}
-    $hdrs = ['User-Agent: BravoAviationVA/1.0', 'Accept: application/json'];
+    // GET /search/plans + GET /plan/{id} (com ou sem key)
+    $hdrs = ['Accept: application/json'];
+    if (FPDB_KEY) $hdrs[] = $authHdr;
     $url  = FPDB_BASE . '/search/plans?' . http_build_query([
         'fromICAO' => $dep, 'toICAO' => $arr, 'limit' => 5, 'sort' => 'created',
     ]);
@@ -166,8 +188,16 @@ function fpdbRoutes(string $dep, string $arr, int $fl = 350): array {
     $plan   = $detail ? json_decode($detail, true) : null;
     if (!$plan) return ['error' => 'Falha ao buscar detalhes do plano'];
 
-    $nodes    = $plan['route']['nodes'] ?? [];
-    $routeStr = nodesToRouteString($nodes, $dep, $arr);
+    // Tenta route como string
+    $routeStr = '';
+    if (is_string($plan['route'] ?? null) && trim($plan['route']) !== '') {
+        $routeStr = trim(strtoupper($plan['route']));
+        $routeStr = trim(preg_replace('/^' . $dep . '\s+/', '', $routeStr));
+        $routeStr = trim(preg_replace('/\s+' . $arr . '$/', '', $routeStr));
+    }
+    if (!$routeStr && is_array($plan['route']['nodes'] ?? null)) {
+        $routeStr = nodesToRouteString($plan['route']['nodes'], $dep, $arr);
+    }
     if (!$routeStr) return ['error' => 'Plano sem waypoints para ' . $dep . '→' . $arr];
 
     return [[
@@ -288,6 +318,33 @@ switch ($action) {
 
     case 'aerodrome':
         handleAerodrome($_GET['icao'] ?? '');
+        break;
+
+    case 'test':
+        // Diagnóstico: retorna resposta bruta do FPDB para uma rota
+        $dep = strtoupper(preg_replace('/[^A-Z0-9]/', '', $_GET['dep'] ?? 'SBGR'));
+        $arr = strtoupper(preg_replace('/[^A-Z0-9]/', '', $_GET['arr'] ?? 'SBBR'));
+        $sslCtx = ['verify_peer' => false, 'verify_peer_name' => false];
+        $authHdr = FPDB_KEY ? 'Authorization: Basic ' . base64_encode(FPDB_KEY . ':') : '';
+        // Testa GET search
+        $hdrs = array_filter(['Accept: application/json', $authHdr]);
+        $searchRaw = httpGet(FPDB_BASE . '/search/plans?fromICAO=' . $dep . '&toICAO=' . $arr . '&limit=2', $hdrs);
+        $searchData = $searchRaw ? json_decode($searchRaw, true) : null;
+        // Testa POST generate
+        $body = json_encode(['fromICAO'=>$dep,'toICAO'=>$arr,'useAWYHI'=>true,'useAWYLO'=>true,'useNAT'=>false,'usePACOT'=>false,'cruiseAlt'=>35000,'cruiseSpeed'=>460]);
+        $ctx = stream_context_create(['http'=>['method'=>'POST','timeout'=>25,'header'=>implode("\r\n",array_filter(['User-Agent: BravoAviationVA/1.0','Content-Type: application/json','Accept: application/json',$authHdr]))."\r\n",'content'=>$body],'ssl'=>$sslCtx]);
+        $genRaw = @file_get_contents(FPDB_BASE . '/auto/generate', false, $ctx);
+        $genData = $genRaw ? json_decode($genRaw, true) : null;
+        echo json_encode([
+            'key_set'       => !empty(FPDB_KEY),
+            'search_ok'     => $searchData !== null,
+            'search_count'  => is_array($searchData) ? count($searchData) : 0,
+            'search_raw'    => $searchRaw ? substr($searchRaw, 0, 300) : null,
+            'generate_ok'   => $genData !== null,
+            'generate_keys' => $genData ? array_keys($genData) : null,
+            'generate_route'=> $genData['route'] ?? null,
+            'generate_raw'  => $genRaw ? substr($genRaw, 0, 500) : null,
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
         break;
 
     default:
