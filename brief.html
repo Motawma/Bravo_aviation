@@ -275,13 +275,7 @@ async function fetchSimBriefOFP(username) {
     const uid = auth.currentUser?.uid;
     if (uid) db.collection('users').doc(uid).update({ simbriefUsername: username.trim() }).catch(()=>{});
     renderSBCard(data);
-
-    // Auto-aplica se DEP/ARR do SimBrief baterem com a rota selecionada
-    const sbDep = data.origin?.icao_code      || '';
-    const sbArr = data.destination?.icao_code || '';
-    if (_pf && sbDep === _pf.dep && sbArr === _pf.arr) {
-      applySimBrief();
-    }
+    applySimBrief();
   } catch(e) {
     el.innerHTML = `<div style="color:var(--danger);font-size:12px">${e.message}</div>
       <button class="sb-btn sb-btn-primary" style="margin-top:10px;width:100%" onclick="showSBInput()">Tentar outro ID</button>`;
