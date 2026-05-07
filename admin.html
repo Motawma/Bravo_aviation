@@ -929,55 +929,35 @@ async function fpdbFetch(dep, arr, fl) {
   const cached = fpdbCacheGet(dep, arr);
   if (cached) return { ...cached, _source: 'cache' };
 
-  // Auth: Basic base64(apiKey + ":") conforme documentação FPDB
-  const headers = { 'Accept': 'application/json', 'Content-Type': 'application/json' };
-  if (FPDB_KEY) headers['Authorization'] = 'Basic ' + btoa(FPDB_KEY + ':');
+  // FPDB bloqueia o header Authorization em CORS (preflight falha).
+  // Usa GET sem auth — funciona no browser, limite 100 req/dia (suficiente para admin).
+  const hdrs = { 'Accept': 'application/json' };
 
-  let plan;
+  // 1ª chamada: busca lista de planos arquivados entre os dois aeródromos
+  const sRes = await fetch(
+    `https://api.flightplandatabase.com/search/plans?fromICAO=${dep}&toICAO=${arr}&limit=5&sort=created`,
+    { headers: hdrs }
+  );
+  if (sRes.status === 429) throw new Error('429');
+  if (!sRes.ok) throw new Error(`HTTP ${sRes.status}`);
+  const list = await sRes.json();
+  if (!Array.isArray(list) || !list.length) return { dep, arr, airac: airacCycleJS(), routes: [] };
 
-  if (FPDB_KEY) {
-    // COM key: usa /auto/generate — gera rota fresca com AIRAC atual (melhor opção)
-    const cruiseAlt = fl ? parseInt(fl) * 100 : 35000;
-    const res = await fetch('https://api.flightplandatabase.com/auto/generate', {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({
-        fromICAO: dep, toICAO: arr,
-        useAWYHI: true, useAWYLO: false,
-        useNAT: false,  usePACOT: false,
-        cruiseAlt, cruiseSpeed: 460,
-      })
-    });
-    if (res.status === 429) throw new Error('429');
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    plan = await res.json();
-  } else {
-    // SEM key: busca plano existente (2 chamadas, rate limit baixo)
-    const sRes = await fetch(
-      `https://api.flightplandatabase.com/search/plans?fromICAO=${dep}&toICAO=${arr}&limit=3`,
-      { headers: { 'Accept': 'application/json' } }
-    );
-    if (sRes.status === 429) throw new Error('429');
-    if (!sRes.ok) throw new Error(`HTTP ${sRes.status}`);
-    const list = await sRes.json();
-    if (!Array.isArray(list) || !list.length) return { dep, arr, airac: airacCycleJS(), routes: [] };
+  // 2ª chamada: detalhes do plano (contém nodes com aerovias e waypoints)
+  const dRes = await fetch(
+    `https://api.flightplandatabase.com/plan/${list[0].id}`,
+    { headers: hdrs }
+  );
+  if (dRes.status === 429) throw new Error('429');
+  if (!dRes.ok) throw new Error(`HTTP ${dRes.status}`);
+  const plan = await dRes.json();
 
-    const dRes = await fetch(
-      `https://api.flightplandatabase.com/plan/${list[0].id}`,
-      { headers: { 'Accept': 'application/json' } }
-    );
-    if (dRes.status === 429) throw new Error('429');
-    if (!dRes.ok) throw new Error(`HTTP ${dRes.status}`);
-    plan = await dRes.json();
-  }
-
-  // Constrói string de rota a partir dos nodes
   const nodes = plan.route?.nodes || [];
   const routeStr = nodesToRouteString(nodes);
   const routes = routeStr ? [{
     route:    routeStr,
     level:    plan.maxAltitude ? String(Math.round(plan.maxAltitude / 100)) : null,
-    distance: plan.distance    ? Math.round(plan.distance) : null, // AVIATION = NM
+    distance: plan.distance    ? Math.round(plan.distance) : null,
     cycle:    plan.cycle ? `${plan.cycle.year}/${plan.cycle.release}` : null,
   }] : [];
 
@@ -1052,13 +1032,10 @@ async function fetchAisweb(mode, routeId) {
 async function refreshAllAisweb() {
   if (!allRoutes.length) { toast('Nenhuma rota cadastrada.', 'err'); return; }
 
-  // Sem API key o limite é ~10 req/min — avisa o admin
-  const keyWarning = FPDB_KEY ? '' : '\n\n⚠ Sem API key o processo é lento (1 rota a cada 7s para evitar bloqueio).';
-  if (!confirm(`Buscar rotas atualizadas para todas as ${allRoutes.length} rotas?${keyWarning}`)) return;
+  if (!confirm(`Buscar rotas atualizadas para todas as ${allRoutes.length} rotas?\n\nCada rota usa 2 chamadas à API (100/dia no total).`)) return;
 
-  // Delay entre requisições: 1.2s com key, 7s sem key
   const delay = ms => new Promise(r => setTimeout(r, ms));
-  const INTERVAL = FPDB_KEY ? 1200 : 7000;
+  const INTERVAL = 2000; // 2s entre rotas (2 chamadas por rota = ~1 req/s, bem abaixo do limit)
 
   let ok = 0, skip = 0, err = 0;
   const btn = document.querySelector('[onclick="refreshAllAisweb()"]');
