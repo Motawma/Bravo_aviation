@@ -853,16 +853,6 @@ async function confirmRoute() {
         savedAt:     firebase.firestore.FieldValue.serverTimestamp()
       }
     }, { merge: true });
-    // Abre SimBrief em background com autosubmit
-    const acType = AC_SIMBRIEF[aircraft] || AC_SIMBRIEF[selectedRoute.aircraft] || 'B738';
-    const fltNum = (selectedRoute.flightNumber || '').replace(/^BRV/i, '').trim() || '001';
-    const sbFl   = selectedRoute.plannedFL || selectedRoute.flightLevel || '350';
-    const sbUrl  = `https://www.simbrief.com/system/dispatch.php`
-                 + `?orig=${selectedRoute.dep}&dest=${selectedRoute.arr}`
-                 + `&type=${acType}&airline=BRV&fltnum=${fltNum}&fl=${sbFl}00`
-                 + `&autosubmit=1`
-                 + `&rmk=${encodeURIComponent('TCAS WWW.BRAVOAVIATION.SITE IVAOVA/BRV')}`;
-    window.open(sbUrl, '_blank');
     btn.textContent = '✔ Confirmado';
     setTimeout(() => { window.location.href = 'brief.html'; }, 600);
   } catch(e) {

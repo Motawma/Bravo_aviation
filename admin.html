@@ -146,6 +146,8 @@ tr:hover td{background:rgba(255,255,255,.02);}
 .route-tag-ac{display:inline-block;background:rgba(58,127,212,.1);border:1px solid rgba(58,127,212,.2);color:var(--info);font-size:9px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;padding:2px 8px;border-radius:2px;}
 .btn-danger{background:none;border:1px solid rgba(224,85,85,.3);color:var(--danger);padding:5px 12px;border-radius:var(--radius);font-size:11px;font-weight:600;cursor:pointer;transition:all .2s;font-family:'Inter',sans-serif;}
 .btn-danger:hover{background:rgba(224,85,85,.1);}
+.btn-edit{background:none;border:1px solid rgba(58,127,212,.3);color:var(--info);padding:5px 12px;border-radius:var(--radius);font-size:11px;font-weight:600;cursor:pointer;transition:all .2s;font-family:'Inter',sans-serif;}
+.btn-edit:hover{background:rgba(58,127,212,.1);}
 .toggle-active{background:none;border:1px solid rgba(61,176,122,.3);color:var(--success);padding:5px 12px;border-radius:var(--radius);font-size:11px;font-weight:600;cursor:pointer;transition:all .2s;font-family:'Inter',sans-serif;}
 .toggle-active.off{border-color:rgba(224,85,85,.3);color:var(--danger);}
 @media(max-width:900px){
@@ -341,6 +343,18 @@ tr:hover td{background:rgba(255,255,255,.02);}
         <span id="routes-total-label" style="font-size:12px;color:var(--text-dim);"></span>
       </div>
 
+      <!-- AIRAC INFO BAR -->
+      <div id="airac-bar" style="background:rgba(0,238,255,.06);border:1px solid rgba(0,238,255,.18);border-radius:4px;padding:10px 16px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);">Ciclo AIRAC</span>
+          <span id="airac-label" style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:800;color:var(--gold);">—</span>
+          <span id="airac-dates" style="font-size:11px;color:var(--text-sec);">—</span>
+        </div>
+        <button onclick="refreshAllAisweb()" style="background:none;border:1px solid rgba(0,238,255,.3);color:var(--gold);padding:5px 14px;border-radius:3px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;">
+          ↻ Atualizar todas as rotas via AISWEB
+        </button>
+      </div>
+
       <!-- ADD FORM -->
       <div class="route-form-card">
         <div style="font-size:13px;font-weight:600;margin-bottom:16px;color:var(--text-sec);">➕ Adicionar nova rota</div>
@@ -384,9 +398,14 @@ tr:hover td{background:rgba(255,255,255,.02);}
           </div>
         </div>
         <div class="form-group" style="margin-top:10px;">
-          <label>Rota AIRAC (airways) — opcional</label>
+          <label style="display:flex;align-items:center;justify-content:space-between;">
+            Rota AIRAC (airways)
+            <button onclick="fetchAisweb('add')" id="btn-aisweb-add" style="background:none;border:1px solid rgba(0,238,255,.3);color:var(--gold);padding:3px 10px;border-radius:3px;font-size:10px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;letter-spacing:.05em;">
+              ⬇ Buscar AISWEB
+            </button>
+          </label>
           <input id="rf-route" type="text" placeholder="DCT EVINO DCT GUBET UZ25 SOMEP DCT" style="width:100%;font-family:monospace;text-transform:uppercase" />
-          <div style="font-size:11px;color:var(--text-dim);margin-top:4px;">String de airways que será enviada ao SimBrief, VATSIM e IVAO. Ex: <code>DCT EVINO UZ25 SOMEP DCT</code></div>
+          <div id="rf-aisweb-status" style="font-size:11px;color:var(--text-dim);margin-top:4px;">String de airways que será enviada ao VATSIM e IVAO. Ex: <code>DCT EVINO UZ25 SOMEP DCT</code></div>
         </div>
         <div id="rf-error" style="display:none;color:var(--danger);font-size:12px;margin-top:10px;"></div>
       </div>
@@ -839,6 +858,120 @@ async function loadAll() {
   renderPireps();
 }
 
+/* ── AISWEB ── */
+// api_aisweb.php deve estar no mesmo diretório e ter as credenciais configuradas.
+const AISWEB_PROXY = 'api_aisweb.php';
+
+async function loadAiracInfo() {
+  try {
+    const r = await fetch(AISWEB_PROXY + '?action=airac');
+    const d = await r.json();
+    const lbl   = document.getElementById('airac-label');
+    const dates = document.getElementById('airac-dates');
+    if (lbl)   lbl.textContent   = d.label  || '—';
+    if (dates) dates.textContent = d.start + ' → ' + d.end;
+  } catch(_) {}
+}
+
+// Busca rota AISWEB para o formulário "Adicionar nova rota"
+async function fetchAisweb(mode, routeId) {
+  let dep, arr, statusEl, inputEl;
+
+  if (mode === 'add') {
+    dep      = document.getElementById('rf-dep').value.trim().toUpperCase();
+    arr      = document.getElementById('rf-arr').value.trim().toUpperCase();
+    statusEl = document.getElementById('rf-aisweb-status');
+    inputEl  = document.getElementById('rf-route');
+  } else {
+    // modo "edit" — formulário inline da linha da rota
+    const r  = allRoutes.find(x => x.id === routeId);
+    if (!r) return;
+    dep      = r.dep;
+    arr      = r.arr;
+    statusEl = document.getElementById('re-aisweb-status-' + routeId);
+    inputEl  = document.getElementById('re-route-' + routeId);
+  }
+
+  if (!dep || dep.length !== 4 || !arr || arr.length !== 4) {
+    if (statusEl) { statusEl.textContent = '⚠ Preencha os ICAOs de partida e destino (4 letras) antes de buscar.'; statusEl.style.color = 'var(--danger)'; }
+    return;
+  }
+
+  if (statusEl) { statusEl.textContent = '⏳ Consultando AISWEB...'; statusEl.style.color = 'var(--gold)'; }
+
+  try {
+    const res  = await fetch(`${AISWEB_PROXY}?action=routes&dep=${dep}&arr=${arr}`);
+    const data = await res.json();
+
+    if (data.error) {
+      if (statusEl) { statusEl.textContent = '✘ ' + data.error; statusEl.style.color = 'var(--danger)'; }
+      return;
+    }
+
+    const routes = data.routes || [];
+    if (!routes.length || !routes[0].route) {
+      if (statusEl) {
+        statusEl.textContent = '⚠ Nenhuma rota encontrada no AISWEB para ' + dep + '→' + arr + '. Insira manualmente.';
+        statusEl.style.color = 'var(--text-sec)';
+      }
+      return;
+    }
+
+    // Preenche com a primeira rota retornada
+    const best = routes[0];
+    if (inputEl) inputEl.value = best.route;
+
+    // Preenche FL e EET se disponíveis (apenas no modo "add")
+    if (mode === 'add') {
+      if (best.level)    document.getElementById('rf-fl').value   = best.level;
+      if (best.distance) document.getElementById('rf-dist').value = best.distance;
+      if (best.eet)      document.getElementById('rf-eet').value  = best.eet;
+    } else {
+      if (best.level)    document.getElementById('re-fl-' + routeId).value  = best.level;
+      if (best.distance) document.getElementById('re-nm-' + routeId).value  = best.distance;
+      if (best.eet)      document.getElementById('re-eet-' + routeId).value  = best.eet;
+    }
+
+    const src = data._source === 'cache' ? '(cache AIRAC)' : '(API ao vivo)';
+    if (statusEl) {
+      statusEl.textContent = '✔ Rota obtida ' + src + ' — ' + (data.airac?.label || '');
+      statusEl.style.color = 'var(--success)';
+    }
+    if (routes.length > 1) console.info('[AISWEB] ' + routes.length + ' rotas disponíveis:', routes);
+  } catch(e) {
+    if (statusEl) { statusEl.textContent = '✘ Erro ao chamar api_aisweb.php: ' + e.message; statusEl.style.color = 'var(--danger)'; }
+  }
+}
+
+// Atualiza TODAS as rotas cadastradas via AISWEB (útil na virada de ciclo AIRAC)
+async function refreshAllAisweb() {
+  if (!allRoutes.length) { toast('Nenhuma rota cadastrada.', 'err'); return; }
+  if (!confirm('Buscar rotas atualizadas do AISWEB para todas as ' + allRoutes.length + ' rotas cadastradas? Os campos de rota, FL e EET serão sobrescritos com os dados do ciclo atual.')) return;
+
+  let ok = 0, skip = 0, err = 0;
+  toast('Atualizando rotas via AISWEB...', 'ok');
+
+  for (const r of allRoutes) {
+    try {
+      const res  = await fetch(`${AISWEB_PROXY}?action=routes&dep=${r.dep}&arr=${r.arr}`);
+      const data = await res.json();
+      if (data.error || !data.routes?.length || !data.routes[0].route) { skip++; continue; }
+
+      const best = data.routes[0];
+      const update = { route: best.route };
+      if (best.level)    update.plannedFL = best.level;
+      if (best.distance) update.distance  = parseInt(best.distance) || null;
+      if (best.eet)      update.eet       = best.eet;
+
+      await db.collection('routes').doc(r.id).update(update);
+      ok++;
+    } catch(_) { err++; }
+  }
+
+  toast(`AISWEB: ${ok} atualizadas, ${skip} sem dados, ${err} erros.`, ok > 0 ? 'ok' : 'err');
+  await loadRoutes();
+}
+
 /* ── ROUTES ── */
 let allRoutes = [];
 
@@ -867,7 +1000,12 @@ function renderRoutes() {
     <tr>
       <td class="td-main">${sanitize(r.flightNumber)}</td>
       <td><span class="route-tag-ac">${sanitize(r.aircraft)}</span></td>
-      <td>${sanitize(r.dep)} → ${sanitize(r.arr)}</td>
+      <td>
+        ${sanitize(r.dep)} → ${sanitize(r.arr)}
+        ${r.route
+          ? `<div style="font-size:10px;color:var(--text-dim);font-family:monospace;margin-top:2px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${sanitize(r.route)}">${sanitize(r.route)}</div>`
+          : '<div style="font-size:10px;color:var(--text-dim);margin-top:2px;">DCT</div>'}
+      </td>
       <td>FL${sanitize(r.plannedFL)}</td>
       <td>${sanitize(r.eet)}</td>
       <td>${r.distance ? sanitize(r.distance) + ' NM' : '—'}</td>
@@ -877,10 +1015,41 @@ function renderRoutes() {
         </span>
       </td>
       <td style="display:flex;gap:6px;flex-wrap:wrap;">
+        <button class="btn-edit" onclick="openRouteEdit('${r.id}')">Editar</button>
         <button class="toggle-active ${r.active !== false ? '' : 'off'}" onclick="toggleRoute('${r.id}',${r.active !== false})">
           ${r.active !== false ? 'Desativar' : 'Ativar'}
         </button>
-        <button class="btn-danger" onclick="deleteRoute('${r.id}','${r.flightNumber}')">Excluir</button>
+        <button class="btn-danger" onclick="deleteRoute('${r.id}','${sanitize(r.flightNumber)}')">Excluir</button>
+      </td>
+    </tr>
+    <tr id="route-edit-${r.id}" style="display:none;background:var(--surface2)">
+      <td colspan="8" style="padding:14px 16px;border-top:1px solid var(--border)">
+        <div style="display:grid;grid-template-columns:1fr 70px 80px 80px;gap:10px;align-items:end;margin-bottom:10px;">
+          <div>
+            <div style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);margin-bottom:4px;display:flex;align-items:center;gap:8px;">
+              Rota AIRAC (waypoints)
+              <button onclick="fetchAisweb('edit','${r.id}')" style="background:none;border:1px solid rgba(0,238,255,.3);color:var(--gold);padding:2px 8px;border-radius:2px;font-size:9px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;">⬇ AISWEB</button>
+            </div>
+            <input id="re-route-${r.id}" type="text" placeholder="DCT WAYP1 UZ25 WAYP2 DCT" style="width:100%;font-family:monospace;text-transform:uppercase;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:7px 10px;font-size:12px;border-radius:3px;" />
+            <div id="re-aisweb-status-${r.id}" style="font-size:10px;margin-top:3px;"></div>
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);margin-bottom:4px;">FL</div>
+            <input id="re-fl-${r.id}" type="text" maxlength="4" style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:7px 10px;font-size:12px;border-radius:3px;" />
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);margin-bottom:4px;">EET</div>
+            <input id="re-eet-${r.id}" type="text" maxlength="5" placeholder="01:30" style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:7px 10px;font-size:12px;border-radius:3px;" />
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);margin-bottom:4px;">NM</div>
+            <input id="re-nm-${r.id}" type="number" style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:7px 10px;font-size:12px;border-radius:3px;" />
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn-gold" style="padding:6px 18px;font-size:11px;" onclick="saveRouteEdit('${r.id}')">💾 Salvar</button>
+          <button class="btn-back" style="padding:6px 14px;font-size:11px;" onclick="closeRouteEdit('${r.id}')">Cancelar</button>
+        </div>
       </td>
     </tr>`).join('');
 }
@@ -939,6 +1108,37 @@ async function toggleRoute(id, currentlyActive) {
     toast('Rota ' + (currentlyActive ? 'desativada' : 'ativada') + '.', 'ok');
   } catch(e) {
     toast('Erro ao alterar status.', 'err');
+  }
+}
+
+function openRouteEdit(id) {
+  document.querySelectorAll('[id^="route-edit-"]').forEach(el => el.style.display = 'none');
+  const r = allRoutes.find(x => x.id === id);
+  if (!r) return;
+  document.getElementById('re-route-' + id).value = r.route || '';
+  document.getElementById('re-fl-' + id).value    = r.plannedFL || '';
+  document.getElementById('re-eet-' + id).value   = r.eet || '';
+  document.getElementById('re-nm-' + id).value    = r.distance || '';
+  document.getElementById('route-edit-' + id).style.display = '';
+  document.getElementById('route-edit-' + id).scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function closeRouteEdit(id) {
+  document.getElementById('route-edit-' + id).style.display = 'none';
+}
+
+async function saveRouteEdit(id) {
+  const route = document.getElementById('re-route-' + id).value.trim().toUpperCase();
+  const fl    = document.getElementById('re-fl-' + id).value.trim();
+  const eet   = document.getElementById('re-eet-' + id).value.trim();
+  const nm    = parseInt(document.getElementById('re-nm-' + id).value) || null;
+  try {
+    await db.collection('routes').doc(id).update({ route, plannedFL: fl, eet, distance: nm });
+    toast('Rota atualizada!', 'ok');
+    await loadRoutes();
+  } catch(e) {
+    console.error(e);
+    toast('Erro ao salvar rota.', 'err');
   }
 }
 
@@ -1761,7 +1961,7 @@ function goTo(id, el) {
     if(n.getAttribute('onclick')&&n.getAttribute('onclick').includes("'"+id+"'")) n.classList.add('active');
   });
   document.getElementById('topbar-title').textContent = PAGE_TITLES[id]||'';
-  if (id === 'routes')      loadRoutes();
+  if (id === 'routes')      { loadRoutes(); loadAiracInfo(); }
   if (id === 'site')        loadSiteStaff();
   if (id === 'fleet-admin') loadFleet();
 }
