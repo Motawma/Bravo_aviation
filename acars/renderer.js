@@ -107,6 +107,7 @@
   let cruiseConfirmed   = false;
   let cruiseReported    = false;
   let hasLanded         = false;
+  let postLandingStaticSec = 0;
   let prevOnGrnd        = false;
   let prevEng1          = false;
   let prevEng2          = false;
@@ -531,8 +532,9 @@
     cruiseWindowStart = null;
     cruiseConfirmed   = false;
     cruiseReported    = false;
-    hasLanded         = false;
-    prevOnGrnd        = false;
+    hasLanded             = false;
+    postLandingStaticSec  = 0;
+    prevOnGrnd            = false;
     prevEng1          = lastSimData?.eng1 ?? false;
     prevEng2          = lastSimData?.eng2 ?? false;
     overspeed10kSec   = 0;
@@ -796,9 +798,19 @@
     }
     prevOnGrnd = onGround;
 
-    // ── Finalização de voo: estacionado, motores off, freio acionado ─────────
-    if (tookOff && hasLanded && onGround && spd < 5 && !eng1 && !eng2 && d.parkingBrake) {
-      onLanding();
+    // ── Finalização de voo ───────────────────────────────────────────────────
+    if (tookOff && hasLanded && onGround && spd < 2 && !eng1 && !eng2) {
+      if (d.parkingBrake) {
+        // Freio de estacionamento detectado → finaliza imediatamente
+        onLanding();
+      } else {
+        // Fallback: finaliza após 60s parado sem freio (addons como Fenix não expõem BRAKE PARKING INDICATOR)
+        postLandingStaticSec++;
+        if (postLandingStaticSec === 30) addLogEntry('ℹ️', 'Freio de estacionamento não detectado — finalizando em 30s...');
+        if (postLandingStaticSec >= 60) onLanding();
+      }
+    } else {
+      postLandingStaticSec = 0;
     }
   }
 
