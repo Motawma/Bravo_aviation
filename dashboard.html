@@ -1314,6 +1314,8 @@ async function loadRanking() {
         const d = doc.data();
         return { name: d.name || '', vid: d.vid || '', rank: getRank(d.hours||0).name, flights: d.flights||0, hours: d.hours||0, aircraft: d.aircraft||'' };
       }).sort((a,b) => b.hours - a.hours);
+    console.log('[RANKING] total docs:', snap.size, '| pilotos:', PILOTS.length);
+    console.log('[RANKING] nomes:', PILOTS.map(p => p.name + ' (VID:' + p.vid + ')'));
   } catch(_) {
     PILOTS = [{ name: user.name, vid: user.vid, rank: getRank(user.hours).name, flights: user.flights, hours: user.hours, aircraft: user.aircraft }];
   }
