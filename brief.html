@@ -84,8 +84,6 @@ body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-ser
 .int-btn.vatsim:hover { background: rgba(0,238,255,0.15); }
 .int-btn.ivao { background: rgba(155,48,255,0.1); border-color: rgba(155,48,255,0.3); color: #B070FF; }
 .int-btn.ivao:hover { background: rgba(155,48,255,0.2); }
-.int-btn.import { background: rgba(200,150,28,0.1); border-color: rgba(200,150,28,0.3); color: var(--gold); grid-column: 1 / -1; }
-.int-btn.import:hover { background: rgba(200,150,28,0.2); }
 
 /* METAR */
 .metar-section { margin-bottom: 20px; }
@@ -255,7 +253,6 @@ function renderBrief(pf, userData) {
   const ac    = pf.aircraft || userData.aircraft || 'A320';
   const fn    = pf.flightNumber || 'BRV';
   const route = pf.route || '';
-  const ivaoPrefileUrl = pf.ivaoPrefileUrl || null;
   const depApt = getApt(dep);
   const arrApt = getApt(arr);
 
@@ -332,7 +329,7 @@ function renderBrief(pf, userData) {
 
         <!-- Integration Buttons -->
         <div class="int-btns">
-          <a class="int-btn simbrief" href="${buildSimBriefUrl(dep,arr,fl,fn,ac,route)}" target="_blank">
+          <a class="int-btn simbrief" href="${buildSimBriefUrl(dep,arr,fl,fn,ac)}" target="_blank">
             ✈ SimBrief
           </a>
           <a class="int-btn skyvector" href="https://skyvector.com/?fpl=${dep}%20${arr}" target="_blank">
@@ -341,12 +338,9 @@ function renderBrief(pf, userData) {
           <a class="int-btn vatsim" href="https://my.vatsim.net/pilots/flightplan/create?callsign=${fn}&dep=${dep}&arr=${arr}&aircraft=${encodeURIComponent(ac)}&altitude=${fl}00&route=${encodeURIComponent(route||'DCT')}" target="_blank">
             🔵 VATSIM Prefile
           </a>
-          <a class="int-btn ivao" href="${ivaoPrefileUrl || buildIvaoUrl(dep,arr,fl,fn,ac,route,eet)}" target="_blank">
-            🟣 IVAO Prefile${ivaoPrefileUrl ? ' ✓ SimBrief' : ''}
+          <a class="int-btn ivao" href="${buildIvaoUrl(dep,arr,fl,fn,ac,route,eet)}" target="_blank">
+            🟣 IVAO Prefile
           </a>
-          <button class="int-btn import" onclick="importFromSimbrief('${dep}','${arr}')">
-            ↙ Importar rota do SimBrief (AIRAC atual)
-          </button>
         </div>
 
         <!-- METAR -->
@@ -478,60 +472,11 @@ function parseTime(r){
 }
 
 /* ── HELPERS ── */
-async function importFromSimbrief(dep, arr) {
-  const btn = document.querySelector('.int-btn.import');
-  const fbUser = auth.currentUser;
-  if (!fbUser) { alert('Usuário não autenticado.'); return; }
-
-  const snap = await db.collection('users').doc(fbUser.uid).get();
-  const username = snap.data()?.simbriefUsername;
-  if (!username) {
-    alert('Cadastre seu SimBrief Username no Meu Perfil do dashboard antes de importar.');
-    return;
-  }
-
-  btn.textContent = '⏳ Buscando OFP...';
-  btn.style.pointerEvents = 'none';
-
-  try {
-    const res  = await fetch(`https://www.simbrief.com/api/xml.fetcher.php?username=${encodeURIComponent(username)}&json=1`);
-    const data = await res.json();
-
-    if (data.fetch?.status === 'Error' || !data.general) {
-      throw new Error(data.fetch?.message || 'Nenhum OFP encontrado. Gere um plano no SimBrief primeiro.');
-    }
-
-    const ofpDep = data.origin?.icao_code || '';
-    const ofpArr = data.destination?.icao_code || '';
-    if (ofpDep !== dep || ofpArr !== arr) {
-      const ok = confirm(`O último OFP do SimBrief é ${ofpDep}→${ofpArr}, mas esta rota é ${dep}→${arr}.\nImportar mesmo assim?`);
-      if (!ok) { btn.textContent = '↙ Importar rota do SimBrief (AIRAC atual)'; btn.style.pointerEvents = ''; return; }
-    }
-
-    const route   = data.general.route       || '';
-    const fl      = data.general.initial_altitude ? String(Math.round(parseInt(data.general.initial_altitude) / 100)) : '';
-    const eetSec  = parseInt(data.times?.est_time_enroute || 0);
-    const eetStr  = eetSec ? `${Math.floor(eetSec/3600)}h${String(Math.floor((eetSec%3600)/60)).padStart(2,'0')}` : '';
-    const dist    = data.general.distance_nm  ? parseInt(data.general.distance_nm) : null;
-
-    // Captura link IVAO Prefile gerado pelo SimBrief (campo 18 completo)
-    const ivaoPrefileUrl = data.prefile?.ivao?.link || data.links?.ivao || null;
-
-    await db.collection('users').doc(fbUser.uid).set({
-      pendingFlight: { dep: ofpDep, arr: ofpArr, route, plannedFL: fl, eet: eetStr, distance: dist, ivaoPrefileUrl: ivaoPrefileUrl || null }
-    }, { merge: true });
-
-    btn.textContent = '✓ Rota importada! Recarregando...';
-    setTimeout(() => location.reload(), 1000);
-
-  } catch(e) {
-    alert('Erro: ' + e.message);
-    btn.textContent = '↙ Importar rota do SimBrief (AIRAC atual)';
-    btn.style.pointerEvents = '';
-  }
-}
-
 function buildIvaoUrl(dep, arr, fl, fn, ac, route, eet) {
+  const today = new Date();
+  const dof   = String(today.getFullYear()).slice(-2)
+              + String(today.getMonth() + 1).padStart(2, '0')
+              + String(today.getDate()).padStart(2, '0');
   const fp = {
     callsign:          fn  || '',
     flightRules:       'I',
@@ -543,7 +488,7 @@ function buildIvaoUrl(dep, arr, fl, fn, ac, route, eet) {
     altitude:          fl && fl !== '—' ? parseInt(fl, 10) : 0,
     cruisingSpeedType: 'N',
     cruisingSpeed:     460,
-    remarks:           'OPR/BRV IVAOVA/BRV'
+    remarks:           `OPR/BRV PBN/A1B1C1D1O1S1 DOF/${dof} PER/C RMK/TCAS IVAOVA/BRV`
   };
   if (route && route.trim()) fp.route = route.trim();
   if (eet && eet !== '—') {
@@ -553,16 +498,15 @@ function buildIvaoUrl(dep, arr, fl, fn, ac, route, eet) {
   return 'https://fpl.ivao.aero/flight-plans/create?flightPlan=' + encodeURIComponent(btoa(JSON.stringify(fp)));
 }
 
-function buildSimBriefUrl(dep, arr, fl, fn, ac, route) {
+function buildSimBriefUrl(dep, arr, fl, fn, ac) {
   const type = toICAOType(ac);
   const num  = (fn || '').replace(/^BRV/i, '').trim() || '001';
-  let url = `https://www.simbrief.com/system/dispatch.php`
-          + `?orig=${dep}&dest=${arr}&type=${type}`
-          + `&airline=BRV&fltnum=${num}`
-          + `&fl=${fl}00`;
-  if (route && route.trim()) url += `&route=${encodeURIComponent(route.trim())}`;
-  url += `&rmk=${encodeURIComponent('TCAS WWW.BRAVOAVIATION.SITE IVAOVA/BRV')}`;
-  return url;
+  return `https://www.simbrief.com/system/dispatch.php`
+       + `?orig=${dep}&dest=${arr}&type=${type}`
+       + `&airline=BRV&fltnum=${num}`
+       + `&fl=${fl}00`
+       + `&autosubmit=1`
+       + `&rmk=${encodeURIComponent('TCAS WWW.BRAVOAVIATION.SITE IVAOVA/BRV')}`;
 }
 
 function toICAOType(ac) {
