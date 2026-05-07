@@ -237,6 +237,7 @@ auth.onAuthStateChanged(async (fbUser) => {
       return;
     }
     renderBrief(pf, data);
+    if (data.simbriefUsername) startSimbriefPolling(data.simbriefUsername, pf.dep || '', pf.arr || '', fbUser.uid);
   } catch(e) {
     document.body.style.visibility = '';
     console.error(e);
@@ -245,16 +246,17 @@ auth.onAuthStateChanged(async (fbUser) => {
 
 /* ── RENDER ── */
 function renderBrief(pf, userData) {
-  const dep   = pf.dep || '????';
-  const arr   = pf.arr || '????';
-  const fl    = pf.plannedFL || '—';
-  const eet   = pf.eet || '—';
-  const nm    = pf.distance ? pf.distance + ' NM' : '—';
-  const ac    = pf.aircraft || userData.aircraft || 'A320';
-  const fn    = pf.flightNumber || 'BRV';
-  const route = pf.route || '';
-  const depApt = getApt(dep);
-  const arrApt = getApt(arr);
+  const dep      = pf.dep || '????';
+  const arr      = pf.arr || '????';
+  const fl       = pf.plannedFL || '—';
+  const eet      = pf.eet || '—';
+  const nm       = pf.distance ? pf.distance + ' NM' : '—';
+  const ac       = pf.aircraft || userData.aircraft || 'A320';
+  const fn       = pf.flightNumber || 'BRV';
+  const route    = pf.route || '';
+  const hasSB    = !!userData.simbriefUsername;
+  const depApt   = getApt(dep);
+  const arrApt   = getApt(arr);
 
   document.getElementById('tb-flight').textContent = fn;
 
@@ -320,10 +322,11 @@ function renderBrief(pf, userData) {
             <tr><td class="k">Flight Number</td><td class="v">${fn}</td></tr>
             <tr><td class="k">Departure</td><td class="v">${dep} — ${depApt.name}</td></tr>
             <tr><td class="k">Arrival</td><td class="v">${arr} — ${arrApt.name}</td></tr>
-            <tr><td class="k">Flight Level</td><td class="v">FL${fl}</td></tr>
-            <tr><td class="k">EET</td><td class="v">${eet}</td></tr>
-            <tr><td class="k">Distância</td><td class="v">${nm}</td></tr>
+            <tr><td class="k">Flight Level</td><td class="v" id="brief-fl-val">FL${fl}</td></tr>
+            <tr><td class="k">EET</td><td class="v" id="brief-eet-val">${eet}</td></tr>
+            <tr><td class="k">Distância</td><td class="v" id="brief-nm-val">${nm}</td></tr>
             <tr><td class="k">Aeronave</td><td class="v">${ac}</td></tr>
+            <tr><td class="k">Rota</td><td class="v" id="brief-route-val" style="font-size:11px;word-break:break-all;">${route || (hasSB ? '⏳ aguardando SimBrief...' : 'DCT')}</td></tr>
           </table>
         </div>
 
@@ -338,8 +341,8 @@ function renderBrief(pf, userData) {
           <a class="int-btn vatsim" href="https://my.vatsim.net/pilots/flightplan/create?callsign=${fn}&dep=${dep}&arr=${arr}&aircraft=${encodeURIComponent(ac)}&altitude=${fl}00&route=${encodeURIComponent(route||'DCT')}" target="_blank">
             🔵 VATSIM Prefile
           </a>
-          <a class="int-btn ivao" href="${buildIvaoUrl(dep,arr,fl,fn,ac,route,eet)}" target="_blank">
-            🟣 IVAO Prefile
+          <a class="int-btn ivao" id="ivao-btn" href="${buildIvaoUrl(dep,arr,fl,fn,ac,route,eet)}" target="_blank">
+            ${hasSB ? '⏳ Aguardando SimBrief...' : '🟣 IVAO Prefile'}
           </a>
         </div>
 
@@ -469,6 +472,62 @@ function parseQNH(r){
 function parseTime(r){
   const m=r.match(/\d{6}Z/);
   return m?m[0].slice(2,6):'';
+}
+
+/* ── SIMBRIEF POLLING ── */
+async function startSimbriefPolling(username, dep, arr, uid) {
+  const MAX = 40; let attempts = 0;
+
+  async function poll() {
+    if (attempts++ >= MAX) {
+      const btn = document.getElementById('ivao-btn');
+      if (btn) btn.textContent = '🟣 IVAO Prefile';
+      return;
+    }
+    try {
+      const res  = await fetch(`https://www.simbrief.com/api/xml.fetcher.php?username=${encodeURIComponent(username)}&json=1`);
+      const data = await res.json();
+      const ofpDep = data.origin?.icao_code || '';
+      const ofpArr = data.destination?.icao_code || '';
+
+      if (data.general && ofpDep === dep && ofpArr === arr) {
+        const route  = data.general.route || '';
+        const fl     = data.general.initial_altitude ? String(Math.round(parseInt(data.general.initial_altitude) / 100)) : '';
+        const eetSec = parseInt(data.times?.est_time_enroute || 0);
+        const eetStr = eetSec ? `${Math.floor(eetSec/3600)}h${String(Math.floor((eetSec%3600)/60)).padStart(2,'0')}` : '';
+        const dist   = data.general.distance_nm ? parseInt(data.general.distance_nm) : null;
+
+        // Salva rota AIRAC no Firestore
+        await db.collection('users').doc(uid).set({
+          pendingFlight: { route, plannedFL: fl, eet: eetStr, distance: dist }
+        }, { merge: true });
+
+        // Atualiza botão IVAO com dados reais
+        const btn = document.getElementById('ivao-btn');
+        if (btn) {
+          const fn = document.querySelector('.topbar-flight')?.textContent || 'BRV';
+          const ac = data.aircraft?.icaocode || 'A320';
+          btn.href = buildIvaoUrl(dep, arr, fl, fn, ac, route, eetStr);
+          btn.textContent = '🟣 IVAO Prefile ✓';
+          btn.style.background = 'rgba(155,48,255,0.25)';
+          btn.style.borderColor = 'rgba(155,48,255,0.6)';
+        }
+
+        // Atualiza resumo com dados reais do SimBrief
+        const rRoute = document.getElementById('brief-route-val');
+        const rFl    = document.getElementById('brief-fl-val');
+        const rEet   = document.getElementById('brief-eet-val');
+        const rNm    = document.getElementById('brief-nm-val');
+        if (rRoute) rRoute.textContent = route || 'DCT';
+        if (rFl && fl)   rFl.textContent  = 'FL' + fl;
+        if (rEet && eetStr) rEet.textContent = eetStr;
+        if (rNm && dist) rNm.textContent  = dist + ' NM';
+        return;
+      }
+    } catch(_) {}
+    setTimeout(poll, 3000);
+  }
+  setTimeout(poll, 4000); // aguarda 4s para SimBrief gerar
 }
 
 /* ── HELPERS ── */
