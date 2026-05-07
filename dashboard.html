@@ -776,12 +776,12 @@ tr:hover td { background: rgba(255,255,255,0.02); }
   <div style="background:#100E25;border:1px solid #1E1840;border-radius:6px;padding:32px;max-width:380px;width:90%;">
     <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700;color:#00EEFF;margin-bottom:4px">Confirmar rota</div>
     <div id="modal-route-info" style="color:#9A8FB8;font-size:13px;margin-bottom:20px;line-height:1.6"></div>
-    <p style="font-size:12px;color:#6A5F8A;margin-bottom:20px">A rota sera salva e carregada automaticamente ao abrir o ACARS Bravo.</p>
+    <p style="font-size:12px;color:#6A5F8A;margin-bottom:20px">Você será redirecionado para o Brief com os dados do voo. A rota também é carregada pelo ACARS Bravo.</p>
     <div style="display:flex;gap:10px">
       <button onclick="confirmRoute()" style="flex:1;padding:11px;background:#00EEFF;color:#000;border:none;font-weight:700;font-size:13px;border-radius:4px;cursor:pointer">Confirmar</button>
       <button onclick="closeRouteModal()" style="flex:1;padding:11px;background:transparent;color:#9A8FB8;border:1px solid #1E1840;font-size:13px;border-radius:4px;cursor:pointer">Cancelar</button>
     </div>
-    <div id="modal-route-ok" style="display:none;margin-top:12px;color:#3db07a;font-size:13px;text-align:center">Rota salva! Abra o ACARS para iniciar.</div>
+    <div id="modal-route-ok" style="display:none;margin-top:12px;color:#3db07a;font-size:13px;text-align:center">✓ Rota salva! Abrindo brief...</div>
   </div>
 </div>
 
@@ -1422,13 +1422,16 @@ function closeRouteModal() {
 }
 async function confirmRoute() {
   if (!_pendingRoute) return;
-  await db.collection('users').doc(user.uid).update({ pendingFlight: _pendingRoute });
-  document.getElementById('modal-route-ok').style.display = 'block';
-  // Destaca o botão selecionado
-  document.querySelectorAll('.btn-fly-route').forEach(b => b.classList.remove('selected'));
   const btn = document.getElementById('btn-fly-' + _pendingRoute.routeIdx);
-  if (btn) { btn.textContent = '✓ Selecionada'; btn.classList.add('selected'); }
-  setTimeout(closeRouteModal, 2000);
+  try {
+    await db.collection('users').doc(user.uid).update({ pendingFlight: _pendingRoute });
+    document.getElementById('modal-route-ok').style.display = 'block';
+    document.querySelectorAll('.btn-fly-route').forEach(b => b.classList.remove('selected'));
+    if (btn) { btn.textContent = '✓ Selecionada'; btn.classList.add('selected'); }
+    setTimeout(() => { window.location.href = 'brief.html'; }, 800);
+  } catch(e) {
+    alert('Erro ao salvar rota: ' + e.message);
+  }
 }
 
 /* ── LIVE FLIGHTS ── */
