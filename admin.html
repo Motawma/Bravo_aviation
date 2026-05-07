@@ -895,63 +895,91 @@ function fpdbCachePut(dep, arr, data) {
   try { localStorage.setItem(key, JSON.stringify(data)); } catch(_) {}
 }
 
-async function fpdbFetch(dep, arr) {
+// Converte array de nodes da FPDB para string de rota ICAO
+// Ex: [{ident:'EVINO',via:null},{ident:'GUBET',via:{ident:'UZ25',type:'AWY-HI'}}]
+//  →  "EVINO UZ25 GUBET"
+function nodesToRouteString(nodes) {
+  if (!nodes || nodes.length < 2) return '';
+  const AWY = new Set(['AWY-HI', 'AWY-LO', 'NAT', 'PACOT']);
+  const mid = nodes.slice(1, -1); // remove DEP e ARR
+  if (!mid.length) return '';
+
+  const out = [mid[0].ident];
+  let i = 1;
+  while (i < mid.length) {
+    const node = mid[i];
+    const via  = node.via;
+    if (via && AWY.has(via.type)) {
+      // Agrupa todos os nós consecutivos na mesma aerovia
+      const airway = via.ident;
+      let j = i;
+      while (j < mid.length && mid[j].via?.ident === airway && AWY.has(mid[j].via?.type)) j++;
+      // Adiciona: AEROVIA WAYPOINT_SAÍDA
+      out.push(airway, mid[j - 1].ident);
+      i = j;
+    } else {
+      out.push(node.ident);
+      i++;
+    }
+  }
+  return out.join(' ');
+}
+
+async function fpdbFetch(dep, arr, fl) {
   const cached = fpdbCacheGet(dep, arr);
   if (cached) return { ...cached, _source: 'cache' };
 
-  const headers = { 'Accept': 'application/json' };
-  if (FPDB_KEY) headers['Authorization'] = 'Token ' + FPDB_KEY;
+  // Auth: Basic base64(apiKey + ":") conforme documentação FPDB
+  const headers = { 'Accept': 'application/json', 'Content-Type': 'application/json' };
+  if (FPDB_KEY) headers['Authorization'] = 'Basic ' + btoa(FPDB_KEY + ':');
 
-  // 1ª chamada: busca os IDs dos planos (search não retorna a string de rota)
-  const searchRes = await fetch(
-    `https://api.flightplandatabase.com/search/plans?fromICAO=${dep}&toICAO=${arr}&limit=5`,
-    { headers }
-  );
-  if (searchRes.status === 429) throw new Error('429');
-  if (!searchRes.ok) throw new Error(`HTTP ${searchRes.status}`);
-  const plans = await searchRes.json();
-  if (!Array.isArray(plans) || !plans.length) {
-    return { dep, arr, airac: airacCycleJS(), routes: [] };
-  }
+  let plan;
 
-  // 2ª chamada: busca o plano completo do primeiro resultado para obter a rota
-  const detailRes = await fetch(
-    `https://api.flightplandatabase.com/plan/${plans[0].id}`,
-    { headers }
-  );
-  if (!detailRes.ok) throw new Error(`HTTP ${detailRes.status}`);
-  const detail = await detailRes.json();
-
-  const routes = [];
-  const seen   = new Set();
-
-  // Extrai rota do plano detalhado
-  const parseRoute = (p, d) => {
-    // campo "route" pode estar no detail ou construído a partir de "nodes"
-    let route = (d?.route || p.route || '').trim().toUpperCase();
-    if (!route && Array.isArray(d?.nodes)) {
-      // nodes = [{icao/ident}, ...] — monta string de waypoints
-      route = d.nodes
-        .map(n => (n.ident || n.icao || n.name || '').toUpperCase())
-        .filter(Boolean)
-        .join(' ');
-    }
-    route = route
-      .replace(new RegExp('^' + dep + '\\s+'), '')
-      .replace(new RegExp('\\s+' + arr + '$'), '')
-      .trim();
-    return route;
-  };
-
-  const route = parseRoute(plans[0], detail);
-  if (route && route !== 'DCT' && !seen.has(route)) {
-    seen.add(route);
-    routes.push({
-      route,
-      level:    plans[0].maxAltitude ? String(Math.round(plans[0].maxAltitude / 100)) : null,
-      distance: plans[0].distance    ? Math.round(plans[0].distance * 0.539957)        : null,
+  if (FPDB_KEY) {
+    // COM key: usa /auto/generate — gera rota fresca com AIRAC atual (melhor opção)
+    const cruiseAlt = fl ? parseInt(fl) * 100 : 35000;
+    const res = await fetch('https://api.flightplandatabase.com/auto/generate', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        fromICAO: dep, toICAO: arr,
+        useAWYHI: true, useAWYLO: false,
+        useNAT: false,  usePACOT: false,
+        cruiseAlt, cruiseSpeed: 460,
+      })
     });
+    if (res.status === 429) throw new Error('429');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    plan = await res.json();
+  } else {
+    // SEM key: busca plano existente (2 chamadas, rate limit baixo)
+    const sRes = await fetch(
+      `https://api.flightplandatabase.com/search/plans?fromICAO=${dep}&toICAO=${arr}&limit=3`,
+      { headers: { 'Accept': 'application/json' } }
+    );
+    if (sRes.status === 429) throw new Error('429');
+    if (!sRes.ok) throw new Error(`HTTP ${sRes.status}`);
+    const list = await sRes.json();
+    if (!Array.isArray(list) || !list.length) return { dep, arr, airac: airacCycleJS(), routes: [] };
+
+    const dRes = await fetch(
+      `https://api.flightplandatabase.com/plan/${list[0].id}`,
+      { headers: { 'Accept': 'application/json' } }
+    );
+    if (dRes.status === 429) throw new Error('429');
+    if (!dRes.ok) throw new Error(`HTTP ${dRes.status}`);
+    plan = await dRes.json();
   }
+
+  // Constrói string de rota a partir dos nodes
+  const nodes = plan.route?.nodes || [];
+  const routeStr = nodesToRouteString(nodes);
+  const routes = routeStr ? [{
+    route:    routeStr,
+    level:    plan.maxAltitude ? String(Math.round(plan.maxAltitude / 100)) : null,
+    distance: plan.distance    ? Math.round(plan.distance) : null, // AVIATION = NM
+    cycle:    plan.cycle ? `${plan.cycle.year}/${plan.cycle.release}` : null,
+  }] : [];
 
   const result = { dep, arr, airac: airacCycleJS(), routes };
   fpdbCachePut(dep, arr, result);
@@ -969,9 +997,11 @@ function loadAiracInfo() {
 async function fetchAisweb(mode, routeId) {
   let dep, arr, statusEl, inputEl;
 
+  let fl;
   if (mode === 'add') {
     dep      = document.getElementById('rf-dep').value.trim().toUpperCase();
     arr      = document.getElementById('rf-arr').value.trim().toUpperCase();
+    fl       = document.getElementById('rf-fl').value.trim();
     statusEl = document.getElementById('rf-aisweb-status');
     inputEl  = document.getElementById('rf-route');
   } else {
@@ -979,6 +1009,7 @@ async function fetchAisweb(mode, routeId) {
     if (!r) return;
     dep      = r.dep;
     arr      = r.arr;
+    fl       = r.plannedFL;
     statusEl = document.getElementById('re-aisweb-status-' + routeId);
     inputEl  = document.getElementById('re-route-' + routeId);
   }
@@ -991,7 +1022,7 @@ async function fetchAisweb(mode, routeId) {
   if (statusEl) { statusEl.textContent = '⏳ Buscando rotas...'; statusEl.style.color = 'var(--gold)'; }
 
   try {
-    const data   = await fpdbFetch(dep, arr);
+    const data   = await fpdbFetch(dep, arr, fl);
     const routes = data.routes || [];
 
     if (!routes.length) {
