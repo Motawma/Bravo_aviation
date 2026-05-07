@@ -85,6 +85,18 @@ body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-ser
 .int-btn.ivao { background: rgba(155,48,255,0.1); border-color: rgba(155,48,255,0.3); color: #B070FF; }
 .int-btn.ivao:hover { background: rgba(155,48,255,0.2); }
 
+/* SIMBRIEF OFP CARD */
+.sb-card { background: var(--surface); border: 1px solid rgba(58,127,212,0.3); border-radius: var(--radius); padding: 16px; margin-bottom: 20px; }
+.sb-card-title { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #5BA8FF; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; }
+.sb-btn { padding: 8px 14px; border-radius: 4px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: 'Inter', sans-serif; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s; }
+.sb-btn-primary { background: rgba(58,127,212,0.15); border: 1px solid rgba(58,127,212,0.4); color: #5BA8FF; }
+.sb-btn-primary:hover { background: rgba(58,127,212,0.28); }
+.sb-btn-secondary { background: rgba(58,127,212,0.07); border: 1px solid rgba(58,127,212,0.2); color: #5BA8FF; }
+.sb-btn-secondary:hover { background: rgba(58,127,212,0.15); }
+.sb-input { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 8px 12px; border-radius: 4px; font-size: 13px; font-family: 'Inter', sans-serif; width: 100%; }
+.sb-input:focus { outline: none; border-color: rgba(58,127,212,0.5); }
+.sb-mismatch { color: var(--danger); font-size: 11px; margin-bottom: 10px; padding: 6px 10px; background: rgba(224,85,85,0.08); border-radius: 3px; border: 1px solid rgba(224,85,85,0.2); }
+
 /* METAR */
 .metar-section { margin-bottom: 20px; }
 .metar-dep, .metar-arr { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; margin-bottom: 10px; }
@@ -243,8 +255,110 @@ auth.onAuthStateChanged(async (fbUser) => {
   }
 });
 
+/* ── SIMBRIEF FETCHER ── */
+let _pf       = null;
+let _userData = null;
+let _sbData   = null;
+
+async function fetchSimBriefOFP(username) {
+  const el = document.getElementById('sb-body');
+  if (!el) return;
+  el.innerHTML = '<div style="color:var(--text-dim);font-size:12px;padding:4px 0">Carregando OFP...</div>';
+  try {
+    const res = await fetch(
+      'https://www.simbrief.com/api/xml.fetcher.php?userid=' + encodeURIComponent(username.trim()) + '&json=1'
+    );
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    if (data.fetch?.status === 'Error' || !data.general) throw new Error(data.fetch?.message || 'Plano não encontrado ou ID inválido.');
+    _sbData = data;
+    renderSBCard(data);
+  } catch(e) {
+    el.innerHTML = `<div style="color:var(--danger);font-size:12px">${e.message}</div>
+      <button class="sb-btn sb-btn-primary" style="margin-top:10px;width:100%" onclick="showSBInput()">Tentar outro ID</button>`;
+  }
+}
+
+function showSBInput() {
+  const el = document.getElementById('sb-body');
+  if (!el) return;
+  el.innerHTML = `
+    <div style="font-size:11px;color:var(--text-sec);margin-bottom:6px">Pilot ID ou username do SimBrief:</div>
+    <div style="display:flex;gap:8px">
+      <input id="sb-input-id" class="sb-input" placeholder="Ex: 123456 ou BoardingSeat47" />
+      <button class="sb-btn sb-btn-primary" onclick="fetchSimBriefOFP(document.getElementById('sb-input-id').value)" style="white-space:nowrap">Buscar</button>
+    </div>`;
+  setTimeout(() => document.getElementById('sb-input-id')?.focus(), 50);
+}
+
+function renderSBCard(data) {
+  const el = document.getElementById('sb-body');
+  if (!el) return;
+  const sbDep   = data.origin?.icao_code      || '';
+  const sbArr   = data.destination?.icao_code || '';
+  const route   = data.general?.route         || '';
+  const fl      = data.general?.initial_altitude ? Math.round(parseInt(data.general.initial_altitude) / 100) : null;
+  const fuelLbs = data.fuel?.plan_ramp         || null;
+  const staticId= data.params?.static_id       || '';
+  const eetSec  = parseInt(data.times?.est_time_enroute || 0);
+  const eetH    = Math.floor(eetSec / 3600);
+  const eetM    = Math.floor((eetSec % 3600) / 60);
+  const eetStr  = eetSec ? eetH + 'h' + String(eetM).padStart(2,'0') : null;
+  const mismatch = _pf && (sbDep !== _pf.dep || sbArr !== _pf.arr);
+
+  el.innerHTML = `
+    ${mismatch ? `<div class="sb-mismatch">⚠ Plano SimBrief é ${sbDep}→${sbArr} — diferente da rota selecionada (${_pf.dep}→${_pf.arr})</div>` : ''}
+    <table class="summary-table" style="margin-bottom:10px">
+      <tr><td class="k">Rota</td><td class="v" style="font-size:11px;word-break:break-all;text-align:right">${route || 'DCT'}</td></tr>
+      ${fl   ? `<tr><td class="k">Flight Level</td><td class="v">FL${fl}</td></tr>` : ''}
+      ${fuelLbs ? `<tr><td class="k">Combustível (ramp)</td><td class="v">${Number(fuelLbs).toLocaleString('pt-BR')} lbs</td></tr>` : ''}
+      ${eetStr  ? `<tr><td class="k">EET</td><td class="v">${eetStr}</td></tr>` : ''}
+    </table>
+    <div style="display:flex;gap:8px">
+      <button class="sb-btn sb-btn-primary" style="flex:1" onclick="applySimBrief()">↓ Aplicar ao Brief</button>
+      ${staticId ? `<a class="sb-btn sb-btn-secondary" style="flex:1" href="https://www.simbrief.com/ofp/ofp_disp.php?static_id=${staticId}" target="_blank">📋 Ver OFP</a>` : ''}
+      <button class="sb-btn sb-btn-secondary" onclick="showSBInput()" title="Buscar outro ID" style="padding:8px 10px">↺</button>
+    </div>`;
+}
+
+function applySimBrief() {
+  if (!_sbData) return;
+  const route   = _sbData.general?.route || '';
+  const fl      = _sbData.general?.initial_altitude ? Math.round(parseInt(_sbData.general.initial_altitude) / 100) : null;
+  const eetSec  = parseInt(_sbData.times?.est_time_enroute || 0);
+  const eetH    = Math.floor(eetSec / 3600);
+  const eetM    = Math.floor((eetSec % 3600) / 60);
+  const eetStr  = eetSec ? eetH + 'h' + String(eetM).padStart(2,'0') : null;
+
+  if (route) {
+    document.getElementById('brief-route-val').textContent = route;
+    if (_pf) _pf.route = route;
+  }
+  if (fl) {
+    document.getElementById('brief-fl-val').textContent = 'FL' + fl;
+    if (_pf) _pf.plannedFL = String(fl);
+  }
+  if (eetStr) {
+    document.getElementById('brief-eet-val').textContent = eetStr;
+    if (_pf) _pf.eet = eetStr;
+  }
+
+  // Atualiza links IVAO e VATSIM com nova rota
+  if (_pf) {
+    const ivao   = document.getElementById('btn-ivao-prefile');
+    const vatsim = document.getElementById('btn-vatsim-prefile');
+    if (ivao)   ivao.href   = buildIvaoUrl(_pf.dep, _pf.arr, _pf.plannedFL, _pf.flightNumber, _pf.aircraft || _userData?.aircraft, _pf.route, _pf.eet);
+    if (vatsim) vatsim.href = 'https://my.vatsim.net/pilots/flightplan/create?callsign=' + (_pf.flightNumber||'') + '&dep=' + _pf.dep + '&arr=' + _pf.arr + '&aircraft=' + encodeURIComponent(_pf.aircraft||'') + '&altitude=' + (_pf.plannedFL||'350') + '00&route=' + encodeURIComponent(_pf.route||'DCT');
+  }
+
+  const btn = document.querySelector('[onclick="applySimBrief()"]');
+  if (btn) { btn.textContent = '✓ Aplicado!'; btn.disabled = true; }
+}
+
 /* ── RENDER ── */
 function renderBrief(pf, userData) {
+  _pf       = pf;
+  _userData = userData;
   const dep      = pf.dep || '????';
   const arr      = pf.arr || '????';
   const fl       = pf.plannedFL || '—';
@@ -336,12 +450,20 @@ function renderBrief(pf, userData) {
           <a class="int-btn skyvector" href="https://skyvector.com/?fpl=${dep}%20${arr}" target="_blank">
             🗺 SkyVector
           </a>
-          <a class="int-btn vatsim" href="https://my.vatsim.net/pilots/flightplan/create?callsign=${fn}&dep=${dep}&arr=${arr}&aircraft=${encodeURIComponent(ac)}&altitude=${fl}00&route=${encodeURIComponent(route||'DCT')}" target="_blank">
+          <a id="btn-vatsim-prefile" class="int-btn vatsim" href="https://my.vatsim.net/pilots/flightplan/create?callsign=${fn}&dep=${dep}&arr=${arr}&aircraft=${encodeURIComponent(ac)}&altitude=${fl}00&route=${encodeURIComponent(route||'DCT')}" target="_blank">
             🔵 VATSIM Prefile
           </a>
-          <a class="int-btn ivao" href="${buildIvaoUrl(dep,arr,fl,fn,ac,route,eet)}" target="_blank">
+          <a id="btn-ivao-prefile" class="int-btn ivao" href="${buildIvaoUrl(dep,arr,fl,fn,ac,route,eet)}" target="_blank">
             🟣 IVAO Prefile
           </a>
+        </div>
+
+        <!-- SimBrief OFP -->
+        <div class="sb-card">
+          <div class="sb-card-title">
+            <span>✈ SimBrief — Plano de Voo</span>
+          </div>
+          <div id="sb-body"></div>
         </div>
 
         <!-- METAR -->
@@ -371,6 +493,12 @@ function renderBrief(pf, userData) {
   initMap(dep, arr, depApt, arrApt);
   fetchMetarBrief(dep, 'metar-dep');
   fetchMetarBrief(arr, 'metar-arr');
+
+  if (userData.simbriefUsername) {
+    fetchSimBriefOFP(userData.simbriefUsername);
+  } else {
+    showSBInput();
+  }
 }
 
 /* ── MAP ── */
