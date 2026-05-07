@@ -859,9 +859,9 @@ async function loadAll() {
 }
 
 /* ── FPDB (Flightplandatabase.com) — chamada direta do browser ── */
-// GitHub Pages só serve arquivos estáticos, sem PHP.
-// A Flightplandatabase suporta CORS — chamamos direto do JS.
-// Cache no localStorage por ciclo AIRAC (28 dias).
+// Cadastro gratuito em https://flightplandatabase.com/api
+// Sem key: ~10 req/min. Com key gratuita: 2.500 req/dia sem throttle.
+const FPDB_KEY = '';  // cole sua API key aqui após cadastro
 
 function airacCycleJS() {
   const ref   = new Date('2024-01-25').getTime();
@@ -899,11 +899,15 @@ async function fpdbFetch(dep, arr) {
   const cached = fpdbCacheGet(dep, arr);
   if (cached) return { ...cached, _source: 'cache' };
 
+  const headers = { 'Accept': 'application/json' };
+  if (FPDB_KEY) headers['Authorization'] = 'Token ' + FPDB_KEY;
+
   // 1ª chamada: busca os IDs dos planos (search não retorna a string de rota)
   const searchRes = await fetch(
     `https://api.flightplandatabase.com/search/plans?fromICAO=${dep}&toICAO=${arr}&limit=5`,
-    { headers: { 'Accept': 'application/json' } }
+    { headers }
   );
+  if (searchRes.status === 429) throw new Error('429');
   if (!searchRes.ok) throw new Error(`HTTP ${searchRes.status}`);
   const plans = await searchRes.json();
   if (!Array.isArray(plans) || !plans.length) {
@@ -913,7 +917,7 @@ async function fpdbFetch(dep, arr) {
   // 2ª chamada: busca o plano completo do primeiro resultado para obter a rota
   const detailRes = await fetch(
     `https://api.flightplandatabase.com/plan/${plans[0].id}`,
-    { headers: { 'Accept': 'application/json' } }
+    { headers }
   );
   if (!detailRes.ok) throw new Error(`HTTP ${detailRes.status}`);
   const detail = await detailRes.json();
@@ -1016,25 +1020,66 @@ async function fetchAisweb(mode, routeId) {
 
 async function refreshAllAisweb() {
   if (!allRoutes.length) { toast('Nenhuma rota cadastrada.', 'err'); return; }
-  if (!confirm('Buscar rotas atualizadas para todas as ' + allRoutes.length + ' rotas? Os campos de rota, FL e distância serão sobrescritos.')) return;
+
+  // Sem API key o limite é ~10 req/min — avisa o admin
+  const keyWarning = FPDB_KEY ? '' : '\n\n⚠ Sem API key o processo é lento (1 rota a cada 7s para evitar bloqueio).';
+  if (!confirm(`Buscar rotas atualizadas para todas as ${allRoutes.length} rotas?${keyWarning}`)) return;
+
+  // Delay entre requisições: 1.2s com key, 7s sem key
+  const delay = ms => new Promise(r => setTimeout(r, ms));
+  const INTERVAL = FPDB_KEY ? 1200 : 7000;
 
   let ok = 0, skip = 0, err = 0;
-  toast('Buscando rotas...', 'ok');
+  const btn = document.querySelector('[onclick="refreshAllAisweb()"]');
+  if (btn) btn.disabled = true;
 
-  for (const r of allRoutes) {
+  for (let i = 0; i < allRoutes.length; i++) {
+    const r = allRoutes[i];
+
+    // pula rotas já cacheadas — não consome req
+    if (fpdbCacheGet(r.dep, r.arr)) {
+      try {
+        const cached = fpdbCacheGet(r.dep, r.arr);
+        if (cached.routes?.length) {
+          const best = cached.routes[0];
+          const update = { route: best.route };
+          if (best.level)    update.plannedFL = best.level;
+          if (best.distance) update.distance  = parseInt(best.distance) || null;
+          await db.collection('routes').doc(r.id).update(update);
+          ok++;
+        } else skip++;
+      } catch(_) { err++; }
+      continue;
+    }
+
+    toast(`Buscando ${i + 1}/${allRoutes.length} — ${r.dep}→${r.arr}`, 'ok');
+
     try {
       const data = await fpdbFetch(r.dep, r.arr);
-      if (!data.routes?.length) { skip++; continue; }
-      const best   = data.routes[0];
-      const update = { route: best.route };
-      if (best.level)    update.plannedFL = best.level;
-      if (best.distance) update.distance  = parseInt(best.distance) || null;
-      await db.collection('routes').doc(r.id).update(update);
-      ok++;
-    } catch(_) { err++; }
+      if (!data.routes?.length) { skip++; }
+      else {
+        const best   = data.routes[0];
+        const update = { route: best.route };
+        if (best.level)    update.plannedFL = best.level;
+        if (best.distance) update.distance  = parseInt(best.distance) || null;
+        await db.collection('routes').doc(r.id).update(update);
+        ok++;
+      }
+    } catch(e) {
+      if (e.message === '429') {
+        // Rate limit — aguarda 15s e tenta de novo
+        toast(`Rate limit atingido. Aguardando 15s... (${i + 1}/${allRoutes.length})`, 'err');
+        await delay(15000);
+        i--; continue; // retenta a mesma rota
+      }
+      err++;
+    }
+
+    if (i < allRoutes.length - 1) await delay(INTERVAL);
   }
 
-  toast(`AISWEB: ${ok} atualizadas, ${skip} sem dados, ${err} erros.`, ok > 0 ? 'ok' : 'err');
+  if (btn) btn.disabled = false;
+  toast(`Concluído: ${ok} atualizadas · ${skip} sem dados · ${err} erros`, ok > 0 ? 'ok' : 'err');
   await loadRoutes();
 }
 
