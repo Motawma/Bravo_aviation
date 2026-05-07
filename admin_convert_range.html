@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<title>Converter Alcance km → NM — Admin BRV</title>
+<style>
+body{background:#080612;color:#F0EAF8;font-family:monospace;padding:30px;max-width:900px;margin:0 auto}
+h1{color:#00EEFF;margin-bottom:6px}
+p{color:#9A8FB8;margin-bottom:20px;font-size:13px}
+button{background:#00EEFF;color:#000;border:none;padding:10px 24px;font-size:14px;font-weight:700;cursor:pointer;border-radius:4px;margin-right:10px}
+button:disabled{opacity:0.4;cursor:not-allowed}
+#log{background:#0E0B1E;border:1px solid #1E1840;padding:16px;margin-top:20px;height:380px;overflow-y:auto;font-size:12px;line-height:1.8}
+.ok{color:#00EEFF}.skip{color:#9A8FB8}.err{color:#FF2080}.bold{color:#fff;font-weight:bold}
+#login-box{background:#0E0B1E;border:1px solid #1E1840;padding:20px;margin-bottom:20px}
+#login-box input{background:#080612;border:1px solid #1E1840;color:#F0EAF8;padding:8px 12px;font-size:13px;width:260px;margin:5px 0;display:block}
+</style>
+</head>
+<body>
+<h1>✈ Converter Alcance km → NM</h1>
+<p>Converte o campo <code>range_km</code> para <code>range_nm</code> em todos os documentos da coleção <code>fleet</code>. O campo antigo é removido.</p>
+
+<div id="login-box">
+  <p style="color:#00EEFF;margin-bottom:10px;font-size:13px">Login necessário:</p>
+  <input id="email" type="email" placeholder="Email admin" />
+  <input id="password" type="password" placeholder="Senha" />
+  <button id="btn-login" style="margin-top:8px">Entrar</button>
+  <span id="login-err" style="color:#FF2080;margin-left:10px;font-size:12px"></span>
+</div>
+
+<button id="btn-preview" disabled>🔍 Pré-visualizar conversão</button>
+<button id="btn-convert" disabled>⚡ Converter agora</button>
+
+<div id="log"><span class="skip">Aguardando Firebase...</span></div>
+
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+<script>
+firebase.initializeApp({
+  apiKey: 'AIzaSyC2dDGhKjzHSclyFwUFNGA60DtXAjLEJ6I',
+  authDomain: 'bravo-aviation.firebaseapp.com',
+  projectId: 'bravo-aviation',
+  storageBucket: 'bravo-aviation.firebasestorage.app',
+  messagingSenderId: '712016002234',
+  appId: '1:712016002234:web:ce7a8e39c28bc6d8ca5683'
+});
+const auth = firebase.auth();
+const db   = firebase.firestore();
+
+const logEl = document.getElementById('log');
+function log(msg, cls='') {
+  const d = document.createElement('div');
+  d.className = cls; d.innerHTML = msg;
+  logEl.appendChild(d);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+auth.onAuthStateChanged(user => {
+  if (user) {
+    document.getElementById('login-box').style.display = 'none';
+    document.getElementById('btn-preview').disabled = false;
+    document.getElementById('btn-convert').disabled = false;
+    log(`✅ Autenticado como <b>${user.email}</b>`, 'ok');
+  }
+});
+
+document.getElementById('btn-login').addEventListener('click', async () => {
+  const email = document.getElementById('email').value;
+  const pass  = document.getElementById('password').value;
+  const err   = document.getElementById('login-err');
+  try { await auth.signInWithEmailAndPassword(email, pass); err.textContent = ''; }
+  catch(e) { err.textContent = e.message; }
+});
+
+document.getElementById('btn-preview').addEventListener('click', async () => {
+  logEl.innerHTML = '';
+  log('--- Pré-visualização (sem alterações) ---', 'bold');
+  try {
+    const snap = await db.collection('fleet').get();
+    if (snap.empty) { log('Nenhuma aeronave encontrada.', 'skip'); return; }
+    snap.docs.forEach(d => {
+      const a = d.data();
+      if (a.range_km) {
+        const nm = Math.round(a.range_km * 0.539957);
+        log(`  <b>${a.name}</b> [${a.code}]: ${a.range_km} km → <span style="color:#00EEFF">${nm} NM</span>`, 'ok');
+      } else if (a.range_nm) {
+        log(`  <b>${a.name}</b> [${a.code}]: já possui range_nm = ${a.range_nm} NM`, 'skip');
+      } else {
+        log(`  <b>${a.name}</b> [${a.code}]: sem campo range_km ou range_nm`, 'err');
+      }
+    });
+    log(`Total: ${snap.size} aeronaves`, 'bold');
+  } catch(e) { log('Erro: ' + e.message, 'err'); }
+});
+
+document.getElementById('btn-convert').addEventListener('click', async () => {
+  if (!confirm('Confirmar conversão? O campo range_km será substituído por range_nm em todas as aeronaves.')) return;
+  logEl.innerHTML = '';
+  log('--- Iniciando conversão... ---', 'bold');
+  document.getElementById('btn-convert').disabled = true;
+
+  let updated = 0, skipped = 0, errors = 0;
+  try {
+    const snap = await db.collection('fleet').get();
+    for (const docSnap of snap.docs) {
+      const a = docSnap.data();
+      if (!a.range_km) {
+        log(`  ↷ SKIP  <b>${a.name}</b> — sem range_km`, 'skip');
+        skipped++; continue;
+      }
+      const nm = Math.round(a.range_km * 0.539957);
+      try {
+        await db.collection('fleet').doc(docSnap.id).update({
+          range_nm: nm,
+          range_km: firebase.firestore.FieldValue.delete()
+        });
+        log(`  ✔ OK    <b>${a.name}</b> [${a.code}]: ${a.range_km} km → <span style="color:#00EEFF">${nm} NM</span>`, 'ok');
+        updated++;
+      } catch(e) {
+        log(`  ✘ ERR   ${a.name}: ${e.message}`, 'err');
+        errors++;
+      }
+    }
+  } catch(e) { log('Erro ao ler fleet: ' + e.message, 'err'); }
+
+  log('--- Concluído! ---', 'bold');
+  log(`✅ Convertidas: <b>${updated}</b> | ↷ Ignoradas: <b>${skipped}</b> | ❌ Erros: <b>${errors}</b>`, 'bold');
+  document.getElementById('btn-convert').disabled = false;
+});
+</script>
+</body>
+</html>
