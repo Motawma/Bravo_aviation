@@ -285,7 +285,7 @@ function showSBInput() {
   el.innerHTML = `
     <div style="font-size:11px;color:var(--text-sec);margin-bottom:6px">Pilot ID ou username do SimBrief:</div>
     <div style="display:flex;gap:8px">
-      <input id="sb-input-id" class="sb-input" placeholder="Ex: 123456 ou BoardingSeat47" />
+      <input id="sb-input-id" class="sb-input" placeholder="Pilot ID ou username do SimBrief" />
       <button class="sb-btn sb-btn-primary" onclick="fetchSimBriefOFP(document.getElementById('sb-input-id').value)" style="white-space:nowrap">Buscar</button>
     </div>`;
   setTimeout(() => document.getElementById('sb-input-id')?.focus(), 50);
