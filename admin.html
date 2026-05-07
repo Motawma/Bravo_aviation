@@ -858,22 +858,82 @@ async function loadAll() {
   renderPireps();
 }
 
-/* ── AISWEB ── */
-// api_aisweb.php deve estar no mesmo diretório e ter as credenciais configuradas.
-const AISWEB_PROXY = 'api_aisweb.php';
+/* ── FPDB (Flightplandatabase.com) — chamada direta do browser ── */
+// GitHub Pages só serve arquivos estáticos, sem PHP.
+// A Flightplandatabase suporta CORS — chamamos direto do JS.
+// Cache no localStorage por ciclo AIRAC (28 dias).
 
-async function loadAiracInfo() {
-  try {
-    const r = await fetch(AISWEB_PROXY + '?action=airac');
-    const d = await r.json();
-    const lbl   = document.getElementById('airac-label');
-    const dates = document.getElementById('airac-dates');
-    if (lbl)   lbl.textContent   = d.label  || '—';
-    if (dates) dates.textContent = d.start + ' → ' + d.end;
-  } catch(_) {}
+function airacCycleJS() {
+  const ref   = new Date('2024-01-25').getTime();
+  const today = new Date(); today.setHours(0,0,0,0);
+  const idx   = Math.floor((today.getTime() - ref) / (28 * 86400000));
+  const start = new Date(ref + idx * 28 * 86400000);
+  const end   = new Date(start.getTime() + 27 * 86400000);
+  const year  = start.getFullYear();
+  const firstIdx = Math.ceil((new Date(year + '-01-01').getTime() - ref) / (28 * 86400000));
+  const n     = idx - firstIdx + 1;
+  return {
+    id:    start.toISOString().slice(0,10).replace(/-/g,''),
+    label: `AIRAC ${year}${String(n).padStart(2,'0')}`,
+    start: start.toISOString().slice(0,10),
+    end:   end.toISOString().slice(0,10),
+  };
 }
 
-// Busca rota AISWEB para o formulário "Adicionar nova rota"
+function fpdbCacheGet(dep, arr) {
+  const key = `fpdb_${airacCycleJS().id}_${dep}_${arr}`;
+  try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : null; } catch(_) { return null; }
+}
+
+function fpdbCachePut(dep, arr, data) {
+  const airac = airacCycleJS();
+  const key   = `fpdb_${airac.id}_${dep}_${arr}`;
+  // remove entradas de ciclos anteriores
+  Object.keys(localStorage).forEach(k => {
+    if (k.startsWith('fpdb_') && !k.startsWith('fpdb_' + airac.id)) localStorage.removeItem(k);
+  });
+  try { localStorage.setItem(key, JSON.stringify(data)); } catch(_) {}
+}
+
+async function fpdbFetch(dep, arr) {
+  const cached = fpdbCacheGet(dep, arr);
+  if (cached) return { ...cached, _source: 'cache' };
+
+  const res = await fetch(
+    `https://api.flightplandatabase.com/search/plans?fromICAO=${dep}&toICAO=${arr}&limit=10`,
+    { headers: { 'Accept': 'application/json' } }
+  );
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const plans = await res.json();
+
+  const routes = [];
+  const seen   = new Set();
+  for (const p of (Array.isArray(plans) ? plans : [])) {
+    let route = (p.route || '').trim().toUpperCase();
+    if (!route) continue;
+    route = route.replace(new RegExp('^' + dep + '\\s+'), '').replace(new RegExp('\\s+' + arr + '$'), '').trim();
+    if (!route || route === 'DCT' || seen.has(route)) continue;
+    seen.add(route);
+    routes.push({
+      route,
+      level:    p.cruisingAlt ? String(Math.round(p.cruisingAlt / 100)) : null,
+      distance: p.distance    ? Math.round(p.distance * 0.539957)        : null,
+    });
+  }
+
+  const result = { dep, arr, airac: airacCycleJS(), routes };
+  fpdbCachePut(dep, arr, result);
+  return { ...result, _source: 'api' };
+}
+
+function loadAiracInfo() {
+  const airac = airacCycleJS();
+  const lbl   = document.getElementById('airac-label');
+  const dates = document.getElementById('airac-dates');
+  if (lbl)   lbl.textContent   = airac.label;
+  if (dates) dates.textContent = airac.start + ' → ' + airac.end;
+}
+
 async function fetchAisweb(mode, routeId) {
   let dep, arr, statusEl, inputEl;
 
@@ -883,7 +943,6 @@ async function fetchAisweb(mode, routeId) {
     statusEl = document.getElementById('rf-aisweb-status');
     inputEl  = document.getElementById('rf-route');
   } else {
-    // modo "edit" — formulário inline da linha da rota
     const r  = allRoutes.find(x => x.id === routeId);
     if (!r) return;
     dep      = r.dep;
@@ -893,76 +952,55 @@ async function fetchAisweb(mode, routeId) {
   }
 
   if (!dep || dep.length !== 4 || !arr || arr.length !== 4) {
-    if (statusEl) { statusEl.textContent = '⚠ Preencha os ICAOs de partida e destino (4 letras) antes de buscar.'; statusEl.style.color = 'var(--danger)'; }
+    if (statusEl) { statusEl.textContent = '⚠ Preencha os ICAOs antes de buscar.'; statusEl.style.color = 'var(--danger)'; }
     return;
   }
 
-  if (statusEl) { statusEl.textContent = '⏳ Consultando AISWEB...'; statusEl.style.color = 'var(--gold)'; }
+  if (statusEl) { statusEl.textContent = '⏳ Buscando rotas...'; statusEl.style.color = 'var(--gold)'; }
 
   try {
-    const res  = await fetch(`${AISWEB_PROXY}?action=routes&dep=${dep}&arr=${arr}`);
-    const data = await res.json();
-
-    if (data.error) {
-      if (statusEl) { statusEl.textContent = '✘ ' + data.error; statusEl.style.color = 'var(--danger)'; }
-      return;
-    }
-
+    const data   = await fpdbFetch(dep, arr);
     const routes = data.routes || [];
-    if (!routes.length || !routes[0].route) {
-      if (statusEl) {
-        statusEl.textContent = '⚠ Nenhuma rota encontrada no AISWEB para ' + dep + '→' + arr + '. Insira manualmente.';
-        statusEl.style.color = 'var(--text-sec)';
-      }
+
+    if (!routes.length) {
+      if (statusEl) { statusEl.textContent = '⚠ Nenhuma rota encontrada para ' + dep + '→' + arr + '. Insira manualmente.'; statusEl.style.color = 'var(--text-sec)'; }
       return;
     }
 
-    // Preenche com a primeira rota retornada
     const best = routes[0];
     if (inputEl) inputEl.value = best.route;
 
-    // Preenche FL e EET se disponíveis (apenas no modo "add")
     if (mode === 'add') {
       if (best.level)    document.getElementById('rf-fl').value   = best.level;
       if (best.distance) document.getElementById('rf-dist').value = best.distance;
-      if (best.eet)      document.getElementById('rf-eet').value  = best.eet;
     } else {
-      if (best.level)    document.getElementById('re-fl-' + routeId).value  = best.level;
-      if (best.distance) document.getElementById('re-nm-' + routeId).value  = best.distance;
-      if (best.eet)      document.getElementById('re-eet-' + routeId).value  = best.eet;
+      if (best.level)    document.getElementById('re-fl-' + routeId).value = best.level;
+      if (best.distance) document.getElementById('re-nm-' + routeId).value = best.distance;
     }
 
-    const src = data._source === 'cache' ? '(cache AIRAC)' : '(API ao vivo)';
-    if (statusEl) {
-      statusEl.textContent = '✔ Rota obtida ' + src + ' — ' + (data.airac?.label || '');
-      statusEl.style.color = 'var(--success)';
-    }
-    if (routes.length > 1) console.info('[AISWEB] ' + routes.length + ' rotas disponíveis:', routes);
+    const src = data._source === 'cache' ? '(cache AIRAC)' : '(ao vivo)';
+    if (statusEl) { statusEl.textContent = `✔ ${routes.length} rota(s) encontrada(s) ${src} — ${data.airac?.label || ''}`; statusEl.style.color = 'var(--success)'; }
+    if (routes.length > 1) console.info('[FPDB] rotas disponíveis:', routes);
   } catch(e) {
-    if (statusEl) { statusEl.textContent = '✘ Erro ao chamar api_aisweb.php: ' + e.message; statusEl.style.color = 'var(--danger)'; }
+    if (statusEl) { statusEl.textContent = '✘ Erro: ' + e.message; statusEl.style.color = 'var(--danger)'; }
   }
 }
 
-// Atualiza TODAS as rotas cadastradas via AISWEB (útil na virada de ciclo AIRAC)
 async function refreshAllAisweb() {
   if (!allRoutes.length) { toast('Nenhuma rota cadastrada.', 'err'); return; }
-  if (!confirm('Buscar rotas atualizadas do AISWEB para todas as ' + allRoutes.length + ' rotas cadastradas? Os campos de rota, FL e EET serão sobrescritos com os dados do ciclo atual.')) return;
+  if (!confirm('Buscar rotas atualizadas para todas as ' + allRoutes.length + ' rotas? Os campos de rota, FL e distância serão sobrescritos.')) return;
 
   let ok = 0, skip = 0, err = 0;
-  toast('Atualizando rotas via AISWEB...', 'ok');
+  toast('Buscando rotas...', 'ok');
 
   for (const r of allRoutes) {
     try {
-      const res  = await fetch(`${AISWEB_PROXY}?action=routes&dep=${r.dep}&arr=${r.arr}`);
-      const data = await res.json();
-      if (data.error || !data.routes?.length || !data.routes[0].route) { skip++; continue; }
-
-      const best = data.routes[0];
+      const data = await fpdbFetch(r.dep, r.arr);
+      if (!data.routes?.length) { skip++; continue; }
+      const best   = data.routes[0];
       const update = { route: best.route };
       if (best.level)    update.plannedFL = best.level;
       if (best.distance) update.distance  = parseInt(best.distance) || null;
-      if (best.eet)      update.eet       = best.eet;
-
       await db.collection('routes').doc(r.id).update(update);
       ok++;
     } catch(_) { err++; }
