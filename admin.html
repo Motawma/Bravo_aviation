@@ -323,10 +323,13 @@ tr:hover td{background:rgba(255,255,255,.02);}
 
     <!-- PIREPS -->
     <div class="page" id="page-pireps">
-      <div class="tabs">
-        <div class="tab active" onclick="filterPireps('pending',this)">Pendentes</div>
-        <div class="tab" onclick="filterPireps('approved',this)">Aprovados</div>
-        <div class="tab" onclick="filterPireps('rejected',this)">Rejeitados</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <div class="tabs" style="margin-bottom:0">
+          <div class="tab active" onclick="filterPireps('pending',this)">Pendentes</div>
+          <div class="tab" onclick="filterPireps('approved',this)">Aprovados</div>
+          <div class="tab" onclick="filterPireps('rejected',this)">Rejeitados</div>
+        </div>
+        <button class="btn-sm approve" onclick="openManualPirepModal()" style="white-space:nowrap">+ PIREP Manual</button>
       </div>
       <div class="table-wrap">
         <table>
@@ -648,6 +651,67 @@ tr:hover td{background:rgba(255,255,255,.02);}
       <button class="btn-ghost" onclick="closeAddModal()">Cancelar</button>
       <button class="btn-gold" id="add-btn" onclick="createPilot()">Criar conta</button>
     </div>
+  </div>
+</div>
+
+<!-- Modal: PIREP Manual -->
+<div id="modal-manual-pirep" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:9999;align-items:flex-start;justify-content:center;overflow-y:auto;padding:32px 16px;">
+  <div style="background:#100E25;border:1px solid #1E1840;border-radius:8px;width:100%;max-width:500px;padding:28px;">
+    <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700;color:#00EEFF;margin-bottom:4px">Registrar PIREP Manual</div>
+    <p style="font-size:12px;color:#6A5F8A;margin-bottom:20px">Use para registrar voos não capturados pelo ACARS. O PIREP será criado como <strong style="color:#3db07a">Aprovado</strong> diretamente.</p>
+
+    <label style="display:block;font-size:10px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;color:#4A4068;margin-bottom:6px">Piloto</label>
+    <select id="mp-pilot" style="width:100%;background:#080612;border:1px solid #1E1840;color:#F0EAF8;padding:10px 12px;border-radius:4px;font-size:13px;font-family:'Inter',sans-serif;margin-bottom:14px;appearance:none"></select>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+      <div>
+        <label style="display:block;font-size:10px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;color:#4A4068;margin-bottom:6px">Partida</label>
+        <input type="text" id="mp-dep" maxlength="4" placeholder="SBGR" style="width:100%;background:#080612;border:1px solid #1E1840;color:#F0EAF8;padding:10px 12px;border-radius:4px;font-size:13px;font-family:'Inter',sans-serif;text-transform:uppercase" />
+      </div>
+      <div>
+        <label style="display:block;font-size:10px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;color:#4A4068;margin-bottom:6px">Chegada</label>
+        <input type="text" id="mp-arr" maxlength="4" placeholder="SBCF" style="width:100%;background:#080612;border:1px solid #1E1840;color:#F0EAF8;padding:10px 12px;border-radius:4px;font-size:13px;font-family:'Inter',sans-serif;text-transform:uppercase" />
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+      <div>
+        <label style="display:block;font-size:10px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;color:#4A4068;margin-bottom:6px">Aeronave</label>
+        <input type="text" id="mp-ac" placeholder="Airbus A320" style="width:100%;background:#080612;border:1px solid #1E1840;color:#F0EAF8;padding:10px 12px;border-radius:4px;font-size:13px;font-family:'Inter',sans-serif" />
+      </div>
+      <div>
+        <label style="display:block;font-size:10px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;color:#4A4068;margin-bottom:6px">Duração (HH:MM)</label>
+        <input type="text" id="mp-dur" placeholder="01:16" style="width:100%;background:#080612;border:1px solid #1E1840;color:#F0EAF8;padding:10px 12px;border-radius:4px;font-size:13px;font-family:'Inter',sans-serif" />
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px">
+      <div>
+        <label style="display:block;font-size:10px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;color:#4A4068;margin-bottom:6px">FL</label>
+        <input type="number" id="mp-fl" placeholder="350" style="width:100%;background:#080612;border:1px solid #1E1840;color:#F0EAF8;padding:10px 12px;border-radius:4px;font-size:13px;font-family:'Inter',sans-serif" />
+      </div>
+      <div>
+        <label style="display:block;font-size:10px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;color:#4A4068;margin-bottom:6px">Pouso (FPM)</label>
+        <input type="number" id="mp-lr" placeholder="202" style="width:100%;background:#080612;border:1px solid #1E1840;color:#F0EAF8;padding:10px 12px;border-radius:4px;font-size:13px;font-family:'Inter',sans-serif" />
+      </div>
+      <div>
+        <label style="display:block;font-size:10px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;color:#4A4068;margin-bottom:6px">Sim</label>
+        <select id="mp-sim" style="width:100%;background:#080612;border:1px solid #1E1840;color:#F0EAF8;padding:10px 12px;border-radius:4px;font-size:13px;font-family:'Inter',sans-serif;appearance:none">
+          <option value="MSFS">MSFS</option>
+          <option value="XP">X-Plane</option>
+          <option value="Manual">Manual</option>
+        </select>
+      </div>
+    </div>
+
+    <label style="display:block;font-size:10px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;color:#4A4068;margin-bottom:6px">Observações (opcional)</label>
+    <input type="text" id="mp-obs" placeholder="Voo não capturado pelo ACARS" style="width:100%;background:#080612;border:1px solid #1E1840;color:#F0EAF8;padding:10px 12px;border-radius:4px;font-size:13px;font-family:'Inter',sans-serif;margin-bottom:20px" />
+
+    <div style="display:flex;gap:10px">
+      <button id="mp-submit-btn" onclick="submitManualPirep()" style="flex:1;padding:12px;background:#00EEFF;color:#000;border:none;font-weight:700;font-size:13px;border-radius:4px;cursor:pointer;font-family:'Inter',sans-serif">✔ Registrar PIREP</button>
+      <button onclick="document.getElementById('modal-manual-pirep').style.display='none'" style="padding:12px 20px;background:transparent;color:#9A8FB8;border:1px solid #1E1840;font-size:13px;border-radius:4px;cursor:pointer">Cancelar</button>
+    </div>
+    <div id="mp-error" style="display:none;color:#e05555;font-size:12px;margin-top:12px;"></div>
   </div>
 </div>
 
@@ -1869,6 +1933,84 @@ async function rejectPirep(pirepId) {
   if (pirep) pirep.status = 'rejected';
   updateBadges(); renderOverview(); renderPireps();
   notifyDiscordPirep(pirep || { dep:'?', arr:'?' }, pilot, 'reject');
+}
+
+/* ── PIREP MANUAL ── */
+function openManualPirepModal() {
+  // Popula dropdown de pilotos
+  const sel = document.getElementById('mp-pilot');
+  sel.innerHTML = allPilots
+    .slice().sort((a,b)=>(a.name||'').localeCompare(b.name||''))
+    .map(p=>`<option value="${p.id}">${p.name} (${p.vid||'?'}) — ${p.callsign||'sem callsign'}</option>`)
+    .join('');
+  // Limpa campos
+  ['mp-dep','mp-arr','mp-ac','mp-dur','mp-fl','mp-lr','mp-obs'].forEach(id=>{ document.getElementById(id).value=''; });
+  document.getElementById('mp-error').style.display = 'none';
+  document.getElementById('mp-submit-btn').disabled = false;
+  document.getElementById('mp-submit-btn').textContent = '✔ Registrar PIREP';
+  document.getElementById('modal-manual-pirep').style.display = 'flex';
+}
+
+async function submitManualPirep() {
+  const pilotId  = document.getElementById('mp-pilot').value;
+  const dep      = document.getElementById('mp-dep').value.trim().toUpperCase();
+  const arr      = document.getElementById('mp-arr').value.trim().toUpperCase();
+  const ac       = document.getElementById('mp-ac').value.trim();
+  const dur      = document.getElementById('mp-dur').value.trim();
+  const fl       = document.getElementById('mp-fl').value.trim();
+  const lr       = parseInt(document.getElementById('mp-lr').value) || 0;
+  const sim      = document.getElementById('mp-sim').value;
+  const obs      = document.getElementById('mp-obs').value.trim();
+  const errEl    = document.getElementById('mp-error');
+  const btn      = document.getElementById('mp-submit-btn');
+
+  errEl.style.display = 'none';
+  if (!dep || dep.length < 3) { errEl.textContent='Partida inválida.'; errEl.style.display='block'; return; }
+  if (!arr || arr.length < 3) { errEl.textContent='Chegada inválida.'; errEl.style.display='block'; return; }
+  if (!dur.match(/^\d{1,2}:\d{2}$/)) { errEl.textContent='Duração no formato HH:MM (ex: 01:16).'; errEl.style.display='block'; return; }
+
+  const pilot = allPilots.find(p=>p.id===pilotId);
+  btn.disabled = true; btn.textContent = 'Salvando...';
+
+  const today = new Date().toISOString().slice(0,10);
+  const pirepData = {
+    userId:      pilotId,
+    pilotId:     pilotId,
+    pilotName:   pilot?.name  || '',
+    pilotVid:    pilot?.vid   || '',
+    callsign:    pilot?.callsign || '',
+    dep, arr,
+    ac:          ac || pilot?.aircraft || '',
+    dur,
+    fl:          fl || '',
+    sim,
+    landingRate: lr,
+    obs,
+    status:      'approved',
+    source:      'manual',
+    createdAt:   firebase.firestore.FieldValue.serverTimestamp(),
+    date:        today,
+  };
+
+  try {
+    const ref = await db.collection('pireps').add(pirepData);
+    // Atualiza horas e voos do piloto
+    const hours = durToHours(dur);
+    const newHours   = (pilot?.hours   || 0) + hours;
+    const newFlights = (pilot?.flights || 0) + 1;
+    await db.collection('users').doc(pilotId).update({ hours: newHours, flights: newFlights });
+
+    // Atualiza arrays em memória
+    allPireps.unshift({ id: ref.id, ...pirepData, status: 'approved' });
+    if (pilot) { pilot.hours = newHours; pilot.flights = newFlights; }
+
+    updateBadges(); renderOverview(); renderPireps(); renderPilots();
+    document.getElementById('modal-manual-pirep').style.display = 'none';
+    toast(`PIREP de ${pilot?.name||'piloto'} registrado! +${hours.toFixed(1)}h adicionadas.`);
+  } catch(e) {
+    btn.disabled = false; btn.textContent = '✔ Registrar PIREP';
+    errEl.textContent = 'Erro: ' + e.message; errEl.style.display = 'block';
+  }
 }
 
 /* ── PIREP LOG MODAL ── */
