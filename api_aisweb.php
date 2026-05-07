@@ -17,7 +17,7 @@ header('Access-Control-Allow-Origin: *');
 // ─── Flightplandatabase.com ───────────────────────────────────────────────────
 // Cadastro gratuito em https://flightplandatabase.com/api — aprovação imediata.
 // Sem key: 100 req/dia. Com key gratuita: 2.500 req/dia.
-define('FPDB_KEY',  '');          // deixe vazio para usar sem autenticação
+define('FPDB_KEY',  'p7kj9dPZvDiQ9UUo1HmlQIX1wXsSwHhKLhbfkfNX');
 define('FPDB_BASE', 'https://api.flightplandatabase.com');
 
 // ─── DECEA AISWEB (aguardando credenciais) ────────────────────────────────────
@@ -84,61 +84,98 @@ function httpGet(string $url, array $headers = []): ?string {
     return $raw === false ? null : $raw;
 }
 
+// ─── Converte nodes do FPDB em string de rota ICAO ───────────────────────────
+function nodesToRouteString(array $nodes, string $dep, string $arr): string {
+    $AWY = ['AWY-HI', 'AWY-LO', 'NAT', 'PACOT'];
+    // Remove DEP e ARR dos extremos
+    $mid = array_slice($nodes, 1, -1);
+    if (!$mid) return '';
+
+    $out = [$mid[0]['ident']];
+    $i   = 1;
+    while ($i < count($mid)) {
+        $via = $mid[$i]['via'] ?? null;
+        if ($via && in_array($via['type'] ?? '', $AWY)) {
+            $airway = $via['ident'];
+            $j = $i;
+            while ($j < count($mid) && ($mid[$j]['via']['ident'] ?? '') === $airway) $j++;
+            $out[] = $airway;
+            $out[] = $mid[$j - 1]['ident'];
+            $i = $j;
+        } else {
+            $out[] = $mid[$i]['ident'];
+            $i++;
+        }
+    }
+    return implode(' ', $out);
+}
+
 // ─── Flightplandatabase.com ───────────────────────────────────────────────────
-function fpdbRoutes(string $dep, string $arr): array {
-    $headers = FPDB_KEY ? ['Authorization: Token ' . FPDB_KEY] : [];
+function fpdbRoutes(string $dep, string $arr, int $fl = 350): array {
+    if (FPDB_KEY) {
+        // COM key: POST /auto/generate — rota AIRAC atual (server-side, sem CORS)
+        $body = json_encode([
+            'fromICAO'   => $dep,   'toICAO'    => $arr,
+            'useAWYHI'   => true,   'useAWYLO'  => false,
+            'useNAT'     => false,  'usePACOT'  => false,
+            'cruiseAlt'  => $fl * 100,
+            'cruiseSpeed'=> 460,
+        ]);
+        $ctx = stream_context_create(['http' => [
+            'method'  => 'POST',
+            'timeout' => 20,
+            'header'  => implode("\r\n", [
+                'User-Agent: BravoAviationVA/1.0',
+                'Content-Type: application/json',
+                'Accept: application/json',
+                'Authorization: Basic ' . base64_encode(FPDB_KEY . ':'),
+            ]) . "\r\n",
+            'content' => $body,
+        ]]);
+        $raw  = @file_get_contents(FPDB_BASE . '/auto/generate', false, $ctx);
+        $plan = $raw ? json_decode($raw, true) : null;
 
-    // Busca até 10 planos arquivados entre os dois aeródromos, ordenados por votos
-    $url = FPDB_BASE . '/search/plans?' . http_build_query([
-        'fromICAO' => $dep,
-        'toICAO'   => $arr,
-        'limit'    => 10,
-        'sort'     => 'created',   // mais recentes primeiro
+        if (!$plan || isset($plan['message'])) {
+            return ['error' => 'Falha no auto/generate: ' . ($plan['message'] ?? 'sem resposta')];
+        }
+
+        $nodes    = $plan['route']['nodes'] ?? [];
+        $routeStr = nodesToRouteString($nodes, $dep, $arr);
+        if (!$routeStr) return ['error' => 'Rota gerada sem waypoints para ' . $dep . '→' . $arr];
+
+        return [[
+            'route'    => $routeStr,
+            'level'    => isset($plan['maxAltitude']) ? (string)(int)($plan['maxAltitude'] / 100) : null,
+            'distance' => isset($plan['distance'])    ? (int)round($plan['distance']) : null,
+            'source'   => 'fpdb_generate',
+        ]];
+    }
+
+    // SEM key: GET /search/plans + GET /plan/{id}
+    $hdrs = ['User-Agent: BravoAviationVA/1.0', 'Accept: application/json'];
+    $url  = FPDB_BASE . '/search/plans?' . http_build_query([
+        'fromICAO' => $dep, 'toICAO' => $arr, 'limit' => 5, 'sort' => 'created',
     ]);
-
-    $raw = httpGet($url, $headers);
-    if ($raw === null) return ['error' => 'Falha ao conectar com flightplandatabase.com'];
-
-    $data = json_decode($raw, true);
-    if (!is_array($data)) return ['error' => 'Resposta inválida da API.'];
-
-    // A API retorna array direto (não wrapped em "data")
-    $plans  = isset($data[0]) ? $data : ($data['data'] ?? []);
-    $routes = [];
-
-    foreach ($plans as $plan) {
-        $route = trim(strtoupper($plan['route'] ?? ''));
-        if (!$route || $route === 'DCT') continue;
-
-        // Remove DEP e ARR do início/fim da string se estiverem presentes
-        $route = preg_replace('/^' . $dep . '\s+/', '', $route);
-        $route = preg_replace('/\s+' . $arr . '$/', '', $route);
-        $route = trim($route);
-
-        if (!$route) continue;
-
-        $routes[] = [
-            'route'    => $route,
-            'level'    => isset($plan['cruisingAlt']) ? (string)(int)($plan['cruisingAlt'] / 100) : null,
-            'distance' => isset($plan['distance'])    ? (int)round($plan['distance'] * 0.539957)   : null, // km→NM
-            'eet'      => null,
-            'source'   => 'flightplandatabase',
-        ];
+    $raw  = httpGet($url, $hdrs);
+    $list = $raw ? json_decode($raw, true) : null;
+    if (!is_array($list) || !$list) {
+        return ['error' => 'Nenhuma rota encontrada para ' . $dep . '→' . $arr];
     }
 
-    if (!$routes) {
-        return ['error' => 'Nenhuma rota encontrada no Flightplandatabase para ' . $dep . '→' . $arr . '. Insira manualmente.'];
-    }
+    $detail = httpGet(FPDB_BASE . '/plan/' . $list[0]['id'], $hdrs);
+    $plan   = $detail ? json_decode($detail, true) : null;
+    if (!$plan) return ['error' => 'Falha ao buscar detalhes do plano'];
 
-    // Deduplica por string de rota
-    $seen = [];
-    $routes = array_filter($routes, function($r) use (&$seen) {
-        if (isset($seen[$r['route']])) return false;
-        $seen[$r['route']] = true;
-        return true;
-    });
+    $nodes    = $plan['route']['nodes'] ?? [];
+    $routeStr = nodesToRouteString($nodes, $dep, $arr);
+    if (!$routeStr) return ['error' => 'Plano sem waypoints para ' . $dep . '→' . $arr];
 
-    return array_values($routes);
+    return [[
+        'route'    => $routeStr,
+        'level'    => isset($plan['maxAltitude']) ? (string)(int)($plan['maxAltitude'] / 100) : null,
+        'distance' => isset($plan['distance'])    ? (int)round($plan['distance']) : null,
+        'source'   => 'fpdb_search',
+    ]];
 }
 
 // ─── DECEA AISWEB (comentado — ativar quando credenciais chegarem) ─────────────
@@ -187,6 +224,7 @@ function handleAirac(): void {
 function handleRoutes(string $dep, string $arr): void {
     $dep = strtoupper(preg_replace('/[^A-Z0-9]/', '', $dep));
     $arr = strtoupper(preg_replace('/[^A-Z0-9]/', '', $arr));
+    $fl  = max(100, min(450, (int)($_GET['fl'] ?? 350)));
 
     if (strlen($dep) !== 4 || strlen($arr) !== 4) {
         echo json_encode(['error' => 'ICAOs inválidos. Use 4 letras. Ex: SBGR']); return;
@@ -197,7 +235,7 @@ function handleRoutes(string $dep, string $arr): void {
     if ($cached) { $cached['_source'] = 'cache'; echo json_encode($cached, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE); return; }
 
     // ── Fonte ativa: Flightplandatabase ──────────────────────────────────────
-    $routes = fpdbRoutes($dep, $arr);
+    $routes = fpdbRoutes($dep, $arr, $fl);
 
     // ── Fonte futura: DECEA AISWEB (descomentar quando credenciais chegarem) ─
     // $routes = aiswebRoutes($dep, $arr);

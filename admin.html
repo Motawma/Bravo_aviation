@@ -925,15 +925,29 @@ function nodesToRouteString(nodes) {
   return out.join(' ');
 }
 
+// Detecta se está no XAMPP local (tem acesso ao proxy PHP com API key)
+const IS_LOCAL = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+const PROXY_URL = '/Site Bravo aviation/api_aisweb.php';
+
 async function fpdbFetch(dep, arr, fl) {
   const cached = fpdbCacheGet(dep, arr);
   if (cached) return { ...cached, _source: 'cache' };
 
-  // FPDB bloqueia o header Authorization em CORS (preflight falha).
-  // Usa GET sem auth — funciona no browser, limite 100 req/dia (suficiente para admin).
-  const hdrs = { 'Accept': 'application/json' };
+  if (IS_LOCAL) {
+    // No XAMPP: chama proxy PHP (usa API key server-side, sem CORS)
+    const flParam = fl ? '&fl=' + parseInt(fl) : '';
+    const res = await fetch(`${PROXY_URL}?action=routes&dep=${dep}&arr=${arr}${flParam}`);
+    if (res.status === 429) throw new Error('429');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    if (data.error) return { dep, arr, airac: airacCycleJS(), routes: [], _error: data.error };
+    const result = { dep, arr, airac: airacCycleJS(), routes: data.routes || [] };
+    fpdbCachePut(dep, arr, result);
+    return { ...result, _source: 'proxy' };
+  }
 
-  // 1ª chamada: busca lista de planos arquivados entre os dois aeródromos
+  // Fora do XAMPP: GET direto sem auth (100 req/dia — usar só para buscas individuais)
+  const hdrs = { 'Accept': 'application/json' };
   const sRes = await fetch(
     `https://api.flightplandatabase.com/search/plans?fromICAO=${dep}&toICAO=${arr}&limit=5&sort=created`,
     { headers: hdrs }
@@ -943,7 +957,6 @@ async function fpdbFetch(dep, arr, fl) {
   const list = await sRes.json();
   if (!Array.isArray(list) || !list.length) return { dep, arr, airac: airacCycleJS(), routes: [] };
 
-  // 2ª chamada: detalhes do plano (contém nodes com aerovias e waypoints)
   const dRes = await fetch(
     `https://api.flightplandatabase.com/plan/${list[0].id}`,
     { headers: hdrs }
@@ -958,7 +971,6 @@ async function fpdbFetch(dep, arr, fl) {
     route:    routeStr,
     level:    plan.maxAltitude ? String(Math.round(plan.maxAltitude / 100)) : null,
     distance: plan.distance    ? Math.round(plan.distance) : null,
-    cycle:    plan.cycle ? `${plan.cycle.year}/${plan.cycle.release}` : null,
   }] : [];
 
   const result = { dep, arr, airac: airacCycleJS(), routes };
