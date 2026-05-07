@@ -194,6 +194,10 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 .btn-ghost:hover { border-color: var(--gold-dim); color: var(--gold); }
 .form-success { display: none; margin-top: 16px; background: rgba(61,176,122,0.1); border: 1px solid rgba(61,176,122,0.25); border-radius: var(--radius); padding: 14px; color: var(--success); font-size: 13px; text-align: center; }
 .form-success.show { display: block; }
+.pw-wrap { position: relative; }
+.pw-wrap input { padding-right: 42px !important; }
+.pw-eye { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--text-dim); padding: 4px; display: flex; align-items: center; line-height: 1; }
+.pw-eye:hover { color: var(--text-sec); }
 
 /* ── ROUTES ── */
 .routes-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
@@ -591,7 +595,26 @@ tr:hover td { background: rgba(255,255,255,0.02); }
               <label>SimBrief Username <span style="font-size:11px;color:var(--text-dim);font-weight:400;">(para importar rotas AIRAC)</span></label>
               <input type="text" id="edit-simbrief" placeholder="seu_usuario_simbrief" />
             </div>
-            <div class="form-group"><label>Nova senha (deixe em branco para manter)</label><input type="password" id="edit-password" placeholder="••••••••" /></div>
+            <div class="form-grid-2">
+              <div class="form-group">
+                <label>Nova senha (deixe em branco para manter)</label>
+                <div class="pw-wrap">
+                  <input type="password" id="edit-password" placeholder="••••••••" />
+                  <button type="button" class="pw-eye" onclick="togglePwd('edit-password',this)" tabindex="-1">
+                    <svg id="eye-ico-password" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  </button>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Confirmar nova senha</label>
+                <div class="pw-wrap">
+                  <input type="password" id="edit-password-confirm" placeholder="••••••••" />
+                  <button type="button" class="pw-eye" onclick="togglePwd('edit-password-confirm',this)" tabindex="-1">
+                    <svg id="eye-ico-password-confirm" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
             <button type="submit" class="btn-gold">Salvar alterações</button>
             <div class="form-success" id="profile-success">✓ Perfil atualizado com sucesso!</div>
           </form>
@@ -1282,6 +1305,15 @@ async function submitPirep(e) {
   }
 }
 
+/* ── PASSWORD TOGGLE ── */
+const EYE_OPEN  = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
+const EYE_SHUT  = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`;
+function togglePwd(id, btn) {
+  const inp = document.getElementById(id);
+  if (inp.type === 'password') { inp.type = 'text';     btn.innerHTML = EYE_SHUT; }
+  else                         { inp.type = 'password'; btn.innerHTML = EYE_OPEN; }
+}
+
 /* ── PROFILE SAVE ── */
 async function saveProfile(e) {
   e.preventDefault();
@@ -1289,10 +1321,15 @@ async function saveProfile(e) {
   user.email            = document.getElementById('edit-email').value.trim();
   user.aircraft         = document.getElementById('edit-aircraft').value;
   user.simbriefUsername = document.getElementById('edit-simbrief').value.trim();
-  const newPwd          = document.getElementById('edit-password').value;
+  const newPwd     = document.getElementById('edit-password').value;
+  const confirmPwd = document.getElementById('edit-password-confirm').value;
 
   if (newPwd.length > 0 && newPwd.length < 6) {
     alert('A senha deve ter pelo menos 6 caracteres.');
+    return;
+  }
+  if (newPwd.length >= 6 && newPwd !== confirmPwd) {
+    alert('As senhas não coincidem.');
     return;
   }
 
@@ -1314,6 +1351,7 @@ async function saveProfile(e) {
     try {
       await firebase.auth().currentUser.updatePassword(newPwd);
       document.getElementById('edit-password').value = '';
+      document.getElementById('edit-password-confirm').value = '';
     } catch(err) {
       if (err.code === 'auth/requires-recent-login') {
         alert('Sessão expirada. Faça logout e login novamente para trocar a senha.');
