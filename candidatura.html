@@ -314,9 +314,11 @@ footer {
     if (!ALLOWED_FORA_MALHA.includes(foraMalha || ''))
       return showError('Opção de voos fora da malha inválida.');
 
-    // Verifica unicidade do callsign
-    const existing = await firebase.firestore().collection('users').where('callsign', '==', 'BRV' + csNum).get();
-    if (!existing.empty) return showError('Este callsign já está em uso. Escolha outro.');
+    // Verifica unicidade do callsign via roster público (sem auth)
+    const rosterSnap = await firebase.firestore().collection('siteConfig').doc('roster').get();
+    const rosterPilots = rosterSnap.exists ? (rosterSnap.data().pilots || []) : [];
+    if (rosterPilots.some(p => (p.callsign || '').toUpperCase() === callsign.toUpperCase()))
+      return showError('Este callsign já está em uso. Escolha outro.');
 
     const btn = document.getElementById('jf-btn');
     btn.disabled = true;
