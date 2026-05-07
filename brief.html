@@ -388,9 +388,21 @@ function applyManualRoute() {
 }
 
 /* ── SIMBRIEF FETCHER ── */
-let _pf       = null;
-let _userData = null;
-let _sbData   = null;
+let _pf             = null;
+let _userData       = null;
+let _sbData         = null;
+let _wentToSimBrief = false;
+
+// Quando o piloto volta ao tab após abrir o SimBrief, re-busca o OFP atualizado
+document.addEventListener('click', e => {
+  if (e.target.closest('a[href*="simbrief.com"]')) _wentToSimBrief = true;
+});
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && _wentToSimBrief && _userData?.simbriefUsername) {
+    _wentToSimBrief = false;
+    fetchSimBriefOFP(_userData.simbriefUsername);
+  }
+});
 
 async function fetchSimBriefOFP(username) {
   const el = document.getElementById('sb-body');
@@ -476,9 +488,18 @@ function renderSBCard(data) {
     </div>`;
 }
 
+function buildSBRoute(data) {
+  // Monta rota ICAO completa: SID + enroute + STAR
+  const enroute = data.general?.route || '';
+  const sid     = data.origin?.sid_trans      || data.origin?.sid      || '';
+  const star    = data.destination?.star_trans || data.destination?.star || '';
+  const parts   = [sid, enroute, star].filter(Boolean);
+  return parts.join(' ') || enroute;
+}
+
 function applySimBrief() {
   if (!_sbData) return;
-  const route   = _sbData.general?.route || '';
+  const route   = buildSBRoute(_sbData);
   const fl      = _sbData.general?.initial_altitude ? Math.round(parseInt(_sbData.general.initial_altitude) / 100) : null;
   const eetSec  = parseInt(_sbData.times?.est_time_enroute || 0);
   const eetH    = Math.floor(eetSec / 3600);
