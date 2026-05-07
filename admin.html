@@ -94,6 +94,21 @@ tr:hover td{background:rgba(255,255,255,.02);}
 .badge.rejected{background:rgba(224,85,85,.1);color:var(--danger);border:1px solid rgba(224,85,85,.2);}
 .badge.admin{background:rgba(200,150,28,.15);color:var(--gold-light);border:1px solid rgba(200,150,28,.3);}
 .badge.pilot{background:rgba(58,127,212,.1);color:var(--info);border:1px solid rgba(58,127,212,.2);}
+.badge.staff{background:rgba(168,85,247,.15);color:#c084fc;border:1px solid rgba(168,85,247,.3);}
+
+/* PERMISSION TOGGLES */
+.perm-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid #1E1840;}
+.perm-row:last-child{border-bottom:none;}
+.perm-label{font-size:13px;color:var(--text);}
+.perm-desc{font-size:11px;color:var(--text-dim);margin-top:2px;}
+.perm-toggle{position:relative;display:inline-block;width:40px;height:22px;flex-shrink:0;}
+.perm-toggle input{opacity:0;width:0;height:0;}
+.perm-slider{position:absolute;inset:0;background:#1E1840;border-radius:22px;cursor:pointer;transition:.2s;}
+.perm-slider:before{content:'';position:absolute;width:16px;height:16px;left:3px;top:3px;background:#6A5F8A;border-radius:50%;transition:.2s;}
+.perm-toggle input:checked+.perm-slider{background:rgba(61,176,122,.25);border:1px solid rgba(61,176,122,.5);}
+.perm-toggle input:checked+.perm-slider:before{transform:translateX(18px);background:#4ade80;}
+.perm-toggle input:disabled+.perm-slider{opacity:.4;cursor:not-allowed;}
+.perm-fixed-rule{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;background:rgba(168,85,247,.06);border:1px solid rgba(168,85,247,.2);border-radius:4px;margin-bottom:8px;font-size:12px;color:#c084fc;}
 
 /* BUTTONS */
 .btn-sm{background:none;border:1px solid var(--border);color:var(--text-sec);padding:5px 12px;border-radius:var(--radius);font-size:11px;font-weight:600;cursor:pointer;transition:all .2s;font-family:'Inter',sans-serif;}
@@ -194,6 +209,9 @@ tr:hover td{background:rgba(255,255,255,.02);}
     </a>
     <a class="nav-item" onclick="goTo('fleet-admin',this)">
       <span class="nav-icon">✈️</span> Aeronaves
+    </a>
+    <a class="nav-item" id="nav-staff-config" onclick="goTo('staff-config',this)">
+      <span class="nav-icon">🛡️</span> Permissões Staff
     </a>
   </nav>
   <div class="sidebar-user">
@@ -310,7 +328,7 @@ tr:hover td{background:rgba(255,255,255,.02);}
         <div style="display:flex;align-items:center;gap:12px;">
           <span id="pilots-count" style="font-size:12px;color:var(--text-dim);"></span>
           <button class="btn-sm" onclick="syncPublicRoster(this)" style="padding:8px 18px;font-size:11px;border-color:rgba(0,238,255,0.3);color:#00EEFF;">↻ Sincronizar Roster Público</button>
-          <button class="btn-gold" onclick="openAddModal()" style="padding:8px 18px;font-size:11px;">+ Novo piloto</button>
+          <button id="btn-add-pilot" class="btn-gold" onclick="openAddModal()" style="padding:8px 18px;font-size:11px;">+ Novo piloto</button>
         </div>
       </div>
       <div class="table-wrap">
@@ -329,7 +347,7 @@ tr:hover td{background:rgba(255,255,255,.02);}
           <div class="tab" onclick="filterPireps('approved',this)">Aprovados</div>
           <div class="tab" onclick="filterPireps('rejected',this)">Rejeitados</div>
         </div>
-        <button class="btn-sm approve" onclick="openManualPirepModal()" style="white-space:nowrap">+ PIREP Manual</button>
+        <button id="btn-manual-pirep" class="btn-sm approve" onclick="openManualPirepModal()" style="white-space:nowrap">+ PIREP Manual</button>
       </div>
       <div class="table-wrap">
         <table>
@@ -497,6 +515,76 @@ tr:hover td{background:rgba(255,255,255,.02);}
         </div>
       </div>
 
+    </div>
+
+    <!-- PERMISSÕES STAFF -->
+    <div class="page" id="page-staff-config">
+      <div class="sec-header gap-b">
+        <div class="sec-title">Permissões Staff</div>
+      </div>
+
+      <div class="route-form-card" style="margin-bottom:20px;">
+        <div style="font-size:13px;font-weight:600;color:var(--text-sec);margin-bottom:4px;">🛡️ Configuração de acesso para membros com papel <span style="color:#c084fc">Staff</span></div>
+        <div style="font-size:12px;color:var(--text-dim);margin-bottom:20px;">Defina o que os membros com role Staff podem fazer no painel administrativo. Alterações entram em vigor no próximo login do staff.</div>
+
+        <!-- Regras fixas -->
+        <div style="margin-bottom:20px;">
+          <div style="font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#6A5F8A;margin-bottom:10px;">Regras fixas (não configuráveis)</div>
+          <div class="perm-fixed-rule">🔒 Staff <strong>nunca</strong> pode aprovar o próprio PIREP</div>
+          <div class="perm-fixed-rule">🔒 Staff <strong>nunca</strong> pode reverter a rejeição do próprio PIREP</div>
+        </div>
+
+        <!-- Seção: Habilitadas -->
+        <div style="font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--success);margin-bottom:8px;">Habilitadas por padrão</div>
+        <div style="margin-bottom:20px;">
+          <div class="perm-row">
+            <div><div class="perm-label">Aprovar / recusar PIREPs</div><div class="perm-desc">Pode aprovar ou recusar PIREPs de outros pilotos (nunca o próprio)</div></div>
+            <label class="perm-toggle"><input type="checkbox" id="perm-approvePireps"><span class="perm-slider"></span></label>
+          </div>
+          <div class="perm-row">
+            <div><div class="perm-label">Ver todos os pilotos e logs de voo</div><div class="perm-desc">Acesso à aba Pilotos e ao modal de log dos PIREPs</div></div>
+            <label class="perm-toggle"><input type="checkbox" id="perm-viewPilots"><span class="perm-slider"></span></label>
+          </div>
+          <div class="perm-row">
+            <div><div class="perm-label">Ver candidaturas</div><div class="perm-desc">Pode visualizar candidatos pendentes, aprovados e recusados (sem aprovar)</div></div>
+            <label class="perm-toggle"><input type="checkbox" id="perm-viewApplications"><span class="perm-slider"></span></label>
+          </div>
+        </div>
+
+        <!-- Seção: Desabilitadas -->
+        <div style="font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--danger);margin-bottom:8px;">Desabilitadas por padrão</div>
+        <div style="margin-bottom:20px;">
+          <div class="perm-row">
+            <div><div class="perm-label">Aprovar candidaturas</div><div class="perm-desc">Pode aceitar ou recusar candidatos e criar a conta do piloto</div></div>
+            <label class="perm-toggle"><input type="checkbox" id="perm-approveApplications"><span class="perm-slider"></span></label>
+          </div>
+          <div class="perm-row">
+            <div><div class="perm-label">Criar PIREPs manuais</div><div class="perm-desc">Pode registrar um PIREP manualmente por um piloto (ex: voo não capturado pelo ACARS)</div></div>
+            <label class="perm-toggle"><input type="checkbox" id="perm-createManualPirep"><span class="perm-slider"></span></label>
+          </div>
+          <div class="perm-row">
+            <div><div class="perm-label">Reverter rejeições de FOQA</div><div class="perm-desc">Pode remover violações e reverter um PIREP rejeitado pelo FOQA (nunca o próprio)</div></div>
+            <label class="perm-toggle"><input type="checkbox" id="perm-reverseRejection"><span class="perm-slider"></span></label>
+          </div>
+          <div class="perm-row">
+            <div><div class="perm-label">Editar dados de pilotos</div><div class="perm-desc">Pode alterar nome, horas, aeronave e role dos pilotos</div></div>
+            <label class="perm-toggle"><input type="checkbox" id="perm-editPilotData"><span class="perm-slider"></span></label>
+          </div>
+          <div class="perm-row">
+            <div><div class="perm-label">Criar / excluir pilotos</div><div class="perm-desc">Pode adicionar novos pilotos manualmente ou remover pilotos existentes</div></div>
+            <label class="perm-toggle"><input type="checkbox" id="perm-createDeletePilots"><span class="perm-slider"></span></label>
+          </div>
+          <div class="perm-row">
+            <div><div class="perm-label">Editar configurações do site</div><div class="perm-desc">Acesso à aba Site (equipe, webhook Discord, stats) e à aba Aeronaves</div></div>
+            <label class="perm-toggle"><input type="checkbox" id="perm-editSiteConfig"><span class="perm-slider"></span></label>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:14px;">
+          <button class="btn-primary" onclick="saveStaffConfig()">Salvar configuração</button>
+          <span id="staff-config-msg" style="font-size:12px;color:var(--text-dim);"></span>
+        </div>
+      </div>
     </div>
 
     <!-- AERONAVES -->
@@ -828,6 +916,27 @@ let allPilots = [];
 let allPireps = [];
 let discordWebhookUrl = null;
 
+const STAFF_DEFAULTS = {
+  canApprovePireps:       true,
+  canViewPilots:          true,
+  canViewApplications:    true,
+  canApproveApplications: false,
+  canCreateManualPirep:   false,
+  canReverseRejection:    false,
+  canEditPilotData:       false,
+  canCreateDeletePilots:  false,
+  canEditSiteConfig:      false,
+};
+let staffPerms = null; // null = admin (sem restrições)
+
+function can(perm) {
+  if (adminUser?.role !== 'staff') return true;
+  return (staffPerms ?? STAFF_DEFAULTS)[perm] ?? false;
+}
+function isOwnPirep(pirep) {
+  return pirep?.userId === adminUser?.uid || pirep?.pilotId === adminUser?.uid;
+}
+
 function sanitize(s) {
   if (s == null) return '—';
   const el = document.createElement('div');
@@ -850,7 +959,8 @@ function getRank(h){ return RANKS.find(r=>h>=r.min&&h<r.max)||RANKS[RANKS.length
 auth.onAuthStateChanged(async (u) => {
   if (!u) { window.location.href = 'login.html'; return; }
   const snap = await db.collection('users').doc(u.uid).get();
-  if (!snap.exists || snap.data().role !== 'admin') {
+  const role = snap.data()?.role;
+  if (!snap.exists || (role !== 'admin' && role !== 'staff')) {
     window.location.href = 'dashboard.html'; return;
   }
   adminUser = { uid: u.uid, ...snap.data() };
@@ -858,8 +968,14 @@ auth.onAuthStateChanged(async (u) => {
   const av = (adminUser.name || 'AD').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
   document.getElementById('admin-avatar').textContent = av;
   document.getElementById('admin-name').textContent = adminUser.name || 'Admin';
+  // Staff: carrega permissões antes de renderizar
+  if (role === 'staff') {
+    const cfgSnap = await db.collection('siteConfig').doc('staffPermissions').get();
+    staffPerms = cfgSnap.exists ? { ...STAFF_DEFAULTS, ...cfgSnap.data() } : { ...STAFF_DEFAULTS };
+  }
   await loadAll();
   setupLiveFlights();
+  applyStaffRestrictions();
 });
 
 function logout(){ auth.signOut().then(()=>{ window.location.href='login.html'; }); }
@@ -1489,10 +1605,10 @@ function renderApps() {
   }
   tbody.innerHTML = list.map(a=>{
     const dt = a.createdAt?.toDate ? a.createdAt.toDate().toLocaleDateString('pt-BR') : '—';
-    const actions = a.status==='pending'
+    const actions = a.status==='pending' && can('canApproveApplications')
       ? `<button class="btn-sm approve" onclick="approveApp('${a.id}')">Aprovar</button>
          <button class="btn-sm reject"  onclick="rejectApp('${a.id}')">Recusar</button>`
-      : `<span style="color:var(--text-dim);font-size:12px;">${a.status==='approved'?'Aprovada':'Recusada'}</span>`;
+      : `<span style="color:var(--text-dim);font-size:12px;">${a.status==='pending'?'Aguardando':a.status==='approved'?'Aprovada':'Recusada'}</span>`;
     const csLabel = a.callsign || ('BRV' + (a.vid || ''));
     const fmLabel = a.foraMalha === 'executiva' ? 'Executiva / Charter'
                   : a.foraMalha === 'cargueiro' ? 'Cargueiro'
@@ -1699,21 +1815,24 @@ function renderPilots() {
     tbody.innerHTML='<tr><td colspan="8"><div class="empty-state"><div class="big">👥</div>Nenhum piloto cadastrado.</div></td></tr>';
     return;
   }
-  tbody.innerHTML = allPilots.sort((a,b)=>(b.hours||0)-(a.hours||0)).map(p=>`
-    <tr>
+  tbody.innerHTML = allPilots.sort((a,b)=>(b.hours||0)-(a.hours||0)).map(p=>{
+    const roleLabel = p.role==='admin'?'Admin':p.role==='staff'?'Staff':'Pilot';
+    const roleBadge = p.role==='admin'?'admin':p.role==='staff'?'staff':'pilot';
+    return `<tr>
       <td class="td-main">${sanitize(p.name)}</td>
       <td>${sanitize(p.vid)}</td>
       <td style="font-size:12px;">${sanitize(p.email)}</td>
       <td>${sanitize(getRank(p.hours||0).name)}</td>
       <td><strong style="color:var(--gold)">${(p.hours||0).toFixed(1)}h</strong></td>
       <td>${p.flights||0}</td>
-      <td><span class="badge ${p.role==='admin'?'admin':'pilot'}">${p.role==='admin'?'Admin':'Pilot'}</span></td>
+      <td><span class="badge ${roleBadge}">${roleLabel}</span></td>
       <td style="display:flex;gap:6px;">
-        <button class="btn-sm" onclick="openEditModal('${p.id}')">Editar</button>
+        ${can('canEditPilotData') ? `<button class="btn-sm" onclick="openEditModal('${p.id}')">Editar</button>` : ''}
         <button class="btn-sm" onclick="resendAccessEmail('${p.id}')">Reenviar acesso</button>
-        <button class="btn-sm reject" onclick="deletePilot('${p.id}')">Excluir</button>
+        ${can('canCreateDeletePilots') ? `<button class="btn-sm reject" onclick="deletePilot('${p.id}')">Excluir</button>` : ''}
       </td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
 }
 
 function openEditModal(uid) {
@@ -2108,16 +2227,21 @@ function openPirepLog(pirepId) {
   document.getElementById('plog-reversal-reason').value = '';
   document.getElementById('plog-reversal-error').style.display = 'none';
 
+  // Regras: permissão + nunca aprovar/reverter o próprio PIREP
+  const ownPirep    = isOwnPirep(p);
+  const canApprove  = can('canApprovePireps')    && !ownPirep;
+  const canReverse  = can('canReverseRejection') && !ownPirep;
+
   if (p.status === 'pending') {
-    approveBtn.style.display  = '';
-    rejectBtn.style.display   = '';
+    approveBtn.style.display  = canApprove ? '' : 'none';
+    rejectBtn.style.display   = canApprove ? '' : 'none';
     reverseBtn.style.display  = 'none';
     reversalSec.style.display = 'none';
   } else if (p.status === 'rejected') {
     approveBtn.style.display  = 'none';
     rejectBtn.style.display   = 'none';
-    reverseBtn.style.display  = '';
-    reversalSec.style.display = '';
+    reverseBtn.style.display  = canReverse ? '' : 'none';
+    reversalSec.style.display = canReverse ? '' : 'none';
   } else {
     approveBtn.style.display  = 'none';
     rejectBtn.style.display   = 'none';
@@ -2340,7 +2464,7 @@ async function deleteAircraft(id, name) {
 }
 
 /* ── NAV ── */
-const PAGE_TITLES = { overview:'Visão Geral', applications:'Candidaturas', pilots:'Pilotos', pireps:'PIREPs', routes:'Rotas', site:'Configurações do Site', 'fleet-admin':'Frota de Aeronaves' };
+const PAGE_TITLES = { overview:'Visão Geral', applications:'Candidaturas', pilots:'Pilotos', pireps:'PIREPs', routes:'Rotas', site:'Configurações do Site', 'fleet-admin':'Frota de Aeronaves', 'staff-config':'Permissões Staff' };
 function goTo(id, el) {
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-'+id).classList.add('active');
@@ -2350,9 +2474,76 @@ function goTo(id, el) {
     if(n.getAttribute('onclick')&&n.getAttribute('onclick').includes("'"+id+"'")) n.classList.add('active');
   });
   document.getElementById('topbar-title').textContent = PAGE_TITLES[id]||'';
-  if (id === 'routes')      { loadRoutes(); loadAiracInfo(); }
-  if (id === 'site')        loadSiteStaff();
-  if (id === 'fleet-admin') loadFleet();
+  if (id === 'routes')       { loadRoutes(); loadAiracInfo(); }
+  if (id === 'site')         loadSiteStaff();
+  if (id === 'fleet-admin')  loadFleet();
+  if (id === 'staff-config') loadStaffConfig();
+}
+
+/* ── STAFF PERMISSIONS ── */
+function applyStaffRestrictions() {
+  if (adminUser?.role !== 'staff') return;
+  const p = staffPerms ?? STAFF_DEFAULTS;
+
+  // Sidebar
+  document.querySelector('.user-rank').textContent = 'Staff';
+
+  // Nav: staff nunca acessa configurações de staff
+  document.getElementById('nav-staff-config')?.style.setProperty('display','none');
+
+  // Nav: baseado em permissões
+  if (!p.canViewApplications) document.getElementById('nav-applications')?.style.setProperty('display','none');
+  if (!p.canViewPilots) {
+    document.querySelector('.nav-item[onclick*="\'pilots\'"]')?.style.setProperty('display','none');
+  }
+  if (!p.canEditSiteConfig) {
+    document.querySelector('.nav-item[onclick*="\'site\'"]')?.style.setProperty('display','none');
+    document.querySelector('.nav-item[onclick*="\'fleet-admin\'"]')?.style.setProperty('display','none');
+  }
+
+  // Botões estáticos
+  if (!p.canCreateDeletePilots) document.getElementById('btn-add-pilot')?.style.setProperty('display','none');
+  if (!p.canCreateManualPirep)  document.getElementById('btn-manual-pirep')?.style.setProperty('display','none');
+}
+
+async function loadStaffConfig() {
+  const snap = await db.collection('siteConfig').doc('staffPermissions').get();
+  const cfg  = snap.exists ? { ...STAFF_DEFAULTS, ...snap.data() } : { ...STAFF_DEFAULTS };
+  const map = {
+    canApprovePireps: 'perm-approvePireps', canViewPilots: 'perm-viewPilots',
+    canViewApplications: 'perm-viewApplications', canApproveApplications: 'perm-approveApplications',
+    canCreateManualPirep: 'perm-createManualPirep', canReverseRejection: 'perm-reverseRejection',
+    canEditPilotData: 'perm-editPilotData', canCreateDeletePilots: 'perm-createDeletePilots',
+    canEditSiteConfig: 'perm-editSiteConfig',
+  };
+  Object.entries(map).forEach(([key, id]) => {
+    const el = document.getElementById(id);
+    if (el) el.checked = cfg[key] ?? STAFF_DEFAULTS[key];
+  });
+}
+
+async function saveStaffConfig() {
+  const map = {
+    canApprovePireps: 'perm-approvePireps', canViewPilots: 'perm-viewPilots',
+    canViewApplications: 'perm-viewApplications', canApproveApplications: 'perm-approveApplications',
+    canCreateManualPirep: 'perm-createManualPirep', canReverseRejection: 'perm-reverseRejection',
+    canEditPilotData: 'perm-editPilotData', canCreateDeletePilots: 'perm-createDeletePilots',
+    canEditSiteConfig: 'perm-editSiteConfig',
+  };
+  const data = {};
+  Object.entries(map).forEach(([key, id]) => {
+    const el = document.getElementById(id);
+    if (el) data[key] = el.checked;
+  });
+  try {
+    await db.collection('siteConfig').doc('staffPermissions').set(data);
+    const msg = document.getElementById('staff-config-msg');
+    msg.textContent = '✓ Salvo!'; msg.style.color = 'var(--success)';
+    setTimeout(() => { msg.textContent = ''; }, 3000);
+  } catch(e) {
+    const msg = document.getElementById('staff-config-msg');
+    msg.textContent = 'Erro: ' + e.message; msg.style.color = 'var(--danger)';
+  }
 }
 
 /* ── SITE CONFIG ── */
