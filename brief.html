@@ -783,14 +783,14 @@ function buildIvaoUrl(dep, arr, fl, fn, ac, route, eet) {
 }
 
 function buildSimBriefUrl(dep, arr, fl, fn, ac) {
-  const type = toICAOType(ac);
-  const num  = (fn || '').replace(/^BRV/i, '').trim() || '001';
+  const actype = toICAOType(ac);
+  const num    = (fn || '').replace(/^BRV/i, '').trim() || '001';
+  const rmk    = encodeURIComponent('RMK/OPERATED BY BRAVO AVIATION TCAS WWW.BRAVOAVIATION.SITE IVAOVA/BRV');
   return `https://www.simbrief.com/system/dispatch.php`
-       + `?orig=${dep}&dest=${arr}&type=${type}`
+       + `?type=API_V2&orig=${dep}&dest=${arr}&actype=${actype}`
        + `&airline=BRV&fltnum=${num}`
        + `&fl=${fl}00`
-       + `&autosubmit=1`
-       + `&rmk=${encodeURIComponent('TCAS WWW.BRAVOAVIATION.SITE IVAOVA/BRV')}`;
+       + `&manualrmk=${rmk}`;
 }
 
 function toICAOType(ac) {
