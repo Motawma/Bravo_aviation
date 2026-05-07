@@ -168,6 +168,43 @@ body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-ser
   </div>
 </div>
 
+<!-- Modal instrução SimBrief -->
+<div id="modal-simbrief-guide" class="route-modal-overlay">
+  <div class="route-modal" style="max-width:440px">
+    <div class="route-modal-title" style="color:#5BA8FF">✈ SimBrief OFP</div>
+    <div class="route-modal-sub" style="margin-bottom:20px">Siga as etapas abaixo para garantir que o plano de voo seja arquivado corretamente no IVAO com os dados da VA.</div>
+
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:22px">
+      <div style="display:flex;gap:12px;align-items:flex-start;padding:12px;background:rgba(0,238,255,0.05);border:1px solid rgba(0,238,255,0.15);border-radius:6px">
+        <span style="font-size:18px;line-height:1">1️⃣</span>
+        <div>
+          <div style="font-size:13px;font-weight:600;color:#C0BAD8;margin-bottom:2px">Gere o plano no SimBrief</div>
+          <div style="font-size:12px;color:#6A5F8A">Clique em <strong style="color:#5BA8FF">Abrir SimBrief</strong>, gere o OFP normalmente e volte a esta página.</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:flex-start;padding:12px;background:rgba(0,238,255,0.05);border:1px solid rgba(0,238,255,0.15);border-radius:6px">
+        <span style="font-size:18px;line-height:1">2️⃣</span>
+        <div>
+          <div style="font-size:13px;font-weight:600;color:#C0BAD8;margin-bottom:2px">A rota é atualizada automaticamente</div>
+          <div style="font-size:12px;color:#6A5F8A">Ao retornar, o brief e o link de prefile são atualizados com a rota do SimBrief (SID + enroute + STAR).</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:flex-start;padding:12px;background:rgba(91,168,255,0.08);border:1px solid rgba(91,168,255,0.25);border-radius:6px">
+        <span style="font-size:18px;line-height:1">3️⃣</span>
+        <div>
+          <div style="font-size:13px;font-weight:600;color:#5BA8FF;margin-bottom:2px">Use o botão IVAO Prefile desta página</div>
+          <div style="font-size:12px;color:#6A5F8A">Não utilize o botão Prefile do SimBrief — ele não envia os dados corretos da VA no campo 18.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="route-modal-actions">
+      <a id="btn-simbrief-go" href="#" target="_blank" class="btn-confirm" style="text-decoration:none;text-align:center;background:#3a7fd4" onclick="onSimBriefOpen()">✈ Abrir SimBrief</a>
+      <button class="btn-cancel" onclick="closeSimBriefModal()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <div class="topbar">
   <div class="topbar-logo"><img src="assets/logo.png" alt="BRV" /></div>
   <div class="topbar-sep"></div>
@@ -392,6 +429,18 @@ let _pf             = null;
 let _userData       = null;
 let _sbData         = null;
 let _wentToSimBrief = false;
+
+function openSimBriefModal(url) {
+  document.getElementById('btn-simbrief-go').href = url;
+  document.getElementById('modal-simbrief-guide').classList.add('open');
+}
+function closeSimBriefModal() {
+  document.getElementById('modal-simbrief-guide').classList.remove('open');
+}
+function onSimBriefOpen() {
+  _wentToSimBrief = true;
+  closeSimBriefModal();
+}
 
 // Quando o piloto volta ao tab após abrir o SimBrief, re-busca o OFP atualizado
 document.addEventListener('click', e => {
@@ -620,9 +669,9 @@ function renderBrief(pf, userData) {
 
         <!-- Integration Buttons -->
         <div class="int-btns">
-          <a class="int-btn simbrief" href="${buildSimBriefUrl(dep,arr,fl,fn,ac)}" target="_blank">
+          <button class="int-btn simbrief" onclick="openSimBriefModal('${buildSimBriefUrl(dep,arr,fl,fn,ac)}')">
             ✈ SimBrief OFP
-          </a>
+          </button>
           <a class="int-btn skyvector" href="https://skyvector.com/?fpl=${dep}%20${arr}" target="_blank">
             🗺 SkyVector
           </a>
