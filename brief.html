@@ -97,6 +97,20 @@ body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-ser
 .sb-input:focus { outline: none; border-color: rgba(58,127,212,0.5); }
 .sb-mismatch { color: var(--danger); font-size: 11px; margin-bottom: 10px; padding: 6px 10px; background: rgba(224,85,85,0.08); border-radius: 3px; border: 1px solid rgba(224,85,85,0.2); }
 
+/* MODAL ROTA MANUAL */
+.route-modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:9999; align-items:center; justify-content:center; }
+.route-modal-overlay.open { display:flex; }
+.route-modal { background:#100E25; border:1px solid #1E1840; border-radius:8px; padding:28px; width:100%; max-width:460px; }
+.route-modal-title { font-family:'Barlow Condensed',sans-serif; font-size:20px; font-weight:700; color:var(--gold); margin-bottom:4px; }
+.route-modal-sub { font-size:12px; color:var(--text-sec); margin-bottom:22px; line-height:1.5; }
+.route-modal label { display:block; font-size:10px; font-weight:600; letter-spacing:0.15em; text-transform:uppercase; color:var(--text-dim); margin-bottom:6px; }
+.route-modal input { width:100%; background:var(--bg); border:1px solid var(--border); color:var(--text); padding:10px 12px; border-radius:4px; font-size:13px; font-family:'Inter',sans-serif; margin-bottom:14px; }
+.route-modal input:focus { outline:none; border-color:var(--gold-dim); }
+.route-modal-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.route-modal-actions { display:flex; gap:10px; margin-top:6px; }
+.route-modal-actions .btn-confirm { flex:1; padding:11px; background:var(--gold); color:#000; border:none; font-weight:700; font-size:13px; border-radius:4px; cursor:pointer; font-family:'Inter',sans-serif; }
+.route-modal-actions .btn-cancel { padding:11px 18px; background:transparent; color:var(--text-sec); border:1px solid var(--border); font-size:13px; border-radius:4px; cursor:pointer; font-family:'Inter',sans-serif; }
+
 /* METAR */
 .metar-section { margin-bottom: 20px; }
 .metar-dep, .metar-arr { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; margin-bottom: 10px; }
@@ -129,6 +143,30 @@ body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-ser
 </style>
 </head>
 <body>
+
+<!-- Modal: editar rota manualmente -->
+<div id="modal-route-edit" class="route-modal-overlay">
+  <div class="route-modal">
+    <div class="route-modal-title" id="mrm-title">Editar Rota</div>
+    <div class="route-modal-sub">Cole a rota do SimBrief (ou de outra fonte) e confirme para atualizar o brief e os links de prefile.</div>
+    <label>Rota</label>
+    <input type="text" id="mrm-route" placeholder="SID FIXO AWY FIXO STAR" autocomplete="off" spellcheck="false" />
+    <div class="route-modal-grid">
+      <div>
+        <label>Flight Level</label>
+        <input type="number" id="mrm-fl" placeholder="350" min="50" max="450" />
+      </div>
+      <div>
+        <label>EET (ex: 1h30)</label>
+        <input type="text" id="mrm-eet" placeholder="1h30" />
+      </div>
+    </div>
+    <div class="route-modal-actions">
+      <button class="btn-confirm" onclick="applyManualRoute()">✔ Confirmar e Aplicar</button>
+      <button class="btn-cancel" onclick="closeRouteModal()">Cancelar</button>
+    </div>
+  </div>
+</div>
 
 <div class="topbar">
   <div class="topbar-logo"><img src="assets/logo.png" alt="BRV" /></div>
@@ -263,6 +301,39 @@ auth.onAuthStateChanged(async (fbUser) => {
   }
 });
 
+/* ── MODAL ROTA MANUAL ── */
+function openRouteModal() {
+  document.getElementById('mrm-title').textContent = _pf
+    ? 'Rota ' + _pf.dep + ' → ' + _pf.arr
+    : 'Editar Rota';
+  document.getElementById('mrm-route').value = _pf?.route || '';
+  document.getElementById('mrm-fl').value    = _pf?.plannedFL || '';
+  document.getElementById('mrm-eet').value   = _pf?.eet || '';
+  document.getElementById('modal-route-edit').classList.add('open');
+  setTimeout(() => document.getElementById('mrm-route').focus(), 80);
+}
+function closeRouteModal() {
+  document.getElementById('modal-route-edit').classList.remove('open');
+}
+function applyManualRoute() {
+  const route = document.getElementById('mrm-route').value.trim().toUpperCase();
+  const fl    = document.getElementById('mrm-fl').value.trim();
+  const eet   = document.getElementById('mrm-eet').value.trim();
+  if (!route) { alert('Digite a rota antes de confirmar.'); return; }
+  if (route) { document.getElementById('brief-route-val').textContent = route; if (_pf) _pf.route = route; }
+  if (fl)    { document.getElementById('brief-fl-val').textContent = 'FL' + fl; if (_pf) _pf.plannedFL = fl; }
+  if (eet)   { document.getElementById('brief-eet-val').textContent = eet; if (_pf) _pf.eet = eet; }
+  if (_pf) {
+    const ivao   = document.getElementById('btn-ivao-prefile');
+    const vatsim = document.getElementById('btn-vatsim-prefile');
+    if (ivao)   ivao.href   = buildIvaoUrl(_pf.dep, _pf.arr, _pf.plannedFL, _pf.flightNumber, _pf.aircraft || _userData?.aircraft, _pf.route, _pf.eet);
+    if (vatsim) vatsim.href = 'https://my.vatsim.net/pilots/flightplan/create?callsign=' + (_pf.flightNumber||'') + '&dep=' + _pf.dep + '&arr=' + _pf.arr + '&aircraft=' + encodeURIComponent(_pf.aircraft||'') + '&altitude=' + (_pf.plannedFL||'350') + '00&route=' + encodeURIComponent(_pf.route||'DCT');
+  }
+  closeRouteModal();
+  const el = document.getElementById('sb-body');
+  if (el) el.innerHTML = `<div style="color:var(--success);font-size:12px;padding:6px 0">&#10003; Rota aplicada. Clique em IVAO Prefile para preencher o plano.</div>`;
+}
+
 /* ── SIMBRIEF FETCHER ── */
 let _pf       = null;
 let _userData = null;
@@ -328,11 +399,12 @@ function renderSBCard(data) {
     el.innerHTML = `
       <div class="sb-mismatch" style="margin-bottom:12px">
         ⚠ Seu último OFP no SimBrief é <strong>${sbDep}→${sbArr}</strong>.<br>
-        Para usar a rota correta, crie um novo plano para <strong>${_pf.dep}→${_pf.arr}</strong> no SimBrief e volte aqui.
+        Para usar a rota correta, crie um plano para <strong>${_pf.dep}→${_pf.arr}</strong> no SimBrief — ou insira a rota manualmente abaixo.
       </div>
       <div style="display:flex;gap:8px">
-        <a class="sb-btn sb-btn-primary" style="flex:1" href="${sbUrl}" target="_blank">✈ Criar plano ${_pf.dep}→${_pf.arr} no SimBrief</a>
-        <button class="sb-btn sb-btn-secondary" onclick="fetchSimBriefOFP(_userData?.simbriefUsername||document.getElementById('sb-input-id')?.value||'')" style="padding:8px 10px" title="Recarregar">↺</button>
+        <button class="sb-btn sb-btn-primary" style="flex:1" onclick="openRouteModal()">✏ Inserir rota ${_pf.dep}→${_pf.arr}</button>
+        <a class="sb-btn sb-btn-secondary" href="${sbUrl}" target="_blank" style="padding:8px 12px" title="Abrir SimBrief">✈</a>
+        <button class="sb-btn sb-btn-secondary" onclick="fetchSimBriefOFP(_userData?.simbriefUsername||'')" style="padding:8px 10px" title="Recarregar">↺</button>
       </div>`;
     return;
   }
