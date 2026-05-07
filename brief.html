@@ -247,7 +247,6 @@ auth.onAuthStateChanged(async (fbUser) => {
 
     document.body.style.visibility = '';
     const pf = data.pendingFlight;
-    console.log('[BRV brief] uid:', fbUser.uid, '| pendingFlight:', JSON.stringify(pf));
     if (!pf) {
       document.getElementById('main-content').innerHTML = `
         <div class="loading" style="padding:80px">

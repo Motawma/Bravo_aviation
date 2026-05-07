@@ -828,7 +828,6 @@ function closeModal() {
 }
 
 async function confirmRoute() {
-  console.log('[BRV] confirmRoute | selectedRoute:', selectedRoute, '| currentUser:', currentUser?.uid);
   if (!selectedRoute) { toast('Nenhuma rota selecionada.', 'err'); return; }
   if (!currentUser)   { toast('Usuário não autenticado.', 'err'); return; }
   const btn = document.getElementById('btn-confirm');
@@ -839,7 +838,6 @@ async function confirmRoute() {
   const obs      = document.getElementById('modal-obs').value.trim();
 
   try {
-    console.log('[BRV] saving pendingFlight to uid:', currentUser.uid);
     await db.collection('users').doc(currentUser.uid).set({
       pendingFlight: {
         dep:         selectedRoute.dep          || '',
@@ -855,7 +853,6 @@ async function confirmRoute() {
         savedAt:     firebase.firestore.FieldValue.serverTimestamp()
       }
     }, { merge: true });
-    console.log('[BRV] pendingFlight salvo com sucesso');
     btn.textContent = '✔ Confirmado';
     setTimeout(() => { window.location.href = 'brief.html'; }, 600);
   } catch(e) {
