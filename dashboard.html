@@ -591,7 +591,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
               <label>SimBrief Username <span style="font-size:11px;color:var(--text-dim);font-weight:400;">(para importar rotas AIRAC)</span></label>
               <input type="text" id="edit-simbrief" placeholder="seu_usuario_simbrief" />
             </div>
-            <div class="form-group"><label>Nova senha (deixe em branco para manter)</label><input type="password" placeholder="••••••••" /></div>
+            <div class="form-group"><label>Nova senha (deixe em branco para manter)</label><input type="password" id="edit-password" placeholder="••••••••" /></div>
             <button type="submit" class="btn-gold">Salvar alterações</button>
             <div class="form-success" id="profile-success">✓ Perfil atualizado com sucesso!</div>
           </form>
@@ -1288,12 +1288,27 @@ async function saveProfile(e) {
   user.email            = document.getElementById('edit-email').value;
   user.aircraft         = document.getElementById('edit-aircraft').value;
   user.simbriefUsername = document.getElementById('edit-simbrief').value.trim();
+  const newPwd          = document.getElementById('edit-password').value;
   try {
     await db.collection('users').doc(user.uid).update({
       name: user.name, email: user.email, aircraft: user.aircraft,
       simbriefUsername: user.simbriefUsername || null
     });
-  } catch(_) {}
+    if (newPwd.length >= 6) {
+      await firebase.auth().currentUser.updatePassword(newPwd);
+      document.getElementById('edit-password').value = '';
+    } else if (newPwd.length > 0) {
+      alert('A senha deve ter pelo menos 6 caracteres.');
+      return;
+    }
+  } catch(err) {
+    if (err.code === 'auth/requires-recent-login') {
+      alert('Sessão expirada. Faça logout e login novamente para trocar a senha.');
+    } else {
+      alert('Erro ao salvar: ' + err.message);
+    }
+    return;
+  }
   document.getElementById('profile-success').classList.add('show');
   document.getElementById('pf-name').textContent     = user.name;
   document.getElementById('pf-email').textContent    = user.email;
