@@ -899,25 +899,53 @@ async function fpdbFetch(dep, arr) {
   const cached = fpdbCacheGet(dep, arr);
   if (cached) return { ...cached, _source: 'cache' };
 
-  const res = await fetch(
-    `https://api.flightplandatabase.com/search/plans?fromICAO=${dep}&toICAO=${arr}&limit=10`,
+  // 1ª chamada: busca os IDs dos planos (search não retorna a string de rota)
+  const searchRes = await fetch(
+    `https://api.flightplandatabase.com/search/plans?fromICAO=${dep}&toICAO=${arr}&limit=5`,
     { headers: { 'Accept': 'application/json' } }
   );
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const plans = await res.json();
+  if (!searchRes.ok) throw new Error(`HTTP ${searchRes.status}`);
+  const plans = await searchRes.json();
+  if (!Array.isArray(plans) || !plans.length) {
+    return { dep, arr, airac: airacCycleJS(), routes: [] };
+  }
+
+  // 2ª chamada: busca o plano completo do primeiro resultado para obter a rota
+  const detailRes = await fetch(
+    `https://api.flightplandatabase.com/plan/${plans[0].id}`,
+    { headers: { 'Accept': 'application/json' } }
+  );
+  if (!detailRes.ok) throw new Error(`HTTP ${detailRes.status}`);
+  const detail = await detailRes.json();
 
   const routes = [];
   const seen   = new Set();
-  for (const p of (Array.isArray(plans) ? plans : [])) {
-    let route = (p.route || '').trim().toUpperCase();
-    if (!route) continue;
-    route = route.replace(new RegExp('^' + dep + '\\s+'), '').replace(new RegExp('\\s+' + arr + '$'), '').trim();
-    if (!route || route === 'DCT' || seen.has(route)) continue;
+
+  // Extrai rota do plano detalhado
+  const parseRoute = (p, d) => {
+    // campo "route" pode estar no detail ou construído a partir de "nodes"
+    let route = (d?.route || p.route || '').trim().toUpperCase();
+    if (!route && Array.isArray(d?.nodes)) {
+      // nodes = [{icao/ident}, ...] — monta string de waypoints
+      route = d.nodes
+        .map(n => (n.ident || n.icao || n.name || '').toUpperCase())
+        .filter(Boolean)
+        .join(' ');
+    }
+    route = route
+      .replace(new RegExp('^' + dep + '\\s+'), '')
+      .replace(new RegExp('\\s+' + arr + '$'), '')
+      .trim();
+    return route;
+  };
+
+  const route = parseRoute(plans[0], detail);
+  if (route && route !== 'DCT' && !seen.has(route)) {
     seen.add(route);
     routes.push({
       route,
-      level:    p.cruisingAlt ? String(Math.round(p.cruisingAlt / 100)) : null,
-      distance: p.distance    ? Math.round(p.distance * 0.539957)        : null,
+      level:    plans[0].maxAltitude ? String(Math.round(plans[0].maxAltitude / 100)) : null,
+      distance: plans[0].distance    ? Math.round(plans[0].distance * 0.539957)        : null,
     });
   }
 
