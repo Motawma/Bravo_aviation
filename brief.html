@@ -301,7 +301,8 @@ function renderSBCard(data) {
   const route   = data.general?.route         || '';
   const fl      = data.general?.initial_altitude ? Math.round(parseInt(data.general.initial_altitude) / 100) : null;
   const fuelLbs = data.fuel?.plan_ramp         || null;
-  const staticId= data.params?.static_id       || '';
+  const staticId= typeof data.params?.static_id === 'string' ? data.params.static_id
+                : (data.general?.static_id     || '');
   const eetSec  = parseInt(data.times?.est_time_enroute || 0);
   const eetH    = Math.floor(eetSec / 3600);
   const eetM    = Math.floor((eetSec % 3600) / 60);
