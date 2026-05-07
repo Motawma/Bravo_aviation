@@ -773,10 +773,26 @@ tr:hover td{background:rgba(255,255,255,.02);}
       <div id="plog-obs" style="font-size:13px;color:#C0BAD8;background:#0A0818;border:1px solid #1E1840;border-radius:4px;padding:10px 12px;line-height:1.6"></div>
     </div>
 
+    <!-- Banner: rejeição já revertida -->
+    <div id="plog-reversed-banner" style="display:none;background:rgba(61,176,122,0.08);border:1px solid rgba(61,176,122,0.3);border-radius:4px;padding:10px 14px;margin-bottom:16px;">
+      <div style="font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#4ade80;margin-bottom:4px">↩ Rejeição Revertida</div>
+      <div id="plog-reversed-text" style="font-size:12px;color:#C0BAD8;line-height:1.6"></div>
+    </div>
+
+    <!-- Reversão de rejeição (só aparece para status rejected) -->
+    <div id="plog-reversal-section" style="display:none;margin-bottom:20px;border-top:1px solid #1E1840;padding-top:16px;">
+      <div style="font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#f59e0b;margin-bottom:6px">↩ Reverter Rejeição</div>
+      <div style="font-size:11px;color:#9A8FB8;margin-bottom:12px">Remova as violações indevidas clicando em ✕ e informe o motivo da reversão.</div>
+      <div style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#6A5F8A;margin-bottom:6px">Motivo da reversão <span style="color:#e05555">*</span></div>
+      <textarea id="plog-reversal-reason" rows="2" style="width:100%;background:#0A0818;border:1px solid #1E1840;border-radius:4px;color:#C0BAD8;font-size:13px;padding:8px 10px;resize:vertical;font-family:'Inter',sans-serif;box-sizing:border-box;" placeholder="Ex: Violação removida da política da VA na v1.2.42"></textarea>
+      <div id="plog-reversal-error" style="display:none;color:#e05555;font-size:12px;margin-top:6px;"></div>
+    </div>
+
     <!-- Ações -->
     <div id="plog-actions" style="display:flex;gap:10px;margin-top:4px;">
-      <button id="plog-approve-btn" style="flex:1;padding:11px;background:#3db07a;color:#fff;border:none;font-weight:700;font-size:13px;border-radius:4px;cursor:pointer;font-family:'Inter',sans-serif;letter-spacing:.05em;" onclick="pirepLogAction('approve')">✔ Aprovar</button>
-      <button id="plog-reject-btn"  style="flex:1;padding:11px;background:#e05555;color:#fff;border:none;font-weight:700;font-size:13px;border-radius:4px;cursor:pointer;font-family:'Inter',sans-serif;letter-spacing:.05em;" onclick="pirepLogAction('reject')">✗ Recusar</button>
+      <button id="plog-approve-btn"  style="flex:1;padding:11px;background:#3db07a;color:#fff;border:none;font-weight:700;font-size:13px;border-radius:4px;cursor:pointer;font-family:'Inter',sans-serif;letter-spacing:.05em;" onclick="pirepLogAction('approve')">✔ Aprovar</button>
+      <button id="plog-reject-btn"   style="flex:1;padding:11px;background:#e05555;color:#fff;border:none;font-weight:700;font-size:13px;border-radius:4px;cursor:pointer;font-family:'Inter',sans-serif;letter-spacing:.05em;" onclick="pirepLogAction('reject')">✗ Recusar</button>
+      <button id="plog-reverse-btn"  style="flex:1;padding:11px;background:#f59e0b;color:#000;border:none;font-weight:700;font-size:13px;border-radius:4px;cursor:pointer;font-family:'Inter',sans-serif;letter-spacing:.05em;" onclick="reversePirepRejection()">↩ Reverter e Aprovar</button>
       <button style="padding:11px 18px;background:transparent;color:#9A8FB8;border:1px solid #1E1840;font-size:13px;border-radius:4px;cursor:pointer;" onclick="closePirepLog()">Fechar</button>
     </div>
   </div>
@@ -1855,7 +1871,7 @@ function renderPireps() {
       <td>FL${sanitize(p.fl)}</td>
       <td>${dt}</td>
       <td style="font-size:11px;">${sanitize(p.sim)}${netBadge(p.network)}</td>
-      <td style="font-size:11px;font-weight:700;color:${p.foqaScore===100?'#4ade80':p.foqaScore>=75?'#f59e0b':'#ff4d4d'}">${p.foqaScore != null ? p.foqaScore+'%' : (p.source==='acars'?'—':'N/A')}</td>
+      <td style="font-size:11px;font-weight:700;color:${p.foqaScore===100?'#4ade80':p.foqaScore>=75?'#f59e0b':'#ff4d4d'}">${p.foqaScore != null ? p.foqaScore+'%' : (p.source==='manual'?'—':p.source==='acars'?'—':'N/A')}</td>
       <td><span class="badge ${p.status}">${p.status==='pending'?'Pendente':p.status==='approved'?'Aprovado':'Recusado'}</span></td>
       <td style="display:flex;gap:6px;">
         <button class="btn-sm" onclick="openPirepLog('${p.id}')" title="Ver log do voo">📋</button>
@@ -1912,13 +1928,15 @@ async function notifyDiscordPirep(pirep, pilot, action) {
 async function approvePirep(pirepId, userId, dur) {
   const hours = durToHours(dur);
   const pilot = allPilots.find(p=>p.id===userId);
+  const pirep = allPireps.find(p=>p.id===pirepId);
   const newHours   = ((pilot?.hours||0) + hours);
   const newFlights = ((pilot?.flights||0) + 1);
+  const userUpd = { hours: newHours, flights: newFlights };
+  if (pirep?.arr && pirep?.source !== 'acars') userUpd.currentAirport = pirep.arr;
   await Promise.all([
     db.collection('pireps').doc(pirepId).update({ status: 'approved' }),
-    userId ? db.collection('users').doc(userId).update({ hours: newHours, flights: newFlights }) : Promise.resolve()
+    userId ? db.collection('users').doc(userId).update(userUpd) : Promise.resolve()
   ]);
-  const pirep = allPireps.find(p=>p.id===pirepId);
   if (pirep) pirep.status = 'approved';
   if (pilot) { pilot.hours = newHours; pilot.flights = newFlights; }
   updateBadges(); renderOverview(); renderPireps(); renderPilots();
@@ -1988,6 +2006,8 @@ async function submitManualPirep() {
     obs,
     status:      'approved',
     source:      'manual',
+    foqaScore:   100,
+    foqaViolations: [],
     createdAt:   firebase.firestore.FieldValue.serverTimestamp(),
     date:        today,
   };
@@ -1998,11 +2018,11 @@ async function submitManualPirep() {
     const hours = durToHours(dur);
     const newHours   = (pilot?.hours   || 0) + hours;
     const newFlights = (pilot?.flights || 0) + 1;
-    await db.collection('users').doc(pilotId).update({ hours: newHours, flights: newFlights });
+    await db.collection('users').doc(pilotId).update({ hours: newHours, flights: newFlights, currentAirport: arr });
 
     // Atualiza arrays em memória
     allPireps.unshift({ id: ref.id, ...pirepData, status: 'approved' });
-    if (pilot) { pilot.hours = newHours; pilot.flights = newFlights; }
+    if (pilot) { pilot.hours = newHours; pilot.flights = newFlights; pilot.currentAirport = arr; }
 
     updateBadges(); renderOverview(); renderPireps(); renderPilots();
     document.getElementById('modal-manual-pirep').style.display = 'none';
@@ -2015,6 +2035,7 @@ async function submitManualPirep() {
 
 /* ── PIREP LOG MODAL ── */
 let _logPirepId = null;
+let _logViolations = [];
 
 function openPirepLog(pirepId) {
   const p = allPireps.find(x => x.id === pirepId);
@@ -2055,23 +2076,8 @@ function openPirepLog(pirepId) {
   }
 
   // Violações
-  const violsSection = document.getElementById('plog-viols-section');
-  const violsEl = document.getElementById('plog-viols');
-  const viols = p.foqaViolations || [];
-  if (viols.length) {
-    violsSection.style.display = '';
-    violsEl.innerHTML = viols.map(v => {
-      const isCoc = v.cat === 'CoC';
-      return `<div style="display:flex;gap:8px;align-items:flex-start;padding:7px 10px;background:${isCoc?'rgba(224,85,85,0.1)':'rgba(240,165,0,0.08)'};border:1px solid ${isCoc?'rgba(224,85,85,0.3)':'rgba(240,165,0,0.25)'};border-radius:3px;margin-bottom:5px;font-size:12px;">
-        <span style="font-weight:700;color:${isCoc?'#e05555':'#f59e0b'};min-width:36px;">[${v.cat}]</span>
-        <span style="color:#C0BAD8;flex:1">${v.desc}</span>
-        ${v.pts ? `<span style="color:${isCoc?'#e05555':'#f59e0b'};font-weight:700;font-size:11px;">−${v.pts}pts</span>` : ''}
-      </div>`;
-    }).join('');
-  } else {
-    violsSection.style.display = '';
-    violsEl.innerHTML = '<div style="font-size:12px;color:#4ade80;padding:7px 0">✓ Nenhuma violação registrada</div>';
-  }
+  _logViolations = (p.foqaViolations || []).map(v => ({ ...v }));
+  renderLogViols(p.status === 'rejected');
 
   // Obs piloto
   const obsWrap = document.getElementById('plog-obs-wrap');
@@ -2082,20 +2088,69 @@ function openPirepLog(pirepId) {
     obsWrap.style.display = 'none';
   }
 
-  // Ações: mostrar/ocultar conforme status
-  const actionsEl = document.getElementById('plog-actions');
-  const approveBtn = document.getElementById('plog-approve-btn');
-  const rejectBtn  = document.getElementById('plog-reject-btn');
-  if (p.status === 'pending') {
-    actionsEl.style.display = 'flex';
-    approveBtn.style.display = '';
-    rejectBtn.style.display  = '';
+  // Banner de reversão já feita
+  const reversedBanner = document.getElementById('plog-reversed-banner');
+  if (p.reversedBy) {
+    const dt = p.reversedAt?.toDate ? p.reversedAt.toDate().toLocaleString('pt-BR') : '';
+    document.getElementById('plog-reversed-text').innerHTML =
+      `Revertido por <strong>${sanitize(p.reversedBy)}</strong>${dt ? ' em ' + dt : ''}<br>` +
+      `Motivo: <em>${sanitize(p.reversalReason || '—')}</em>`;
+    reversedBanner.style.display = '';
   } else {
-    approveBtn.style.display = 'none';
-    rejectBtn.style.display  = 'none';
+    reversedBanner.style.display = 'none';
+  }
+
+  // Seção de reversão e botões
+  const approveBtn   = document.getElementById('plog-approve-btn');
+  const rejectBtn    = document.getElementById('plog-reject-btn');
+  const reverseBtn   = document.getElementById('plog-reverse-btn');
+  const reversalSec  = document.getElementById('plog-reversal-section');
+  document.getElementById('plog-reversal-reason').value = '';
+  document.getElementById('plog-reversal-error').style.display = 'none';
+
+  if (p.status === 'pending') {
+    approveBtn.style.display  = '';
+    rejectBtn.style.display   = '';
+    reverseBtn.style.display  = 'none';
+    reversalSec.style.display = 'none';
+  } else if (p.status === 'rejected') {
+    approveBtn.style.display  = 'none';
+    rejectBtn.style.display   = 'none';
+    reverseBtn.style.display  = '';
+    reversalSec.style.display = '';
+  } else {
+    approveBtn.style.display  = 'none';
+    rejectBtn.style.display   = 'none';
+    reverseBtn.style.display  = 'none';
+    reversalSec.style.display = 'none';
   }
 
   document.getElementById('modal-pirep-log').style.display = 'flex';
+}
+
+function renderLogViols(editable) {
+  const violsEl = document.getElementById('plog-viols');
+  if (!_logViolations.length) {
+    violsEl.innerHTML = '<div style="font-size:12px;color:#4ade80;padding:7px 0">✓ Nenhuma violação registrada</div>';
+    return;
+  }
+  violsEl.innerHTML = _logViolations.map((v, i) => {
+    const isCoc = v.cat === 'CoC';
+    const removeBtn = editable
+      ? `<button onclick="removeViolFromLog(${i})" title="Remover violação" style="background:none;border:none;color:#e05555;cursor:pointer;font-size:14px;padding:0 2px;line-height:1;flex-shrink:0;">✕</button>`
+      : '';
+    return `<div style="display:flex;gap:8px;align-items:center;padding:7px 10px;background:${isCoc?'rgba(224,85,85,0.1)':'rgba(240,165,0,0.08)'};border:1px solid ${isCoc?'rgba(224,85,85,0.3)':'rgba(240,165,0,0.25)'};border-radius:3px;margin-bottom:5px;font-size:12px;">
+      <span style="font-weight:700;color:${isCoc?'#e05555':'#f59e0b'};min-width:36px;">[${v.cat}]</span>
+      <span style="color:#C0BAD8;flex:1">${sanitize(v.desc)}</span>
+      ${v.pts ? `<span style="color:${isCoc?'#e05555':'#f59e0b'};font-weight:700;font-size:11px;">−${v.pts}pts</span>` : ''}
+      ${removeBtn}
+    </div>`;
+  }).join('');
+}
+
+function removeViolFromLog(idx) {
+  _logViolations.splice(idx, 1);
+  renderLogViols(true);
 }
 
 function closePirepLog() {
@@ -2112,6 +2167,67 @@ async function pirepLogAction(action) {
     await approvePirep(p.id, p.userId, p.dur);
   } else {
     await rejectPirep(p.id);
+  }
+}
+
+async function reversePirepRejection() {
+  if (!_logPirepId) return;
+  const p       = allPireps.find(x => x.id === _logPirepId);
+  const pilot   = allPilots.find(x => x.id === p?.userId);
+  const reason  = document.getElementById('plog-reversal-reason').value.trim();
+  const errEl   = document.getElementById('plog-reversal-error');
+  const btn     = document.getElementById('plog-reverse-btn');
+
+  errEl.style.display = 'none';
+  if (!reason) {
+    errEl.textContent = 'Informe o motivo da reversão.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  btn.disabled = true; btn.textContent = 'Salvando...';
+
+  const ovDed   = _logViolations.filter(v => v.cat === 'Ov').reduce((s, v) => s + v.pts, 0);
+  const newScore = Math.max(0, 100 - ovDed);
+  const adminName = adminUser?.displayName || adminUser?.email || 'Admin';
+
+  try {
+    await db.collection('pireps').doc(_logPirepId).update({
+      foqaViolations: _logViolations,
+      foqaScore:      newScore,
+      status:         'approved',
+      autoRejected:   false,
+      rejectReason:   null,
+      reversedBy:     adminName,
+      reversalReason: reason,
+      reversedAt:     firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    // Credita horas e voo ao piloto (voo estava rejeitado, não foi contado)
+    if (p.userId) {
+      const hours = durToHours(p.dur);
+      const newHours   = (pilot?.hours   || 0) + hours;
+      const newFlights = (pilot?.flights || 0) + 1;
+      await db.collection('users').doc(p.userId).update({
+        hours: newHours, flights: newFlights, currentAirport: p.arr
+      });
+      if (pilot) { pilot.hours = newHours; pilot.flights = newFlights; pilot.currentAirport = p.arr; }
+    }
+
+    // Atualiza memória
+    Object.assign(p, {
+      foqaViolations: _logViolations, foqaScore: newScore,
+      status: 'approved', autoRejected: false, rejectReason: null,
+      reversedBy: adminName, reversalReason: reason
+    });
+
+    closePirepLog();
+    updateBadges(); renderOverview(); renderPireps(); renderPilots();
+    toast(`Rejeição revertida — PIREP aprovado com FOQA ${newScore}%.`);
+  } catch(e) {
+    btn.disabled = false; btn.textContent = '↩ Reverter e Aprovar';
+    errEl.textContent = 'Erro: ' + e.message;
+    errEl.style.display = 'block';
   }
 }
 

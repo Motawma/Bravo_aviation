@@ -211,7 +211,7 @@
   const AC_LIMITS = {
     A320: { mtow:77000, mlw:66000, maxAlt:39100, maxTailwind:10, maxSpdbrake:315,
             validDepFlaps:[1,2,3], minFob:1600, maxGear:280,
-            flapsMaxSpd:{ 1:235, 2:220, 3:190, 4:182 } },
+            flapsMaxSpd:{ 1:230, 2:215, 3:200, 4:185, 5:177 } },
     B737: { mtow:79016, mlw:66361, maxAlt:41000, maxTailwind:15, maxSpdbrake:320,
             validDepFlaps:[1,5,10,15,25], minFob:1500, maxGear:270,
             flapsMaxSpd:{ 1:265, 5:255, 10:215, 15:205, 25:190, 30:175, 40:165 } }
@@ -748,11 +748,6 @@
     }
     prevFlapsIndex = flapsIndex;
 
-    // ── Motores desligados com flaps baixados ─────────────────────────────────
-    if (onGround && flapsIndex > 0) {
-      if (prevEng1 && !eng1) addFoqaViolation('engines_off_flaps',
-        `Motor desligado com flaps na posição ${flapsIndex} — recolha os flaps antes`, 50, 'Ov');
-    }
     prevEng1 = eng1;
     prevEng2 = eng2;
 
