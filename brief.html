@@ -272,6 +272,8 @@ async function fetchSimBriefOFP(username) {
     const data = await res.json();
     if (data.fetch?.status === 'Error' || !data.general) throw new Error(data.fetch?.message || 'Plano não encontrado ou ID inválido.');
     _sbData = data;
+    const uid = auth.currentUser?.uid;
+    if (uid) db.collection('users').doc(uid).update({ simbriefUsername: username.trim() }).catch(()=>{});
     renderSBCard(data);
   } catch(e) {
     el.innerHTML = `<div style="color:var(--danger);font-size:12px">${e.message}</div>
