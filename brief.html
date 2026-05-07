@@ -233,9 +233,17 @@ auth.onAuthStateChanged(async (fbUser) => {
     return;
   }
   try {
-    const snap = await db.collection('users').doc(fbUser.uid).get();
+    // Força leitura do servidor para evitar cache desatualizado após redirect
+    let snap = await db.collection('users').doc(fbUser.uid).get({ source: 'server' });
     if (!snap.exists) { window.location.href = 'login.html'; return; }
-    const data = snap.data();
+    let data = snap.data();
+
+    // Se pendingFlight ainda não chegou, tenta mais uma vez após 1s
+    if (!data.pendingFlight) {
+      await new Promise(r => setTimeout(r, 1000));
+      snap = await db.collection('users').doc(fbUser.uid).get({ source: 'server' });
+      data = snap.data();
+    }
 
     document.body.style.visibility = '';
     const pf = data.pendingFlight;
