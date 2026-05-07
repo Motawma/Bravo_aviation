@@ -274,8 +274,13 @@ async function fetchSimBriefOFP(username) {
     _sbData = data;
     const uid = auth.currentUser?.uid;
     if (uid) db.collection('users').doc(uid).update({ simbriefUsername: username.trim() }).catch(()=>{});
+    const sbDep = data.origin?.icao_code      || '';
+    const sbArr = data.destination?.icao_code || '';
     renderSBCard(data);
-    applySimBrief();
+    // Auto-aplica apenas quando o OFP é exatamente para esta rota
+    if (_pf && sbDep === _pf.dep && sbArr === _pf.arr) {
+      applySimBrief();
+    }
   } catch(e) {
     el.innerHTML = `<div style="color:var(--danger);font-size:12px">${e.message}</div>
       <button class="sb-btn sb-btn-primary" style="margin-top:10px;width:100%" onclick="showSBInput()">Tentar outro ID</button>`;
@@ -309,9 +314,22 @@ function renderSBCard(data) {
   const eetM    = Math.floor((eetSec % 3600) / 60);
   const eetStr  = eetSec ? eetH + 'h' + String(eetM).padStart(2,'0') : null;
   const mismatch = _pf && (sbDep !== _pf.dep || sbArr !== _pf.arr);
+  const sbUrl    = _pf ? buildSimBriefUrl(_pf.dep, _pf.arr, _pf.plannedFL || '350', _pf.flightNumber || 'BRV', _userData?.aircraft || _pf.aircraft || 'A320') : '';
+
+  if (mismatch) {
+    el.innerHTML = `
+      <div class="sb-mismatch" style="margin-bottom:12px">
+        ⚠ Seu último OFP no SimBrief é <strong>${sbDep}→${sbArr}</strong>.<br>
+        Para usar a rota correta, crie um novo plano para <strong>${_pf.dep}→${_pf.arr}</strong> no SimBrief e volte aqui.
+      </div>
+      <div style="display:flex;gap:8px">
+        <a class="sb-btn sb-btn-primary" style="flex:1" href="${sbUrl}" target="_blank">✈ Criar plano ${_pf.dep}→${_pf.arr} no SimBrief</a>
+        <button class="sb-btn sb-btn-secondary" onclick="fetchSimBriefOFP(_userData?.simbriefUsername||document.getElementById('sb-input-id')?.value||'')" style="padding:8px 10px" title="Recarregar">↺</button>
+      </div>`;
+    return;
+  }
 
   el.innerHTML = `
-    ${mismatch ? `<div class="sb-mismatch">⚠ Plano SimBrief é ${sbDep}→${sbArr} — diferente da rota selecionada (${_pf.dep}→${_pf.arr})</div>` : ''}
     <table class="summary-table" style="margin-bottom:10px">
       <tr><td class="k">Rota</td><td class="v" style="font-size:11px;word-break:break-all;text-align:right">${route || 'DCT'}</td></tr>
       ${fl   ? `<tr><td class="k">Flight Level</td><td class="v">FL${fl}</td></tr>` : ''}
