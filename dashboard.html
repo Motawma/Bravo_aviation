@@ -713,35 +713,35 @@ tr:hover td { background: rgba(255,255,255,0.02); }
           <div class="sec-title">Voo Livre</div>
         </div>
         <p style="font-size:13px;color:var(--text-dim);margin-bottom:24px;line-height:1.6">
-          Escolha a rota do seu voo livre. Após confirmar, você será redirecionado para o Brief onde encontrará informações do aeroporto, METAR e rota. O ACARS carregará o plano automaticamente.
+          Escolha a rota do seu voo livre. Após confirmar, você será redirecionado para o Brief onde encontrará METAR e informações dos aeroportos. O ACARS carregará o plano automaticamente.
         </p>
         <div class="form-card" style="padding:24px">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
-            <div>
-              <label class="form-label">Partida (ICAO)</label>
-              <input id="ff-dep" type="text" maxlength="4" placeholder="SBGR" class="form-input" style="text-transform:uppercase;letter-spacing:0.1em;font-size:16px;font-weight:700" oninput="this.value=this.value.toUpperCase()" />
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+            <div class="form-group">
+              <label>Partida (ICAO)</label>
+              <input id="ff-dep" type="text" maxlength="4" placeholder="SBGR" style="text-transform:uppercase;letter-spacing:0.1em;font-size:15px;font-weight:700" oninput="this.value=this.value.toUpperCase()" />
             </div>
-            <div>
-              <label class="form-label">Destino (ICAO)</label>
-              <input id="ff-arr" type="text" maxlength="4" placeholder="SBBR" class="form-input" style="text-transform:uppercase;letter-spacing:0.1em;font-size:16px;font-weight:700" oninput="this.value=this.value.toUpperCase()" />
-            </div>
-          </div>
-          <div style="margin-bottom:14px">
-            <label class="form-label">Aeronave</label>
-            <select id="ff-ac" class="form-input" style="appearance:none"></select>
-          </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px">
-            <div>
-              <label class="form-label">Nível de Voo (FL)</label>
-              <input id="ff-fl" type="number" placeholder="350" class="form-input" />
-            </div>
-            <div>
-              <label class="form-label">Nº Voo (opcional)</label>
-              <input id="ff-fn" type="text" maxlength="10" placeholder="BRV" class="form-input" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()" />
+            <div class="form-group">
+              <label>Destino (ICAO)</label>
+              <input id="ff-arr" type="text" maxlength="4" placeholder="SBBR" style="text-transform:uppercase;letter-spacing:0.1em;font-size:15px;font-weight:700" oninput="this.value=this.value.toUpperCase()" />
             </div>
           </div>
-          <div id="ff-err" style="display:none;color:var(--danger);font-size:12px;margin-bottom:12px"></div>
-          <button id="ff-btn" onclick="submitFreeFlight()" class="btn-primary" style="width:100%;padding:13px;font-size:14px;font-weight:700;border-radius:4px;cursor:pointer;border:none;background:var(--gold);color:#000;letter-spacing:0.05em">
+          <div class="form-group">
+            <label>Aeronave</label>
+            <select id="ff-ac"></select>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+            <div class="form-group">
+              <label>Nível de Voo (FL)</label>
+              <input id="ff-fl" type="number" placeholder="350" />
+            </div>
+            <div class="form-group">
+              <label>Nº Voo</label>
+              <input id="ff-fn" type="text" maxlength="10" placeholder="BRV0001" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()" />
+            </div>
+          </div>
+          <div id="ff-err" style="display:none;color:var(--danger);font-size:12px;margin-top:-8px;margin-bottom:12px"></div>
+          <button id="ff-btn" onclick="submitFreeFlight()" style="width:100%;padding:13px;font-size:14px;font-weight:700;border-radius:4px;cursor:pointer;border:none;background:var(--gold);color:#000;letter-spacing:0.05em;font-family:'Inter',sans-serif;margin-top:8px">
             ✈ Confirmar e ir para o Brief
           </button>
         </div>
@@ -1477,7 +1477,11 @@ async function initFreeFlight() {
   const current = user?.aircraft || '';
   sel.innerHTML = opts.map(a => `<option value="${a}"${a===current?' selected':''}>${a}</option>`).join('');
   const fnEl = document.getElementById('ff-fn');
-  if (fnEl && user?.callsign) fnEl.placeholder = user.callsign;
+  if (fnEl) {
+    const cs = user?.callsign || '';
+    const valid = cs && !cs.includes('@') && /^[A-Za-z]{2,4}\d{2,4}$/.test(cs);
+    if (valid) fnEl.value = cs;
+  }
   const errEl = document.getElementById('ff-err');
   if (errEl) errEl.style.display = 'none';
   const btn = document.getElementById('ff-btn');
