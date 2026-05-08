@@ -505,6 +505,21 @@ tr:hover td{background:rgba(255,255,255,.02);}
         </div>
       </div>
 
+      <!-- DISCORD WEBHOOK -->
+      <div class="route-form-card" style="margin-bottom:24px;">
+        <div style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--text-sec);">🔔 Webhook Discord — #central-pireps</div>
+        <p style="font-size:12px;color:var(--text-dim);margin-bottom:16px;">URL do webhook usado para notificar aprovações e rejeições de PIREP no canal <strong>#central-pireps</strong>. Para gerar um novo URL, use o comando <code style="background:rgba(0,238,255,0.08);padding:2px 6px;border-radius:3px;font-size:11px;">!criarwebhook</code> no Discord.</p>
+        <div class="form-group" style="margin-bottom:12px;">
+          <label>Webhook URL</label>
+          <input id="site-discord-webhook" type="text" placeholder="https://discord.com/api/webhooks/..." style="font-family:monospace;font-size:12px;" />
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <button class="btn-primary" onclick="saveDiscordWebhook()">💾 Salvar webhook</button>
+          <button class="btn-sm" onclick="testDiscordWebhook()" style="padding:8px 14px;">🔔 Testar</button>
+          <span id="site-webhook-msg" style="font-size:12px;color:var(--text-dim);"></span>
+        </div>
+      </div>
+
       <!-- SYNC STATS -->
       <div class="route-form-card">
         <div style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--text-sec);">📊 Stats do site público</div>
@@ -2475,7 +2490,7 @@ function goTo(id, el) {
   });
   document.getElementById('topbar-title').textContent = PAGE_TITLES[id]||'';
   if (id === 'routes')       { loadRoutes(); loadAiracInfo(); }
-  if (id === 'site')         loadSiteStaff();
+  if (id === 'site')         { loadSiteStaff(); loadSiteConfig(); }
   if (id === 'fleet-admin')  loadFleet();
   if (id === 'staff-config') loadStaffConfig();
 }
@@ -2557,6 +2572,57 @@ async function loadSiteStaff() {
     if (d.ops) { setVal('site-ops-name', d.ops.name); setVal('site-ops-vid', d.ops.vid); }
     if (d.hr)  { setVal('site-hr-name',  d.hr.name);  setVal('site-hr-vid',  d.hr.vid);  }
   } catch(e) { toast('Erro ao carregar configurações.', 'err'); }
+}
+
+async function loadSiteConfig() {
+  try {
+    const snap = await db.collection('siteConfig').doc('1501341988757311528').get();
+    const url  = snap.exists ? (snap.data().webhookUrl || '') : '';
+    const inp  = document.getElementById('site-discord-webhook');
+    if (inp) inp.value = url;
+    if (url) discordWebhookUrl = url;
+  } catch(e) { /* silencioso */ }
+}
+
+async function saveDiscordWebhook() {
+  const msg = document.getElementById('site-webhook-msg');
+  const url = (document.getElementById('site-discord-webhook')?.value || '').trim();
+  if (!url) { msg.style.color = 'var(--danger)'; msg.textContent = '✗ URL não pode ser vazio.'; return; }
+  if (!url.startsWith('https://discord.com/api/webhooks/')) {
+    msg.style.color = 'var(--danger)'; msg.textContent = '✗ URL inválida — deve começar com https://discord.com/api/webhooks/'; return;
+  }
+  msg.style.color = 'var(--text-dim)'; msg.textContent = 'Salvando...';
+  try {
+    await db.collection('siteConfig').doc('1501341988757311528').set({ webhookUrl: url }, { merge: true });
+    discordWebhookUrl = url;
+    msg.style.color = 'var(--success)'; msg.textContent = '✓ Webhook salvo!';
+    setTimeout(() => { msg.textContent = ''; }, 5000);
+    toast('Webhook Discord atualizado!', 'ok');
+  } catch(e) {
+    msg.style.color = 'var(--danger)'; msg.textContent = '✗ Erro: ' + e.message;
+  }
+}
+
+async function testDiscordWebhook() {
+  const msg = document.getElementById('site-webhook-msg');
+  const url = (document.getElementById('site-discord-webhook')?.value || '').trim() || discordWebhookUrl;
+  if (!url) { msg.style.color = 'var(--danger)'; msg.textContent = '✗ Nenhum URL configurado.'; return; }
+  msg.style.color = 'var(--text-dim)'; msg.textContent = 'Enviando teste...';
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ embeds: [{ title: '🔔 Teste de Webhook', description: 'Conexão com o canal #central-pireps está funcionando!', color: 0x00EEFF, footer: { text: 'Bravo Aviation · Admin Panel' } }] })
+    });
+    if (res.ok || res.status === 204) {
+      msg.style.color = 'var(--success)'; msg.textContent = '✓ Mensagem enviada com sucesso!';
+    } else {
+      msg.style.color = 'var(--danger)'; msg.textContent = `✗ Discord retornou erro ${res.status} — URL inválida ou webhook excluído.`;
+    }
+    setTimeout(() => { msg.textContent = ''; }, 6000);
+  } catch(e) {
+    msg.style.color = 'var(--danger)'; msg.textContent = '✗ Erro de rede: ' + e.message;
+  }
 }
 
 async function syncPublicStats() {
