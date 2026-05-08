@@ -349,6 +349,19 @@ tr:hover td{background:rgba(255,255,255,.02);}
         </div>
         <button id="btn-manual-pirep" class="btn-sm approve" onclick="openManualPirepModal()" style="white-space:nowrap">+ PIREP Manual</button>
       </div>
+
+      <!-- Voos não finalizados (sessões ACARS sem PIREP) -->
+      <div id="abandoned-sessions-section" style="display:none;margin-bottom:18px;">
+        <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);border-radius:6px;padding:14px 16px;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+            <span style="color:#f59e0b;font-size:13px;font-weight:700;">⚠ Voos não finalizados</span>
+            <span id="abandoned-count" style="background:#f59e0b;color:#000;border-radius:10px;padding:1px 8px;font-size:11px;font-weight:700;"></span>
+            <span style="color:var(--text-dim);font-size:11px;margin-left:4px;">Sessões ACARS encerradas sem PIREP — o piloto pode ter perdido o voo</span>
+          </div>
+          <div id="abandoned-sessions-list"></div>
+        </div>
+      </div>
+
       <div class="table-wrap">
         <table>
           <thead><tr><th>Piloto</th><th>Rota</th><th>Aeronave</th><th>Duração</th><th>FL</th><th>Data</th><th>Sim</th><th>FOQA</th><th>Status</th><th>Ações</th></tr></thead>
@@ -2021,6 +2034,95 @@ function filterPireps(status, el) {
   renderPireps();
 }
 
+/* ── VOOS NÃO FINALIZADOS ── */
+let allAbandonedSessions = [];
+
+async function loadAbandonedSessions() {
+  try {
+    const snap = await db.collection('flight_sessions').where('status', '==', 'active').get();
+    const STALE_MS = 30 * 60 * 1000; // 30 min sem atualização = considerado abandonado
+    allAbandonedSessions = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .filter(s => {
+        const lastUp = s.lastUpdateAt?.toDate?.()?.getTime?.() || 0;
+        return (Date.now() - lastUp) > STALE_MS;
+      });
+    renderAbandonedSessions();
+  } catch (e) {
+    console.warn('Sessões abandonadas:', e.message);
+  }
+}
+
+function fmtDurFromSecs(secs) {
+  const h = Math.floor(secs / 3600);
+  const m = Math.floor((secs % 3600) / 60);
+  return `${h}h${String(m).padStart(2,'0')}m`;
+}
+
+function renderAbandonedSessions() {
+  const section = document.getElementById('abandoned-sessions-section');
+  const list    = document.getElementById('abandoned-sessions-list');
+  const badge   = document.getElementById('abandoned-count');
+  if (!section || !list) return;
+  if (!allAbandonedSessions.length) { section.style.display = 'none'; return; }
+  section.style.display = '';
+  badge.textContent = allAbandonedSessions.length;
+  list.innerHTML = allAbandonedSessions.map(s => {
+    const lastUp   = s.lastUpdateAt?.toDate?.() || null;
+    const hoursAgo = lastUp ? (Math.round((Date.now() - lastUp.getTime()) / 360000) / 10).toFixed(1) : '?';
+    const elapsed  = s.elapsedSecs ? fmtDurFromSecs(s.elapsedSecs) : '—';
+    return `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid rgba(245,158,11,.15);">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:700;color:var(--text-main)">${sanitize(s.pilotName||s.uid)}</div>
+        <div style="font-size:12px;color:var(--text-sec)">${sanitize(s.dep||'?')} → ${sanitize(s.arr||'?')} &nbsp;·&nbsp; ${sanitize(s.aircraft||'?')} &nbsp;·&nbsp; FL${sanitize(String(s.fl||'?'))}</div>
+        <div style="font-size:11px;color:var(--text-dim);margin-top:3px">
+          Duração na falha: <strong style="color:var(--text-sec)">${elapsed}</strong>
+          &nbsp;·&nbsp; Alt: ${s.lastAlt||0} ft &nbsp;·&nbsp; ${s.lastSpd||0} kts
+          &nbsp;·&nbsp; Último checkpoint: <span style="color:#f59e0b">${hoursAgo}h atrás</span>
+        </div>
+      </div>
+      <button onclick="recoverFlight('${s.id}')" style="padding:7px 14px;background:#f59e0b;color:#000;border:none;font-weight:700;font-size:12px;border-radius:4px;cursor:pointer;white-space:nowrap;font-family:'Inter',sans-serif;">↩ Recuperar PIREP</button>
+      <button onclick="dismissSession('${s.id}')" title="Ignorar" style="padding:7px 10px;background:transparent;color:var(--text-dim);border:1px solid var(--border);font-size:12px;border-radius:4px;cursor:pointer">✗</button>
+    </div>`;
+  }).join('');
+}
+
+async function recoverFlight(sessionId) {
+  const s = allAbandonedSessions.find(x => x.id === sessionId);
+  if (!s) return;
+  openManualPirepModal();
+  await new Promise(r => setTimeout(r, 60));
+  const pilotSel = document.getElementById('mp-pilot');
+  if (pilotSel && s.uid) {
+    for (const opt of pilotSel.options) { if (opt.value === s.uid) { opt.selected = true; break; } }
+  }
+  const set = (id, val) => { const el = document.getElementById(id); if (el && val != null) el.value = val; };
+  set('mp-dep', s.dep || '');
+  set('mp-arr', s.arr || '');
+  set('mp-ac',  s.aircraft || '');
+  set('mp-fl',  s.fl || '');
+  set('mp-obs', `Voo recuperado de sessão ACARS (${s.fn || (s.dep+'→'+s.arr)}) — ${fmtDurFromSecs(s.elapsedSecs||0)} registrado`);
+  if (s.elapsedSecs) {
+    const h = Math.floor(s.elapsedSecs / 3600);
+    const m = Math.floor((s.elapsedSecs % 3600) / 60);
+    set('mp-dur', `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`);
+  }
+  const simSel = document.getElementById('mp-sim');
+  if (simSel && s.sim) {
+    for (const opt of simSel.options) { if (opt.value === s.sim) { opt.selected = true; break; } }
+  }
+}
+
+async function dismissSession(sessionId) {
+  if (!confirm('Ignorar este voo? Será marcado como abandonado e não aparecerá mais.')) return;
+  try {
+    await db.collection('flight_sessions').doc(sessionId).update({ status: 'abandoned' });
+    allAbandonedSessions = allAbandonedSessions.filter(s => s.id !== sessionId);
+    renderAbandonedSessions();
+    toast('Sessão ignorada.');
+  } catch(e) { toast('Erro: ' + e.message, 'err'); }
+}
+
 function durToHours(dur) {
   const [h,m] = (dur||'0:0').split(':').map(Number);
   return (h||0) + (m||0)/60;
@@ -2493,6 +2595,7 @@ function goTo(id, el) {
   if (id === 'site')         { loadSiteStaff(); loadSiteConfig(); }
   if (id === 'fleet-admin')  loadFleet();
   if (id === 'staff-config') loadStaffConfig();
+  if (id === 'pireps')       loadAbandonedSessions();
 }
 
 /* ── STAFF PERMISSIONS ── */

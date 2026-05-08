@@ -4,6 +4,8 @@ const { autoUpdater } = require('electron-updater');
 
 let win;
 let simHandler = null;
+let flightActiveInRenderer = false;
+let pendingInstall = false;
 
 autoUpdater.autoDownload = true;
 autoUpdater.autoInstallOnAppQuit = true;
@@ -61,7 +63,21 @@ autoUpdater.on('error', (err) => {
     win.webContents.send('update:error', err.message);
 });
 
+ipcMain.on('flight:state', (_, { active }) => {
+  flightActiveInRenderer = active;
+  if (!active && pendingInstall) {
+    pendingInstall = false;
+    setTimeout(() => autoUpdater.quitAndInstall(), 3000);
+  }
+});
+
 ipcMain.on('update:install', () => {
+  if (flightActiveInRenderer) {
+    pendingInstall = true;
+    if (win && !win.isDestroyed())
+      win.webContents.send('update:deferred');
+    return;
+  }
   autoUpdater.quitAndInstall();
 });
 

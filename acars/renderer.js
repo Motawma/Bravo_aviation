@@ -47,7 +47,19 @@
     });
     window.acars.onUpdateReady(() => {
       const btn = $('btn-install-update');
-      if (btn) { btn.textContent = '↺ Reiniciar e atualizar'; btn.disabled = false; }
+      if (!btn) return;
+      if (flightActive) {
+        btn.textContent = '↺ Instalar após pouso';
+        btn.disabled = false;
+        btn.title = 'O app será reiniciado automaticamente após o pouso';
+      } else {
+        btn.textContent = '↺ Reiniciar e atualizar';
+        btn.disabled = false;
+      }
+    });
+    window.acars.onUpdateDeferred(() => {
+      const btn = $('btn-install-update');
+      if (btn) { btn.textContent = '↺ Instalar após pouso'; btn.disabled = false; }
     });
     window.acars.onUpdateError(() => {
       const btn = $('btn-install-update');
@@ -89,6 +101,8 @@
   let lastLon       = null;
   let liveInterval      = null;
   let liveFlightPushed  = false;
+  let flightSessionId   = null;
+  let sessionInterval   = null;
 
   // FOQA
   const foqaViolations = [];
@@ -517,6 +531,7 @@
   // ── Iniciar voo ───────────────────────────────────────────────────────────
   window.startFlight = async () => {
     flightActive    = true;
+    if (window.acars?.setFlightState) window.acars.setFlightState(true);
     flightStart     = Date.now();
     fuelAtStart     = lastSimData?.fuel ?? 0;
     maxAlt          = 0; maxSpd = 0; totalDist = 0;
@@ -548,6 +563,29 @@
     logLastPhase = null;
     liveFlightPushed = false;
     clearAllAlerts();
+
+    // Sessão de voo persistente — usada para recuperação se o app fechar durante o voo
+    flightSessionId = currentUser.uid + '_' + flightStart;
+    sessionInterval = setInterval(updateFlightSession, 300000); // checkpoint a cada 5 min
+    db.collection('flight_sessions').doc(flightSessionId).set({
+      uid:          currentUser.uid,
+      pilotName:    userData.name || '',
+      pilotVid:     userData.vid  || '',
+      dep:          $('inp-dep').value.trim().toUpperCase(),
+      arr:          $('inp-arr').value.trim().toUpperCase(),
+      aircraft:     aircraftTitle || '',
+      fl:           $('inp-fl').value.trim(),
+      fn:           $('inp-fn').value.trim().toUpperCase(),
+      network:      document.querySelector('input[name="network"]:checked')?.value || 'Offline',
+      sim:          simType === 'msfs' ? 'MSFS' : 'X-Plane',
+      startedAt:    firebase.firestore.FieldValue.serverTimestamp(),
+      lastUpdateAt: firebase.firestore.FieldValue.serverTimestamp(),
+      status:       'active',
+      pirepId:      null,
+      maxAlt: 0, maxSpd: 0, totalDist: 0, elapsedSecs: 0,
+      lastPhase: 'SOLO', lastAlt: 0, lastSpd: 0,
+      foqaScore: 100, violations: []
+    }).catch(() => {});
 
     $('panel-tele').style.display  = '';
     $('panel-viols').style.display = '';
@@ -799,17 +837,17 @@
     prevOnGrnd = onGround;
 
     // ── Finalização de voo ───────────────────────────────────────────────────
-    if (tookOff && hasLanded && onGround && spd < 2 && !eng1 && !eng2) {
-      if (d.parkingBrake) {
-        // Freio de estacionamento detectado → finaliza imediatamente
+    // Não exige motores desligados: alguns addons (Fenix, PMDG) podem manter eng1/eng2
+    // em estado ambíguo; a condição de parada por 60s cobre todos os casos
+    if (tookOff && hasLanded && onGround && spd < 2) {
+      if (d.parkingBrake || (!eng1 && !eng2)) {
         onLanding();
       } else {
-        // Fallback: finaliza após 60s parado sem freio (addons como Fenix não expõem BRAKE PARKING INDICATOR)
         postLandingStaticSec++;
-        if (postLandingStaticSec === 30) addLogEntry('ℹ️', 'Freio de estacionamento não detectado — finalizando em 30s...');
+        if (postLandingStaticSec === 30) addLogEntry('ℹ️', 'Aguardando parada completa — finalizando em 30s...');
         if (postLandingStaticSec >= 60) onLanding();
       }
-    } else {
+    } else if (!(tookOff && hasLanded && onGround)) {
       postLandingStaticSec = 0;
     }
   }
@@ -849,6 +887,7 @@
   async function onLanding() {
     if (!flightActive) return;
     flightActive = false;
+    if (window.acars?.setFlightState) window.acars.setFlightState(false);
     addLogEntry('🛬', `Taxa de pouso: -${Math.round(landingRate)} FPM — ${classifyLanding(Math.round(landingRate))}`);
     clearInterval(timerInterval);
     clearInterval(liveInterval);
@@ -913,7 +952,37 @@
       createdAt:    firebase.firestore.FieldValue.serverTimestamp()
     };
 
-    await db.collection('pireps').add(pirep);
+    let pirepRef   = null;
+    let pirepSaved = false;
+    try {
+      pirepRef = await db.collection('pireps').add(pirep);
+      pirepSaved = true;
+    } catch (err) {
+      addLogEntry('⚠', 'Erro ao salvar PIREP — tentando novamente em 8s...');
+      await new Promise(resolve => setTimeout(resolve, 8000));
+      try {
+        pirepRef = await db.collection('pireps').add(pirep);
+        pirepSaved = true;
+        addLogEntry('✅', 'PIREP salvo na segunda tentativa');
+      } catch (err2) {
+        addLogEntry('✗', `Falha ao salvar PIREP: ${err2.message} — contate a administração`);
+      }
+    }
+
+    // Fecha a sessão de voo — completed se PIREP salvo, abandoned se falhou
+    if (flightSessionId) {
+      db.collection('flight_sessions').doc(flightSessionId).update({
+        status:       pirepSaved ? 'completed' : 'abandoned',
+        pirepId:      pirepRef?.id || null,
+        lastUpdateAt: firebase.firestore.FieldValue.serverTimestamp(),
+        elapsedSecs:  dur,
+        maxAlt, maxSpd, totalDist, foqaScore,
+        violations:   foqaViolations.map(({ type, desc, pts, cat }) => ({ type, desc, pts, cat }))
+      }).catch(() => {});
+      clearInterval(sessionInterval);
+      flightSessionId = null;
+      sessionInterval = null;
+    }
 
     if (foqaRejected) notifyDiscordRejected(pirep, rejectReason, foqaScore);
 
@@ -936,13 +1005,26 @@
   window.stopFlight = async () => {
     if (!confirm('Finalizar o voo agora? O PIREP será descartado.')) return;
     flightActive = false;
+    if (window.acars?.setFlightState) window.acars.setFlightState(false);
     clearInterval(timerInterval);
     clearInterval(liveInterval);
+    if (flightSessionId) {
+      db.collection('flight_sessions').doc(flightSessionId).update({
+        status:       'abandoned',
+        lastUpdateAt: firebase.firestore.FieldValue.serverTimestamp(),
+        elapsedSecs:  flightStart ? Math.floor((Date.now() - flightStart) / 1000) : 0
+      }).catch(() => {});
+      clearInterval(sessionInterval);
+      flightSessionId = null;
+      sessionInterval = null;
+    }
     await db.collection('liveflights').doc(currentUser.uid).delete().catch(() => {});
     resetFlight();
   };
 
   function resetFlight() {
+    clearInterval(sessionInterval);
+    sessionInterval = null;
     $('panel-tele').style.display  = 'none';
     $('panel-viols').style.display = 'none';
     $('violations-list').innerHTML = '<span class="viol-ok">✓ Nenhuma violação detectada</span>';
@@ -990,6 +1072,26 @@
     }
 
     await db.collection('liveflights').doc(currentUser.uid).set(payload, { merge: true }).catch(() => {});
+  }
+
+  // ── Checkpoint de sessão de voo (a cada 5 min) ───────────────────────────
+  function updateFlightSession() {
+    if (!flightSessionId || !flightActive || !flightStart) return;
+    const phase  = lastSimData
+      ? flightPhase(lastSimData.spd, lastSimData.alt, lastSimData.vs, lastSimData.onGround)
+      : 'VOO';
+    const ovDed  = foqaViolations.filter(v => v.cat === 'Ov').reduce((s, v) => s + v.pts, 0);
+    db.collection('flight_sessions').doc(flightSessionId).update({
+      lastUpdateAt: firebase.firestore.FieldValue.serverTimestamp(),
+      elapsedSecs:  Math.floor((Date.now() - flightStart) / 1000),
+      maxAlt, maxSpd, totalDist,
+      lastPhase:    phase,
+      foqaScore:    Math.max(0, 100 - ovDed),
+      violations:   foqaViolations.map(({ type, desc, pts, cat }) => ({ type, desc, pts, cat })),
+      lastAlt:      Math.round(lastSimData?.alt || 0),
+      lastSpd:      Math.round(lastSimData?.spd || 0),
+      sim:          simType === 'msfs' ? 'MSFS' : 'X-Plane',
+    }).catch(() => {});
   }
 
   // ── Notificação Discord — PIREP auto-rejeitado ───────────────────────────
