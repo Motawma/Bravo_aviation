@@ -432,9 +432,8 @@
       badge.style.display = '';
     }
     updateStartBtn();
-    db.collection('users').doc(currentUser.uid).update({
-      pendingFlight: firebase.firestore.FieldValue.delete()
-    }).catch(() => {});
+    // pendingFlight NÃO é deletado aqui — só no startFlight()
+    // assim o brief.html continua legível enquanto o piloto ainda não iniciou o voo
   }
 
   function setupPendingFlightListener() {

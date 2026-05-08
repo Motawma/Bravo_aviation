@@ -340,10 +340,13 @@ auth.onAuthStateChanged(async (fbUser) => {
 
     if (!pf) {
       document.getElementById('main-content').innerHTML = `
-        <div class="loading" style="padding:80px">
+        <div class="loading" style="padding:80px;text-align:center">
           <div style="font-size:36px;margin-bottom:16px">✈️</div>
           <div style="font-size:16px;margin-bottom:10px">Nenhuma rota selecionada.</div>
-          <a href="flight.html" style="color:var(--gold);font-size:13px;">← Escolher uma rota</a>
+          <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+            <a href="flight.html" style="color:var(--gold);font-size:13px;border:1px solid rgba(0,238,255,0.25);padding:8px 18px;border-radius:4px;text-decoration:none;">← Voos disponíveis</a>
+            <a href="dashboard.html#free-flight" onclick="sessionStorage.setItem('openSection','free-flight')" style="color:#000;background:var(--gold);font-size:13px;border:1px solid var(--gold);padding:8px 18px;border-radius:4px;text-decoration:none;font-weight:700;">✈ Voo Livre</a>
+          </div>
         </div>`;
       return;
     }

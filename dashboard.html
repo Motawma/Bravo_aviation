@@ -368,6 +368,9 @@ tr:hover td { background: rgba(255,255,255,0.02); }
     <a class="nav-item" id="nav-routes" href="flight.html">
       <span class="nav-icon">✈️</span> Voos Disponíveis
     </a>
+    <a class="nav-item" id="nav-free-flight" onclick="goTo('free-flight',this)">
+      <span class="nav-icon">🗺️</span> Voo Livre
+    </a>
     <a class="nav-item" id="nav-brief" href="brief.html">
       <span class="nav-icon">📋</span> Brief
     </a>
@@ -703,6 +706,48 @@ tr:hover td { background: rgba(255,255,255,0.02); }
       <div class="routes-grid" id="routes-grid"></div>
     </div>
 
+    <!-- VOO LIVRE -->
+    <div class="page" id="page-free-flight">
+      <div style="max-width:500px;margin:0 auto">
+        <div class="sec-header gap-b" style="margin-bottom:6px">
+          <div class="sec-title">Voo Livre</div>
+        </div>
+        <p style="font-size:13px;color:var(--text-dim);margin-bottom:24px;line-height:1.6">
+          Escolha a rota do seu voo livre. Após confirmar, você será redirecionado para o Brief onde encontrará informações do aeroporto, METAR e rota. O ACARS carregará o plano automaticamente.
+        </p>
+        <div class="form-card" style="padding:24px">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+            <div>
+              <label class="form-label">Partida (ICAO)</label>
+              <input id="ff-dep" type="text" maxlength="4" placeholder="SBGR" class="form-input" style="text-transform:uppercase;letter-spacing:0.1em;font-size:16px;font-weight:700" oninput="this.value=this.value.toUpperCase()" />
+            </div>
+            <div>
+              <label class="form-label">Destino (ICAO)</label>
+              <input id="ff-arr" type="text" maxlength="4" placeholder="SBBR" class="form-input" style="text-transform:uppercase;letter-spacing:0.1em;font-size:16px;font-weight:700" oninput="this.value=this.value.toUpperCase()" />
+            </div>
+          </div>
+          <div style="margin-bottom:14px">
+            <label class="form-label">Aeronave</label>
+            <select id="ff-ac" class="form-input" style="appearance:none"></select>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px">
+            <div>
+              <label class="form-label">Nível de Voo (FL)</label>
+              <input id="ff-fl" type="number" placeholder="350" class="form-input" />
+            </div>
+            <div>
+              <label class="form-label">Nº Voo (opcional)</label>
+              <input id="ff-fn" type="text" maxlength="10" placeholder="BRV" class="form-input" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()" />
+            </div>
+          </div>
+          <div id="ff-err" style="display:none;color:var(--danger);font-size:12px;margin-bottom:12px"></div>
+          <button id="ff-btn" onclick="submitFreeFlight()" class="btn-primary" style="width:100%;padding:13px;font-size:14px;font-weight:700;border-radius:4px;cursor:pointer;border:none;background:var(--gold);color:#000;letter-spacing:0.05em">
+            ✈ Confirmar e ir para o Brief
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- RANKING -->
     <div class="page" id="page-ranking">
       <div class="sec-header gap-b">
@@ -910,6 +955,7 @@ auth.onAuthStateChanged(async (fbUser) => {
     initUserUI();
     applyPermissions(user.permissions);
     setupLiveFlights();
+    checkDeepLink();
 
   } catch(err) {
     // Erro de rede ou permissão — mostra a página mesmo assim para não prender o usuário
@@ -1052,8 +1098,8 @@ let NOTIFS = [
 /* ── NAV ── */
 const PAGE_TITLES = {
   overview:'Visão Geral', profile:'Meu Perfil', pirep:'Registrar Voo (PIREP)',
-  flights:'Meus Voos', routes:'Rotas Disponíveis', ranking:'Ranking de Pilotos',
-  downloads:'Downloads', notifs:'Notificações'
+  flights:'Meus Voos', routes:'Rotas Disponíveis', 'free-flight':'Voo Livre',
+  ranking:'Ranking de Pilotos', downloads:'Downloads', notifs:'Notificações'
 };
 
 function goTo(id, el) {
@@ -1067,7 +1113,16 @@ function goTo(id, el) {
     });
   }
   document.getElementById('topbar-title').textContent = PAGE_TITLES[id] || '';
-  if (id === 'notifs') renderNotifs();
+  if (id === 'notifs')       renderNotifs();
+  if (id === 'free-flight')  initFreeFlight();
+}
+
+function checkDeepLink() {
+  const section = sessionStorage.getItem('openSection');
+  if (section) {
+    sessionStorage.removeItem('openSection');
+    goTo(section, null);
+  }
 }
 
 function applyPermissions(perms) {
@@ -1401,6 +1456,60 @@ async function loadRanking() {
     </tr>`).join('');
   const pos = PILOTS.findIndex(p => p.vid === user.vid) + 1;
   if (pos > 0) document.getElementById('ov-rank-pos').textContent = '#' + pos;
+}
+
+/* ── VOO LIVRE ── */
+const FF_AIRCRAFT_DEFAULTS = ['A320','A319','A321','B737-800','B737-700','B737-900','ATR72-600','E195','E175','B777-300ER','A350-900'];
+
+async function initFreeFlight() {
+  const sel = document.getElementById('ff-ac');
+  if (!sel) return;
+  // Carrega frota da VA do Firestore (uma vez, depois usa cache)
+  if (!window._fleetList) {
+    try {
+      const snap = await db.collection('fleet').get();
+      window._fleetList = snap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => (a.name || a.id).localeCompare(b.name || b.id));
+    } catch(_) { window._fleetList = []; }
+  }
+  const opts    = window._fleetList.length ? window._fleetList.map(f => f.name || f.id) : FF_AIRCRAFT_DEFAULTS;
+  const current = user?.aircraft || '';
+  sel.innerHTML = opts.map(a => `<option value="${a}"${a===current?' selected':''}>${a}</option>`).join('');
+  const fnEl = document.getElementById('ff-fn');
+  if (fnEl && user?.callsign) fnEl.placeholder = user.callsign;
+  const errEl = document.getElementById('ff-err');
+  if (errEl) errEl.style.display = 'none';
+  const btn = document.getElementById('ff-btn');
+  if (btn) { btn.disabled = false; btn.textContent = '✈ Confirmar e ir para o Brief'; }
+}
+
+async function submitFreeFlight() {
+  const dep   = (document.getElementById('ff-dep').value || '').trim().toUpperCase();
+  const arr   = (document.getElementById('ff-arr').value || '').trim().toUpperCase();
+  const ac    = (document.getElementById('ff-ac').value  || '').trim();
+  const fl    = (document.getElementById('ff-fl').value  || '').trim();
+  const fn    = (document.getElementById('ff-fn').value  || '').trim().toUpperCase();
+  const errEl = document.getElementById('ff-err');
+  errEl.style.display = 'none';
+  if (dep.length < 3 || arr.length < 3) {
+    errEl.textContent = 'Preencha os aeroportos de partida e destino (mín. 3 caracteres).';
+    errEl.style.display = '';
+    return;
+  }
+  const btn = document.getElementById('ff-btn');
+  btn.disabled = true;
+  btn.textContent = 'Salvando...';
+  const pf = { dep, arr, aircraft: ac, plannedFL: fl, flightNumber: fn || user?.callsign || '', freeFlight: true };
+  try {
+    await db.collection('users').doc(user.uid).update({ pendingFlight: pf });
+    window.location.href = 'brief.html';
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = '✈ Confirmar e ir para o Brief';
+    errEl.textContent = 'Erro ao salvar: ' + e.message;
+    errEl.style.display = '';
+  }
 }
 
 /* ── ROTA → ACARS ── */
