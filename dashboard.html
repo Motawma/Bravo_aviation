@@ -1459,7 +1459,11 @@ async function loadRanking() {
 }
 
 /* ── VOO LIVRE ── */
-const FF_AIRCRAFT_DEFAULTS = ['A320','A319','A321','B737-800','B737-700','B737-900','ATR72-600','E195','E175','B777-300ER','A350-900'];
+const FF_AIRCRAFT_BASE = [
+  'Airbus A319','Airbus A320','Airbus A321','Airbus A350-900',
+  'Boeing 737-700','Boeing 737-800','Boeing 737-900','Boeing 777-300ER',
+  'Embraer E175','Embraer E195',
+];
 
 async function initFreeFlight() {
   const sel = document.getElementById('ff-ac');
@@ -1473,13 +1477,14 @@ async function initFreeFlight() {
         .sort((a, b) => (a.name || a.id).localeCompare(b.name || b.id));
     } catch(_) { window._fleetList = []; }
   }
-  const opts    = window._fleetList.length ? window._fleetList.map(f => f.name || f.id) : FF_AIRCRAFT_DEFAULTS;
+  const firestoreNames = window._fleetList.map(f => f.name || f.id);
+  const opts = [...new Set([...FF_AIRCRAFT_BASE, ...firestoreNames])].sort((a, b) => a.localeCompare(b));
   const current = user?.aircraft || '';
   sel.innerHTML = opts.map(a => `<option value="${a}"${a===current?' selected':''}>${a}</option>`).join('');
   const fnEl = document.getElementById('ff-fn');
   if (fnEl) {
     const cs = user?.callsign || '';
-    const valid = cs && !cs.includes('@') && /^[A-Za-z]{2,4}\d{2,4}$/.test(cs);
+    const valid = cs && /^BRV\d{4}$/.test(cs);
     if (valid) fnEl.value = cs;
   }
   const errEl = document.getElementById('ff-err');
