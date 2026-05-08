@@ -935,7 +935,6 @@ auth.onAuthStateChanged(async (fbUser) => {
     try {
       const pirepSnap = await db.collection('pireps')
         .where('pilotId', '==', fbUser.uid)
-        .orderBy('createdAt', 'desc')
         .get();
       flights = pirepSnap.docs.map(doc => ({
         id:     doc.id,
@@ -947,9 +946,10 @@ auth.onAuthStateChanged(async (fbUser) => {
         date:   doc.data().date,
         sim:    doc.data().sim,
         obs:    doc.data().obs || '',
-        status: doc.data().status
-      }));
-    } catch(_) { flights = []; }
+        status: doc.data().status,
+        _ts:    doc.data().createdAt?.toMillis?.() || 0,
+      })).sort((a, b) => b._ts - a._ts);
+    } catch(err) { console.error('Erro ao carregar PIREPs:', err); flights = []; }
 
     document.body.style.visibility = '';
     initUserUI();
