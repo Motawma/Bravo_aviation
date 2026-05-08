@@ -567,6 +567,8 @@ function buildSBRoute(data) {
 
 function applySimBrief() {
   if (!_sbData) return;
+  console.log('[SB] aircraft:', JSON.stringify(_sbData.aircraft));
+  console.log('[SB] sched_out raw:', _sbData.times?.sched_out);
   const route      = buildSBRoute(_sbData);
   const fl         = _sbData.general?.initial_altitude ? Math.round(parseInt(_sbData.general.initial_altitude) / 100) : null;
   const eetSec     = parseInt(_sbData.times?.est_time_enroute || 0);
@@ -934,6 +936,7 @@ function buildIvaoUrl(dep, arr, fl, fn, ac, route, eet, pf) {
     const m = eet.match(/(\d+)h(\d+)/);
     if (m) fp.eet = parseInt(m[1]) * 3600 + parseInt(m[2]) * 60;
   }
+  console.log('[IVAO] fp:', JSON.stringify({equipment:fp.equipment, transponder:fp.transponder, departureTime:fp.departureTime, alternateId:fp.alternateId, wakeCategory:fp.wakeCategory}));
   return 'https://fpl.ivao.aero/flight-plans/create?flightPlan=' + encodeURIComponent(btoa(JSON.stringify(fp)));
 }
 
