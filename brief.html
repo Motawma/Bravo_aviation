@@ -567,9 +567,6 @@ function buildSBRoute(data) {
 
 function applySimBrief() {
   if (!_sbData) return;
-  console.log('[SB] general keys:', Object.keys(_sbData.general||{}));
-  console.log('[SB] weights:', JSON.stringify(_sbData.weights));
-  console.log('[SB] params keys:', Object.keys(_sbData.params||{}));
   const route      = buildSBRoute(_sbData);
   const fl         = _sbData.general?.initial_altitude ? Math.round(parseInt(_sbData.general.initial_altitude) / 100) : null;
   const eetSec     = parseInt(_sbData.times?.est_time_enroute || 0);
@@ -628,7 +625,10 @@ function applySimBrief() {
   }
   // Endurance (autonomia) e POB do SimBrief
   const enduranceSec = parseInt(_sbData.times?.endurance || 0);
-  const pob          = parseInt(_sbData.weights?.pax_count_actual || _sbData.weights?.pax_count || 0);
+  const pob          = parseInt(_sbData.general?.passengers || _sbData.weights?.pax_count_actual || _sbData.weights?.pax_count || 0);
+
+  // Callsign do SimBrief: icao_airline + flight_number (ex: "BRV" + "1202" = "BRV1202")
+  const sbCallsign = ((_sbData.general?.icao_airline || '') + (_sbData.general?.flight_number || '')).toUpperCase();
 
   if (_pf) {
     if (equipment)    _pf.equipment    = equipment;
@@ -640,10 +640,13 @@ function applySimBrief() {
     if (altn2)        _pf.altn2         = altn2;
     if (enduranceSec) _pf.endurance     = enduranceSec;
     if (pob)          _pf.pob           = pob;
+    if (sbCallsign)   _pf.flightNumber  = sbCallsign;
   }
 
   // Atualiza links IVAO e VATSIM com nova rota
   if (_pf) {
+    const tbFlight = document.getElementById('tb-flight');
+    if (tbFlight && sbCallsign) tbFlight.textContent = sbCallsign;
     const ivao   = document.getElementById('btn-ivao-prefile');
     const vatsim = document.getElementById('btn-vatsim-prefile');
     if (ivao)   ivao.href   = buildIvaoUrl(_pf.dep, _pf.arr, _pf.plannedFL, _pf.flightNumber || _userData?.callsign, _pf.aircraft || _userData?.aircraft, _pf.route, _pf.eet, _pf);
@@ -941,6 +944,7 @@ function buildIvaoUrl(dep, arr, fl, fn, ac, route, eet, pf) {
     departureTime:     depSec,
     arrivalId:         arr || '',
     alternateId:       pf?.altn  || '',
+    alternate1Id:      pf?.altn  || '',
     alternate:         pf?.altn  || '',
     alternate2Id:      pf?.altn2 || '',
     alternate2:        pf?.altn2 || '',
