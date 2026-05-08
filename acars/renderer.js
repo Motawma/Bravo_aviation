@@ -62,10 +62,11 @@
   }
 
   // ── Estado global ─────────────────────────────────────────────────────────
-  let currentUser   = null;
-  let userData      = null;
-  let simConnected  = false;
-  let simType       = null;
+  let currentUser      = null;
+  let userData         = null;
+  let simConnected     = false;
+  let simType          = null;
+  let discordWebhookUrl = null;
   let aircraftTitle = null;
   let flightActive  = false;
   let pendingFlightUnsub = null;
@@ -367,6 +368,10 @@
   async function onLoginSuccess() {
     $('topbar-name').textContent = userData.name || currentUser.email;
     $('topbar-vid').textContent  = 'VID ' + (userData.vid || '—');
+    // Carrega webhook Discord para notificações de PIREP
+    db.collection('siteConfig').doc('1501341988757311528').get()
+      .then(s => { if (s.exists) discordWebhookUrl = s.data().webhookUrl || null; })
+      .catch(() => {});
     showMain();
     setupPendingFlightListener();
     setupSimListeners();
@@ -909,6 +914,9 @@
     };
 
     await db.collection('pireps').add(pirep);
+
+    if (foqaRejected) notifyDiscordRejected(pirep, rejectReason, foqaScore);
+
     const userUpdate = {
       flights:        firebase.firestore.FieldValue.increment(1),
       hours:          firebase.firestore.FieldValue.increment(+(dur / 3600).toFixed(2)),
@@ -982,6 +990,38 @@
     }
 
     await db.collection('liveflights').doc(currentUser.uid).set(payload, { merge: true }).catch(() => {});
+  }
+
+  // ── Notificação Discord — PIREP auto-rejeitado ───────────────────────────
+  function notifyDiscordRejected(pirep, rejectReason, foqaScore) {
+    if (!discordWebhookUrl) return;
+    const reasonMap = {
+      hard_landing:   '🛬 Pouso acima de 500 FPM',
+      foqa_exceeded:  '📉 Score FOQA abaixo do mínimo',
+    };
+    const reasonLabel = reasonMap[rejectReason] || rejectReason || 'Violação FOQA';
+    const embed = {
+      title: '❌ PIREP Recusado (ACARS)',
+      color: 0xDC3545,
+      fields: [
+        { name: '👤 Piloto',    value: userData?.name || '—',          inline: true },
+        { name: '🪪 Callsign',  value: userData?.callsign || '—',      inline: true },
+        { name: '✈️ Aeronave',  value: pirep.aircraft || '—',          inline: true },
+        { name: '🛫 Rota',      value: `${pirep.dep} → ${pirep.arr}`,  inline: true },
+        { name: '⏱️ Duração',   value: pirep.dur || '—',               inline: true },
+        { name: '🏆 Score FOQA',value: `${foqaScore}/100`,             inline: true },
+        { name: '⚠️ Motivo',    value: reasonLabel,                    inline: false },
+      ],
+      footer: { text: 'Bravo Aviation · ACARS Auto-Rejeição' },
+      timestamp: new Date().toISOString()
+    };
+    if (pirep.landingRate != null)
+      embed.fields.push({ name: '🛬 Taxa de pouso', value: `${pirep.landingRate} FPM`, inline: true });
+    fetch(discordWebhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ embeds: [embed] })
+    }).catch(() => {});
   }
 
   // ── Tela de resumo ────────────────────────────────────────────────────────
