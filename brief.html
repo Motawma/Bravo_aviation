@@ -435,8 +435,8 @@ function applyManualRoute() {
   if (_pf) {
     const ivao   = document.getElementById('btn-ivao-prefile');
     const vatsim = document.getElementById('btn-vatsim-prefile');
-    if (ivao)   ivao.href   = buildIvaoUrl(_pf.dep, _pf.arr, _pf.plannedFL, _pf.flightNumber, _pf.aircraft || _userData?.aircraft, _pf.route, _pf.eet);
-    if (vatsim) vatsim.href = 'https://my.vatsim.net/pilots/flightplan/create?callsign=' + (_pf.flightNumber||'') + '&dep=' + _pf.dep + '&arr=' + _pf.arr + '&aircraft=' + encodeURIComponent(_pf.aircraft||'') + '&altitude=' + (_pf.plannedFL||'350') + '00&route=' + encodeURIComponent(_pf.route||'DCT');
+    if (ivao)   ivao.href   = buildIvaoUrl(_pf.dep, _pf.arr, _pf.plannedFL, _pf.flightNumber || _userData?.callsign, _pf.aircraft || _userData?.aircraft, _pf.route, _pf.eet, _pf);
+    if (vatsim) vatsim.href = 'https://my.vatsim.net/pilots/flightplan/create?callsign=' + (_pf.flightNumber||_userData?.callsign||'') + '&dep=' + _pf.dep + '&arr=' + _pf.arr + '&aircraft=' + encodeURIComponent(_pf.aircraft||'') + '&altitude=' + (_pf.plannedFL||'350') + '00&route=' + encodeURIComponent(_pf.route||'DCT');
   }
   closeRouteModal();
   const el = document.getElementById('sb-body');
@@ -567,12 +567,20 @@ function buildSBRoute(data) {
 
 function applySimBrief() {
   if (!_sbData) return;
-  const route   = buildSBRoute(_sbData);
-  const fl      = _sbData.general?.initial_altitude ? Math.round(parseInt(_sbData.general.initial_altitude) / 100) : null;
-  const eetSec  = parseInt(_sbData.times?.est_time_enroute || 0);
-  const eetH    = Math.floor(eetSec / 3600);
-  const eetM    = Math.floor((eetSec % 3600) / 60);
-  const eetStr  = eetSec ? eetH + 'h' + String(eetM).padStart(2,'0') : null;
+  const route      = buildSBRoute(_sbData);
+  const fl         = _sbData.general?.initial_altitude ? Math.round(parseInt(_sbData.general.initial_altitude) / 100) : null;
+  const eetSec     = parseInt(_sbData.times?.est_time_enroute || 0);
+  const eetH       = Math.floor(eetSec / 3600);
+  const eetM       = Math.floor((eetSec % 3600) / 60);
+  const eetStr     = eetSec ? eetH + 'h' + String(eetM).padStart(2,'0') : null;
+  // Campos extras para IVAO prefile
+  const equipment  = _sbData.aircraft?.equip        || '';
+  const transponder= _sbData.aircraft?.transponder  || '';
+  const wakecat    = _sbData.aircraft?.wakecat       || '';
+  const cruiseSpdRaw = parseInt(_sbData.general?.cruise_speed || 0);
+  const schedOut   = parseInt(_sbData.times?.sched_out || 0);
+  let   depTime    = 0;
+  if (schedOut) { const d = new Date(schedOut * 1000); depTime = d.getUTCHours() * 100 + d.getUTCMinutes(); }
 
   if (route) {
     document.getElementById('brief-route-val').textContent = route;
@@ -586,13 +594,20 @@ function applySimBrief() {
     document.getElementById('brief-eet-val').textContent = eetStr;
     if (_pf) _pf.eet = eetStr;
   }
+  if (_pf) {
+    if (equipment)   _pf.equipment    = equipment;
+    if (transponder) _pf.transponder  = transponder;
+    if (wakecat)     _pf.wakecat      = wakecat;
+    if (cruiseSpdRaw)_pf.cruiseSpeed  = cruiseSpdRaw;
+    if (depTime)     _pf.departureTime = depTime;
+  }
 
   // Atualiza links IVAO e VATSIM com nova rota
   if (_pf) {
     const ivao   = document.getElementById('btn-ivao-prefile');
     const vatsim = document.getElementById('btn-vatsim-prefile');
-    if (ivao)   ivao.href   = buildIvaoUrl(_pf.dep, _pf.arr, _pf.plannedFL, _pf.flightNumber, _pf.aircraft || _userData?.aircraft, _pf.route, _pf.eet);
-    if (vatsim) vatsim.href = 'https://my.vatsim.net/pilots/flightplan/create?callsign=' + (_pf.flightNumber||'') + '&dep=' + _pf.dep + '&arr=' + _pf.arr + '&aircraft=' + encodeURIComponent(_pf.aircraft||'') + '&altitude=' + (_pf.plannedFL||'350') + '00&route=' + encodeURIComponent(_pf.route||'DCT');
+    if (ivao)   ivao.href   = buildIvaoUrl(_pf.dep, _pf.arr, _pf.plannedFL, _pf.flightNumber || _userData?.callsign, _pf.aircraft || _userData?.aircraft, _pf.route, _pf.eet, _pf);
+    if (vatsim) vatsim.href = 'https://my.vatsim.net/pilots/flightplan/create?callsign=' + (_pf.flightNumber||_userData?.callsign||'') + '&dep=' + _pf.dep + '&arr=' + _pf.arr + '&aircraft=' + encodeURIComponent(_pf.aircraft||'') + '&altitude=' + (_pf.plannedFL||'350') + '00&route=' + encodeURIComponent(_pf.route||'DCT');
   }
 
   const btn = document.querySelector('[onclick="applySimBrief()"]');
@@ -609,7 +624,7 @@ function renderBrief(pf, userData) {
   const eet      = pf.eet || '—';
   const nm       = pf.distance ? pf.distance + ' NM' : '—';
   const ac       = pf.aircraft || userData.aircraft || 'A320';
-  const fn       = pf.flightNumber || 'BRV';
+  const fn       = pf.flightNumber || userData?.callsign || 'BRV001';
   const route    = pf.route || '';
   const depApt   = getApt(dep);
   const arrApt   = getApt(arr);
@@ -705,7 +720,7 @@ function renderBrief(pf, userData) {
           <a id="btn-vatsim-prefile" class="int-btn vatsim" href="https://my.vatsim.net/pilots/flightplan/create?callsign=${fn}&dep=${dep}&arr=${arr}&aircraft=${encodeURIComponent(ac)}&altitude=${fl}00&route=${encodeURIComponent(route||'DCT')}" target="_blank">
             🔵 VATSIM Prefile
           </a>
-          <a id="btn-ivao-prefile" class="int-btn ivao" href="${buildIvaoUrl(dep,arr,fl,fn,ac,route,eet)}" target="_blank">
+          <a id="btn-ivao-prefile" class="int-btn ivao" href="${buildIvaoUrl(dep,arr,fl,fn,ac,route,eet,pf)}" target="_blank">
             🟣 IVAO Prefile
           </a>
         </div>
@@ -853,7 +868,14 @@ function parseTime(r){
 }
 
 /* ── HELPERS ── */
-function buildIvaoUrl(dep, arr, fl, fn, ac, route, eet) {
+function guessWakeCat(ac) {
+  const t = (ac || '').toLowerCase();
+  if (/a38[0-9]|b74[7-9]|b77[78]|a340|a35[0-9]|md-?11|md11/.test(t)) return 'H';
+  if (/a3[12][0-9]|b73[0-9]|e[12][679][0-9]|atr|crj|dash|q[34][0-9]|c[17][0-9]|cessna|pilatus|tbm|baron|citation|caravan|pc-?[12][0-9]/.test(t)) return 'M';
+  return 'L';
+}
+
+function buildIvaoUrl(dep, arr, fl, fn, ac, route, eet, pf) {
   const today = new Date();
   const dof   = String(today.getFullYear()).slice(-2)
               + String(today.getMonth() + 1).padStart(2, '0')
@@ -863,12 +885,16 @@ function buildIvaoUrl(dep, arr, fl, fn, ac, route, eet) {
     flightRules:       'I',
     flightType:        'S',
     aircraftId:        toICAOType(ac),
+    wakeCategory:      pf?.wakecat || guessWakeCat(ac),
+    equipment:         pf?.equipment   || 'S',
+    transponder:       pf?.transponder || 'S',
     departureId:       dep || '',
+    departureTime:     pf?.departureTime || 0,
     arrivalId:         arr || '',
     altitudeType:      'F',
     altitude:          fl && fl !== '—' ? parseInt(fl, 10) : 0,
     cruisingSpeedType: 'N',
-    cruisingSpeed:     460,
+    cruisingSpeed:     pf?.cruiseSpeed || 460,
     remarks:           `OPR/BRV PBN/A1B1C1D1O1S1 DOF/${dof} PER/C RMK/TCAS IVAOVA/BRV`
   };
   if (route && route.trim()) fp.route = route.trim();
@@ -892,14 +918,29 @@ function buildSimBriefUrl(dep, arr, fl, fn, ac) {
 
 function toICAOType(ac) {
   const map = {
-    'a320':'A320','airbus a320':'A320','a319':'A319','airbus a319':'A319',
+    'a319':'A319','airbus a319':'A319',
+    'a320':'A320','airbus a320':'A320',
     'a321':'A321','airbus a321':'A321',
-    'b737-800':'B738','b737800':'B738','boeing 737-800':'B738',
+    'a350':'A35K','a350-900':'A35K','airbus a350-900':'A35K',
+    'a350-1000':'A35K',
     'b737-700':'B737','boeing 737-700':'B737',
-    'b777':'B77W','boeing 777':'B77W',
+    'b737-800':'B738','b737800':'B738','boeing 737-800':'B738',
+    'b737-900':'B739','boeing 737-900':'B739',
+    'b777-300er':'B77W','boeing 777-300er':'B77W','b777':'B77W','boeing 777':'B77W',
     'b747':'B744','boeing 747':'B744',
+    'e175':'E175','embraer e175':'E175',
+    'e195':'E195','embraer e195':'E195',
+    'atr 72-600':'AT76','atr72-600':'AT76','atr 72':'AT72',
+    'cessna c172 skyhawk':'C172','c172':'C172',
+    'cessna caravan 208':'C208','caravan 208':'C208',
+    'cessna citation x':'C750',
+    'cessna c700 citation longitude':'C700',
+    'beechcraft baron 58':'BE58',
+    'pilatus pc-24':'PC24',
+    'tbm 930':'TBM9',
+    'mcdonnell douglas md-11':'MD11',
   };
-  return map[(ac||'').toLowerCase()] || 'A320';
+  return map[(ac||'').toLowerCase()] || (ac||'').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,4) || 'A320';
 }
 </script>
 </body>
