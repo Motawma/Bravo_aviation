@@ -222,6 +222,22 @@
     return 'VOO';
   }
 
+  // Aeronaves sem luzes beacon tradicionais (turboprops GA, alguns jatos pequenos)
+  // Para essas aeronaves o check de beacon é ignorado no FOQA
+  const NO_BEACON_AIRCRAFT = [
+    'TBM', 'PC-12', 'PC12', 'KING AIR', 'KINGAIR',
+    'KODIAK', 'CARAVAN', 'GRAND CARAVAN',
+    'SR22', 'SR20', 'CIRRUS',
+    'DA40', 'DA42', 'DA62', 'DIAMOND',
+    'CESSNA 172', 'C172', 'CESSNA 182', 'C182',
+    'PIPER', 'SEMINOLE', 'ARCHER',
+    'PHENOM 100', 'PHENOM 300',
+  ];
+  function acHasBeacon(title) {
+    const t = (title || '').toUpperCase();
+    return !NO_BEACON_AIRCRAFT.some(p => t.includes(p));
+  }
+
   // ── Limitações de aeronaves ───────────────────────────────────────────────
   const AC_LIMITS = {
     A320: { mtow:77000, mlw:66000, maxAlt:39100, maxTailwind:10, maxSpdbrake:315,
@@ -652,8 +668,8 @@
       addFoqaViolation('sim_rate_fast', `Taxa de simulação ${(simRate||1).toFixed(0)}x detectada`, 100, 'CoC');
     }
 
-    // ── [Ov] Beacon desligado com motores ───────────────────────────────────
-    if ((eng1 || eng2) && !beaconLight) {
+    // ── [Ov] Beacon desligado com motores (ignorado para aeronaves sem beacon)
+    if (acHasBeacon(aircraftTitle) && (eng1 || eng2) && !beaconLight) {
       addFoqaViolation('beacon_off', 'Luzes beacon desligadas com motores acionados', 5, 'Ov');
     }
 
