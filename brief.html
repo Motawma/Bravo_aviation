@@ -623,14 +623,20 @@ function applySimBrief() {
     document.getElementById('brief-eet-val').textContent = eetStr;
     if (_pf) _pf.eet = eetStr;
   }
+  // Endurance (autonomia) e POB do SimBrief
+  const enduranceSec = parseInt(_sbData.times?.endurance || 0);
+  const pob          = parseInt(_sbData.weights?.pax_count_actual || _sbData.weights?.pax_count || 0);
+
   if (_pf) {
-    if (equipment)   _pf.equipment    = equipment;
-    if (transponder) _pf.transponder  = transponder;
-    if (wakecat)     _pf.wakecat      = wakecat;
-    if (cruiseSpdRaw)_pf.cruiseSpeed  = cruiseSpdRaw;
-    if (depTime)     _pf.departureTime = depTime;
-    if (altn)        _pf.altn          = altn;
-    if (altn2)       _pf.altn2         = altn2;
+    if (equipment)    _pf.equipment    = equipment;
+    if (transponder)  _pf.transponder  = transponder;
+    if (wakecat)      _pf.wakecat      = wakecat;
+    if (cruiseSpdRaw) _pf.cruiseSpeed  = cruiseSpdRaw;
+    if (depTime)      _pf.departureTime = depTime;
+    if (altn)         _pf.altn          = altn;
+    if (altn2)        _pf.altn2         = altn2;
+    if (enduranceSec) _pf.endurance     = enduranceSec;
+    if (pob)          _pf.pob           = pob;
   }
 
   // Atualiza links IVAO e VATSIM com nova rota
@@ -655,7 +661,9 @@ function renderBrief(pf, userData) {
   const eet      = pf.eet || '—';
   const nm       = pf.distance ? pf.distance + ' NM' : '—';
   const ac       = pf.aircraft || userData.aircraft || 'A320';
-  const fn       = pf.flightNumber || userData?.callsign || 'BRV001';
+  const rawCs    = userData?.callsign || '';
+  const validCs  = rawCs && !rawCs.includes('@') && /^[A-Za-z]{2,5}\d{2,5}$/.test(rawCs) ? rawCs : '';
+  const fn       = pf.flightNumber || validCs || 'BRV001';
   const route    = pf.route || '';
   const depApt   = getApt(dep);
   const arrApt   = getApt(arr);
@@ -911,23 +919,35 @@ function buildIvaoUrl(dep, arr, fl, fn, ac, route, eet, pf) {
   const dof   = String(today.getFullYear()).slice(-2)
               + String(today.getMonth() + 1).padStart(2, '0')
               + String(today.getDate()).padStart(2, '0');
+  // departureTime: IVAO espera segundos desde meia-noite UTC
+  const depHHMM   = pf?.departureTime || 0;
+  const depSec    = depHHMM ? Math.floor(depHHMM / 100) * 3600 + (depHHMM % 100) * 60 : 0;
+  // Endurance em segundos
+  const endurSec  = pf?.endurance || 0;
+  // Callsign validado (não usa e-mail)
+  const cs        = (fn || '').includes('@') ? 'BRV001' : (fn || 'BRV001');
   const fp = {
-    callsign:          fn  || '',
+    callsign:          cs,
     flightRules:       'I',
     flightType:        'S',
     aircraftId:        toICAOType(ac),
     wakeCategory:      pf?.wakecat || guessWakeCat(ac),
-    equipment:         pf?.equipment   || 'S',
-    transponder:       pf?.transponder || 'S',
+    equipment:         pf?.equipment   || '',
+    transponder:       pf?.transponder || '',
     departureId:       dep || '',
-    departureTime:     pf?.departureTime || 0,
+    departureTime:     depSec,
     arrivalId:         arr || '',
     alternateId:       pf?.altn  || '',
+    alternate:         pf?.altn  || '',
     alternate2Id:      pf?.altn2 || '',
+    alternate2:        pf?.altn2 || '',
     altitudeType:      'F',
     altitude:          fl && fl !== '—' ? parseInt(fl, 10) : 0,
     cruisingSpeedType: 'N',
     cruisingSpeed:     pf?.cruiseSpeed || 460,
+    endurance:         endurSec,
+    personsOnBoard:    pf?.pob || 0,
+    pilotInCommand:    cs,
     remarks:           `OPR/BRV PBN/A1B1C1D1O1S1 DOF/${dof} PER/C RMK/TCAS IVAOVA/BRV`
   };
   if (route && route.trim()) fp.route = route.trim();
