@@ -581,6 +581,8 @@ function applySimBrief() {
   const schedOut   = parseInt(_sbData.times?.sched_out || 0);
   let   depTime    = 0;
   if (schedOut) { const d = new Date(schedOut * 1000); depTime = d.getUTCHours() * 100 + d.getUTCMinutes(); }
+  const altn       = (_sbData.alternate?.icao_code || _sbData.altn?.icao_code || '').toUpperCase();
+  const altn2      = (_sbData.alternate2?.icao_code || _sbData.altn2?.icao_code || '').toUpperCase();
 
   if (route) {
     document.getElementById('brief-route-val').textContent = route;
@@ -600,6 +602,8 @@ function applySimBrief() {
     if (wakecat)     _pf.wakecat      = wakecat;
     if (cruiseSpdRaw)_pf.cruiseSpeed  = cruiseSpdRaw;
     if (depTime)     _pf.departureTime = depTime;
+    if (altn)        _pf.altn          = altn;
+    if (altn2)       _pf.altn2         = altn2;
   }
 
   // Atualiza links IVAO e VATSIM com nova rota
@@ -891,6 +895,8 @@ function buildIvaoUrl(dep, arr, fl, fn, ac, route, eet, pf) {
     departureId:       dep || '',
     departureTime:     pf?.departureTime || 0,
     arrivalId:         arr || '',
+    alternateId:       pf?.altn  || '',
+    alternate2Id:      pf?.altn2 || '',
     altitudeType:      'F',
     altitude:          fl && fl !== '—' ? parseInt(fl, 10) : 0,
     cruisingSpeedType: 'N',
