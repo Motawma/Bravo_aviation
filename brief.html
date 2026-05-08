@@ -567,12 +567,6 @@ function buildSBRoute(data) {
 
 function applySimBrief() {
   if (!_sbData) return;
-  // DEBUG — remover após confirmar campos
-  console.log('[SB] times:', JSON.stringify(_sbData.times));
-  console.log('[SB] origin keys:', Object.keys(_sbData.origin || {}));
-  console.log('[SB] alternate:', JSON.stringify(_sbData.alternate));
-  console.log('[SB] altn:', JSON.stringify(_sbData.altn));
-  console.log('[SB] alternates:', JSON.stringify(_sbData.alternates));
   const route      = buildSBRoute(_sbData);
   const fl         = _sbData.general?.initial_altitude ? Math.round(parseInt(_sbData.general.initial_altitude) / 100) : null;
   const eetSec     = parseInt(_sbData.times?.est_time_enroute || 0);
