@@ -321,7 +321,23 @@ auth.onAuthStateChanged(async (fbUser) => {
     }
 
     document.body.style.visibility = '';
-    const pf = data.pendingFlight;
+    let pf = data.pendingFlight;
+
+    // Fallback: se estiver em voo ativo, usa liveflights
+    if (!pf) {
+      const lfSnap = await db.collection('liveflights').doc(fbUser.uid).get();
+      if (lfSnap.exists) {
+        const lf = lfSnap.data();
+        pf = {
+          dep:        lf.dep      || '?',
+          arr:        lf.arr      || '?',
+          aircraft:   lf.aircraft || data.aircraft || 'A320',
+          flightNumber: data.callsign || '',
+          _fromLiveFlight: true
+        };
+      }
+    }
+
     if (!pf) {
       document.getElementById('main-content').innerHTML = `
         <div class="loading" style="padding:80px">
@@ -597,7 +613,15 @@ function renderBrief(pf, userData) {
 
   document.getElementById('tb-flight').textContent = fn;
 
+  const inFlightBanner = pf._fromLiveFlight
+    ? `<div style="background:rgba(0,238,255,0.08);border:1px solid rgba(0,238,255,0.2);border-radius:6px;padding:10px 16px;margin-bottom:20px;font-size:12px;color:var(--gold);display:flex;align-items:center;gap:10px">
+        <span style="font-size:16px">🛫</span>
+        <span>Voo em andamento — dados de rota parciais (plano carregado pelo ACARS)</span>
+       </div>`
+    : '';
+
   document.getElementById('main-content').innerHTML = `
+    ${inFlightBanner}
     <!-- AIRPORT CARDS -->
     <div class="ac-cards">
       <!-- Aircraft -->
