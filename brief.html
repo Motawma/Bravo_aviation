@@ -567,6 +567,12 @@ function buildSBRoute(data) {
 
 function applySimBrief() {
   if (!_sbData) return;
+  // DEBUG — remover após confirmar campos
+  console.log('[SB] times:', JSON.stringify(_sbData.times));
+  console.log('[SB] origin keys:', Object.keys(_sbData.origin || {}));
+  console.log('[SB] alternate:', JSON.stringify(_sbData.alternate));
+  console.log('[SB] altn:', JSON.stringify(_sbData.altn));
+  console.log('[SB] alternates:', JSON.stringify(_sbData.alternates));
   const route      = buildSBRoute(_sbData);
   const fl         = _sbData.general?.initial_altitude ? Math.round(parseInt(_sbData.general.initial_altitude) / 100) : null;
   const eetSec     = parseInt(_sbData.times?.est_time_enroute || 0);
@@ -574,15 +580,41 @@ function applySimBrief() {
   const eetM       = Math.floor((eetSec % 3600) / 60);
   const eetStr     = eetSec ? eetH + 'h' + String(eetM).padStart(2,'0') : null;
   // Campos extras para IVAO prefile
-  const equipment  = _sbData.aircraft?.equip        || '';
-  const transponder= _sbData.aircraft?.transponder  || '';
-  const wakecat    = _sbData.aircraft?.wakecat       || '';
+  const equipment   = _sbData.aircraft?.equip       || '';
+  const transponder = _sbData.aircraft?.transponder || '';
+  const wakecat     = _sbData.aircraft?.wakecat      || '';
   const cruiseSpdRaw = parseInt(_sbData.general?.cruise_speed || 0);
-  const schedOut   = parseInt(_sbData.times?.sched_out || 0);
-  let   depTime    = 0;
-  if (schedOut) { const d = new Date(schedOut * 1000); depTime = d.getUTCHours() * 100 + d.getUTCMinutes(); }
-  const altn       = (_sbData.alternate?.icao_code || _sbData.altn?.icao_code || '').toUpperCase();
-  const altn2      = (_sbData.alternate2?.icao_code || _sbData.altn2?.icao_code || '').toUpperCase();
+
+  // Horário de partida: sched_out pode ser Unix timestamp (>1M) ou tempo relativo (não usar)
+  let depTime = 0;
+  const schedOut = parseInt(_sbData.times?.sched_out || 0);
+  if (schedOut > 1000000) {
+    const d = new Date(schedOut * 1000);
+    depTime = d.getUTCHours() * 100 + d.getUTCMinutes();
+  } else {
+    // Fallback: campos HHMM diretos do SimBrief
+    const planDep = _sbData.origin?.plan_dep_utc
+                 || _sbData.origin?.dep_time
+                 || _sbData.atc?.dep_time
+                 || '';
+    if (planDep) {
+      const cleaned = planDep.toString().replace(/[^0-9]/g, '');
+      depTime = parseInt(cleaned) || 0;
+    } else {
+      // Último recurso: sched_off (takeoff time) se for Unix timestamp
+      const schedOff = parseInt(_sbData.times?.sched_off || 0);
+      if (schedOff > 1000000) {
+        const d = new Date(schedOff * 1000);
+        depTime = d.getUTCHours() * 100 + d.getUTCMinutes();
+      }
+    }
+  }
+
+  // Alternado: tenta todos os caminhos conhecidos do SimBrief JSON
+  const altnObj  = _sbData.alternate  || _sbData.altn || (_sbData.alternates || [])[0] || null;
+  const altn2Obj = _sbData.alternate2 || _sbData.altn2 || (_sbData.alternates || [])[1] || null;
+  const altn     = (altnObj?.icao_code  || altnObj?.icao || '').toUpperCase();
+  const altn2    = (altn2Obj?.icao_code || altn2Obj?.icao || '').toUpperCase();
 
   if (route) {
     document.getElementById('brief-route-val').textContent = route;
