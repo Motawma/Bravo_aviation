@@ -932,30 +932,30 @@ function buildIvaoUrl(dep, arr, fl, fn, ac, route, eet, pf) {
   const endurSec  = pf?.endurance || 0;
   // Callsign validado (não usa e-mail)
   const cs        = (fn || '').includes('@') ? 'BRV001' : (fn || 'BRV001');
+  // Converte string de equipamento SimBrief em array IVAO (ex: "SDE3FGH" → ["S","D","E3","F","G","H"])
+  const equipArr  = (pf?.equipment   || '').match(/[A-Z][0-9]|[A-Z]/g) || [];
+  const transpArr = (pf?.transponder || '').match(/[A-Z][0-9]|[A-Z]/g) || [];
   const fp = {
-    callsign:          cs,
-    flightRules:       'I',
-    flightType:        'S',
-    aircraftId:        toICAOType(ac),
-    wakeCategory:      pf?.wakecat || guessWakeCat(ac),
-    equipment:         pf?.equipment   || '',
-    transponder:       pf?.transponder || '',
-    departureId:       dep || '',
-    departureTime:     depSec,
-    arrivalId:         arr || '',
-    alternateId:       pf?.altn  || '',
-    alternate1Id:      pf?.altn  || '',
-    alternate:         pf?.altn  || '',
-    alternate2Id:      pf?.altn2 || '',
-    alternate2:        pf?.altn2 || '',
-    altitudeType:      'F',
-    altitude:          fl && fl !== '—' ? parseInt(fl, 10) : 0,
-    cruisingSpeedType: 'N',
-    cruisingSpeed:     pf?.cruiseSpeed || 460,
-    endurance:         endurSec,
-    personsOnBoard:    pf?.pob || 0,
-    pilotInCommand:    cs,
-    remarks:           `OPR/BRV PBN/A1B1C1D1O1S1 DOF/${dof} PER/C RMK/TCAS IVAOVA/BRV`
+    callsign:                 cs,
+    flightRules:              'I',
+    flightType:               'S',
+    aircraftId:               toICAOType(ac),
+    wakeCategory:             pf?.wakecat || guessWakeCat(ac),
+    aircraftEquipments:       equipArr,
+    aircraftTransponderTypes: transpArr,
+    departureId:              dep || '',
+    departureTime:            depSec,
+    arrivalId:                arr || '',
+    alternativeId:            pf?.altn  || '',
+    alternative2Id:           pf?.altn2 || '',
+    altitudeType:             'F',
+    altitude:                 fl && fl !== '—' ? parseInt(fl, 10) : 0,
+    cruisingSpeedType:        'N',
+    cruisingSpeed:            pf?.cruiseSpeed || 460,
+    endurance:                endurSec,
+    pob:                      pf?.pob || 0,
+    pilotInCommand:           cs,
+    remarks:                  `OPR/BRV PBN/A1B1C1D1O1S1 DOF/${dof} PER/C RMK/TCAS IVAOVA/BRV`
   };
   if (route && route.trim()) fp.route = route.trim();
   if (eet && eet !== '—') {
