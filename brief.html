@@ -567,7 +567,8 @@ function buildSBRoute(data) {
 
 function applySimBrief() {
   if (!_sbData) return;
-  const route      = buildSBRoute(_sbData);
+  const route      = buildSBRoute(_sbData);           // exibição: SID + enroute + STAR
+  const enroute    = _sbData.general?.route || route; // IVAO: só enroute (sem SID/STAR)
   const fl         = _sbData.general?.initial_altitude ? Math.round(parseInt(_sbData.general.initial_altitude) / 100) : null;
   const eetSec     = parseInt(_sbData.times?.est_time_enroute || 0);
   const eetH       = Math.floor(eetSec / 3600);
@@ -613,7 +614,7 @@ function applySimBrief() {
 
   if (route) {
     document.getElementById('brief-route-val').textContent = route;
-    if (_pf) _pf.route = route;
+    if (_pf) { _pf.route = route; _pf.enroute = enroute; }
   }
   if (fl) {
     document.getElementById('brief-fl-val').textContent = 'FL' + fl;
@@ -957,7 +958,9 @@ function buildIvaoUrl(dep, arr, fl, fn, ac, route, eet, pf) {
     pilotInCommand:           cs,
     remarks:                  `OPR/BRV PBN/A1B1C1D1O1S1 DOF/${dof} PER/C RMK/TCAS IVAOVA/BRV`
   };
-  if (route && route.trim()) fp.route = route.trim();
+  // Usa só o enroute para IVAO (sem SID/STAR); fallback para route completo se enroute não disponível
+  const ivaoRoute = (pf?.enroute || route || '').trim();
+  if (ivaoRoute) fp.route = ivaoRoute;
   if (eet && eet !== '—') {
     const m = eet.match(/(\d+)h(\d+)/);
     if (m) fp.eet = parseInt(m[1]) * 3600 + parseInt(m[2]) * 60;
