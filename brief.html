@@ -963,8 +963,12 @@ function buildIvaoUrl(dep, arr, fl, fn, ac, route, eet, pf) {
     pilotInCommand:           cs,
     remarks:                  `OPR/BRV PBN/A1B1C1D1O1S1 DOF/${dof} PER/C RMK/TCAS IVAOVA/BRV`
   };
-  // Usa só o enroute para IVAO (sem SID/STAR); fallback para route completo se enroute não disponível
-  const ivaoRoute = (pf?.enroute || route || '').trim();
+  // Remove SID/STAR do route antes de enviar ao IVAO
+  const _sidStarRe  = /^[A-Z]{2,5}\d[A-Z]$/;
+  const _rtTokens   = (pf?.enroute || route || '').trim().split(/\s+/).filter(Boolean);
+  if (_rtTokens.length > 1 && _sidStarRe.test(_rtTokens[0]))                     _rtTokens.shift();
+  if (_rtTokens.length > 1 && _sidStarRe.test(_rtTokens[_rtTokens.length - 1]))  _rtTokens.pop();
+  const ivaoRoute   = _rtTokens.join(' ');
   if (ivaoRoute) fp.route = ivaoRoute;
   if (eet && eet !== '—') {
     const m = eet.match(/(\d+)h(\d+)/);
