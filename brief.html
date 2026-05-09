@@ -568,15 +568,12 @@ function buildSBRoute(data) {
 function applySimBrief() {
   if (!_sbData) return;
   const route      = buildSBRoute(_sbData);           // exibição: SID + enroute + STAR
-  // IVAO: remove SID do início e STAR do fim do general.route
-  let enroute = (_sbData.general?.route || '').trim();
-  const _sid  = (_sbData.origin?.sid_trans      || _sbData.origin?.sid      || '').trim();
-  const _star = (_sbData.destination?.star_trans || _sbData.destination?.star || '').trim();
-  if (_sid  && enroute.toUpperCase().startsWith(_sid.toUpperCase()))
-    enroute = enroute.slice(_sid.length).trim();
-  if (_star && enroute.toUpperCase().endsWith(_star.toUpperCase()))
-    enroute = enroute.slice(0, enroute.length - _star.length).trim();
-  if (!enroute) enroute = route;
+  // IVAO: remove SID/STAR do route pelo padrão ICAO (2-5 letras + dígito + letra, ex: PUNO4A, ANIS1A)
+  const sidStarRe = /^[A-Z]{2,5}\d[A-Z]$/;
+  const rtTokens  = (_sbData.general?.route || '').trim().split(/\s+/).filter(Boolean);
+  if (rtTokens.length > 1 && sidStarRe.test(rtTokens[0]))                   rtTokens.shift();
+  if (rtTokens.length > 1 && sidStarRe.test(rtTokens[rtTokens.length - 1])) rtTokens.pop();
+  const enroute = rtTokens.join(' ') || route;
   const fl         = _sbData.general?.initial_altitude ? Math.round(parseInt(_sbData.general.initial_altitude) / 100) : null;
   const eetSec     = parseInt(_sbData.times?.est_time_enroute || 0);
   const eetH       = Math.floor(eetSec / 3600);
