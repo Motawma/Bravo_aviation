@@ -825,7 +825,7 @@ tr:hover td{background:rgba(255,255,255,.02);}
 
     <div style="display:flex;gap:10px">
       <button id="mp-submit-btn" onclick="submitManualPirep()" style="flex:1;padding:12px;background:#00EEFF;color:#000;border:none;font-weight:700;font-size:13px;border-radius:4px;cursor:pointer;font-family:'Inter',sans-serif">✔ Registrar PIREP</button>
-      <button onclick="document.getElementById('modal-manual-pirep').style.display='none'" style="padding:12px 20px;background:transparent;color:#9A8FB8;border:1px solid #1E1840;font-size:13px;border-radius:4px;cursor:pointer">Cancelar</button>
+      <button onclick="document.getElementById('modal-manual-pirep').style.display='none';_recoveringSessionId=null;" style="padding:12px 20px;background:transparent;color:#9A8FB8;border:1px solid #1E1840;font-size:13px;border-radius:4px;cursor:pointer">Cancelar</button>
     </div>
     <div id="mp-error" style="display:none;color:#e05555;font-size:12px;margin-top:12px;"></div>
   </div>
@@ -2036,6 +2036,7 @@ function filterPireps(status, el) {
 
 /* ── VOOS NÃO FINALIZADOS ── */
 let allAbandonedSessions = [];
+let _recoveringSessionId = null;
 
 async function loadAbandonedSessions() {
   try {
@@ -2090,6 +2091,7 @@ function renderAbandonedSessions() {
 async function recoverFlight(sessionId) {
   const s = allAbandonedSessions.find(x => x.id === sessionId);
   if (!s) return;
+  _recoveringSessionId = sessionId;
   openManualPirepModal();
   await new Promise(r => setTimeout(r, 60));
   const pilotSel = document.getElementById('mp-pilot');
@@ -2114,10 +2116,17 @@ async function recoverFlight(sessionId) {
 }
 
 async function dismissSession(sessionId) {
-  if (!confirm('Ignorar este voo? Será marcado como abandonado e não aparecerá mais.')) return;
+  const s = allAbandonedSessions.find(x => x.id === sessionId);
+  // Se já tem PIREP associado, apenas remove do banner sem confirmação destrutiva
+  if (s?.pirepId) {
+    allAbandonedSessions = allAbandonedSessions.filter(x => x.id !== sessionId);
+    renderAbandonedSessions();
+    return;
+  }
+  if (!confirm('Ignorar este voo abandonado? A sessão será descartada. Nenhum PIREP será afetado.')) return;
   try {
     await db.collection('flight_sessions').doc(sessionId).update({ status: 'abandoned' });
-    allAbandonedSessions = allAbandonedSessions.filter(s => s.id !== sessionId);
+    allAbandonedSessions = allAbandonedSessions.filter(x => x.id !== sessionId);
     renderAbandonedSessions();
     toast('Sessão ignorada.');
   } catch(e) { toast('Erro: ' + e.message, 'err'); }
@@ -2259,6 +2268,15 @@ async function submitManualPirep() {
     // Atualiza arrays em memória
     allPireps.unshift({ id: ref.id, ...pirepData, status: 'approved' });
     if (pilot) { pilot.hours = newHours; pilot.flights = newFlights; pilot.currentAirport = arr; }
+
+    // Se veio de uma sessão abandonada, marca como recuperada e fecha o banner
+    if (_recoveringSessionId) {
+      db.collection('flight_sessions').doc(_recoveringSessionId)
+        .update({ status: 'recovered', pirepId: ref.id }).catch(() => {});
+      allAbandonedSessions = allAbandonedSessions.filter(s => s.id !== _recoveringSessionId);
+      _recoveringSessionId = null;
+      renderAbandonedSessions();
+    }
 
     updateBadges(); renderOverview(); renderPireps(); renderPilots();
     document.getElementById('modal-manual-pirep').style.display = 'none';
