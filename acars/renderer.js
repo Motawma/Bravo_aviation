@@ -820,49 +820,55 @@
       singleEngTaxiSec = 0;
     }
 
-    // ── Touchdown: captura dados no momento do impacto ───────────────────────
-    if (tookOff && !prevOnGrnd && onGround) {
-      hasLanded = true;
-      landingRate = d.touchdownVS > 0 ? d.touchdownVS : Math.abs(Math.min(vs, 0));
-      const lg = Math.max(peakGForce, gForce || 1.0);
-      if (lg > 2.0) {
-        addFoqaViolation('gforce_coc', `G-force no pouso superior a 2.0G (${lg.toFixed(2)}G)`, 100, 'CoC');
-      } else if (lg > 1.5) {
-        addFoqaViolation('gforce_ov', `G-force no pouso 1.5-2.0G (${lg.toFixed(2)}G)`, 15, 'Ov');
-      }
-      if (lim) {
-        if (totalWeightKg > lim.mlw) {
-          addFoqaViolation('exceed_mlw', `Excedeu MLW no pouso (${Math.round(totalWeightKg)} kg)`, 10, 'Ov');
+    // ── Touchdown: captura dados no PRIMEIRO toque (rodas principais) ─────────
+    // Usa effectivelyOnGround para cobrir addons que não reportam onGround corretamente.
+    // Guard !hasLanded garante que bounce não sobrescreve o FPM do primeiro toque.
+    if (tookOff && !prevOnGrnd && effectivelyOnGround) {
+      if (!hasLanded) {
+        landingRate = d.touchdownVS > 0 ? d.touchdownVS : Math.abs(Math.min(vs, 0));
+        const lg = Math.max(peakGForce, gForce || 1.0);
+        if (lg > 2.0) {
+          addFoqaViolation('gforce_coc', `G-force no pouso superior a 2.0G (${lg.toFixed(2)}G)`, 100, 'CoC');
+        } else if (lg > 1.5) {
+          addFoqaViolation('gforce_ov', `G-force no pouso 1.5-2.0G (${lg.toFixed(2)}G)`, 15, 'Ov');
         }
-        if (fuelWeightKg && fuelWeightKg < lim.minFob) {
-          addFoqaViolation('fob_low', `FOB abaixo do mínimo no pouso (${Math.round(fuelWeightKg)} kg)`, 10, 'Ov');
-        }
-        if (windSpd > 0) {
-          const tw = tailwindKts(windDir || 0, windSpd, hdg);
-          if (tw > lim.maxTailwind) {
-            addFoqaViolation('tailwind_arr', `Vento de cauda no pouso (${tw.toFixed(0)} kts)`, 15, 'Ov');
+        if (lim) {
+          if (totalWeightKg > lim.mlw) {
+            addFoqaViolation('exceed_mlw', `Excedeu MLW no pouso (${Math.round(totalWeightKg)} kg)`, 10, 'Ov');
+          }
+          if (fuelWeightKg && fuelWeightKg < lim.minFob) {
+            addFoqaViolation('fob_low', `FOB abaixo do mínimo no pouso (${Math.round(fuelWeightKg)} kg)`, 10, 'Ov');
+          }
+          if (windSpd > 0) {
+            const tw = tailwindKts(windDir || 0, windSpd, hdg);
+            if (tw > lim.maxTailwind) {
+              addFoqaViolation('tailwind_arr', `Vento de cauda no pouso (${tw.toFixed(0)} kts)`, 15, 'Ov');
+            }
+          }
+          if (gearDown && flapsIndex >= 3) {
+            flightOp += 5;
+            addLogEntry('⭐', '+5 OP — Configuração de pouso correta (flaps + trem)');
           }
         }
-        if (gearDown && flapsIndex >= 3) {
-          flightOp += 5;
-          addLogEntry('⭐', '+5 OP — Configuração de pouso correta (flaps + trem)');
-        }
       }
+      hasLanded = true;
     }
-    prevOnGrnd = onGround;
+    prevOnGrnd = effectivelyOnGround;
 
     // ── Finalização de voo ───────────────────────────────────────────────────
-    // Não exige motores desligados: alguns addons (Fenix, PMDG) podem manter eng1/eng2
-    // em estado ambíguo; a condição de parada por 60s cobre todos os casos
-    if (tookOff && hasLanded && onGround && spd < 2) {
+    // Usa effectivelyOnGround (cobre addons com onGround inconsistente).
+    // spd < 5 kts para tolerar pequenas oscilações de dados parado no gate.
+    // Freio de estacionamento OU motores desligados → finaliza imediatamente.
+    // Fallback: 30s parado sem nenhum dos dois sinais.
+    if (tookOff && hasLanded && effectivelyOnGround && spd < 5) {
       if (d.parkingBrake || (!eng1 && !eng2)) {
         onLanding();
       } else {
         postLandingStaticSec++;
-        if (postLandingStaticSec === 30) addLogEntry('ℹ️', 'Aguardando parada completa — finalizando em 30s...');
-        if (postLandingStaticSec >= 60) onLanding();
+        if (postLandingStaticSec === 20) addLogEntry('ℹ️', 'Aguardando finalização — colocar freio de estacionamento ou desligar motores...');
+        if (postLandingStaticSec >= 30) onLanding();
       }
-    } else if (!(tookOff && hasLanded && onGround)) {
+    } else if (!(tookOff && hasLanded && effectivelyOnGround)) {
       postLandingStaticSec = 0;
     }
   }
