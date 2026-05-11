@@ -6,7 +6,7 @@ const { open: simOpen, Protocol, SimConnectPeriod, SimConnectDataType } = requir
 const SIM_VARS = [
   { name: 'PLANE LATITUDE',             unit: 'degrees',         type: SimConnectDataType.FLOAT64 },
   { name: 'PLANE LONGITUDE',            unit: 'degrees',         type: SimConnectDataType.FLOAT64 },
-  { name: 'PLANE ALTITUDE',             unit: 'feet',            type: SimConnectDataType.FLOAT64 },
+  { name: 'INDICATED ALTITUDE',         unit: 'feet',            type: SimConnectDataType.FLOAT64 },
   { name: 'AIRSPEED INDICATED',         unit: 'knots',           type: SimConnectDataType.FLOAT64 },
   { name: 'VERTICAL SPEED',             unit: 'feet per minute', type: SimConnectDataType.FLOAT64 },
   { name: 'PLANE HEADING DEGREES MAGNETIC', unit: 'degrees',      type: SimConnectDataType.FLOAT64 },

@@ -8,7 +8,7 @@ const DATAREFS = [
   // Posição
   { id: 1,  ref: 'sim/flightmodel/position/latitude' },
   { id: 2,  ref: 'sim/flightmodel/position/longitude' },
-  { id: 3,  ref: 'sim/flightmodel/position/elevation' },                           // m
+  { id: 3,  ref: 'sim/cockpit2/gauges/indicators/altitude_ft_pilot' },             // ft indicado
   { id: 4,  ref: 'sim/flightmodel/position/indicated_airspeed' },                  // m/s
   { id: 5,  ref: 'sim/flightmodel/position/vh_ind_fpm' },                          // fpm
   { id: 6,  ref: 'sim/flightmodel/position/psi' },                                 // heading
@@ -125,7 +125,7 @@ class XPlaneHandler {
     return {
       lat:              s[1]  || 0,
       lon:              s[2]  || 0,
-      alt:              (s[3]  || 0) * 3.28084,         // m → ft
+      alt:              s[3]  || 0,                         // ft indicado (altímetro cockpit)
       spd:              (s[4]  || 0) * 1.94384,         // m/s → kts
       vs:               curVS,
       hdg:              s[6]  || 0,
