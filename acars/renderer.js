@@ -127,6 +127,7 @@
   let prevEng1          = false;
   let prevEng2          = false;
   let overspeed10kSec   = 0;
+  let llAbove10kSec     = 0;
 
   // ── Utilitários ───────────────────────────────────────────────────────────
   function $ (id) { return document.getElementById(id); }
@@ -573,6 +574,7 @@
     prevEng1          = lastSimData?.eng1 ?? false;
     prevEng2          = lastSimData?.eng2 ?? false;
     overspeed10kSec   = 0;
+    llAbove10kSec     = 0;
     foqaViolations.length = 0;
     logPrevState = null;
     logLastPhase = null;
@@ -716,9 +718,21 @@
       if (fuelWeightKg && fuelKgPrev > 0 && fuelWeightKg > fuelKgPrev + 50) {
         addFoqaViolation('fuel_refill', 'Reabastecimento em voo detectado', 100, 'CoC');
       }
-      // Landing lights acesas > 10.000ft na subida (todas as aeronaves)
+      // Landing lights acesas > 10.000ft na subida — tolerância 60s para o piloto desligar
       if (alt > 10000 && vs > 200 && landingLights) {
-        addFoqaViolation('ll_above_10k', 'Luzes de pouso acesas acima de 10.000 ft na subida', 5, 'Ov');
+        llAbove10kSec++;
+        const secsLeft = Math.max(0, 60 - llAbove10kSec);
+        showAlert(
+          'll_above_10k', '💡', 'LUZES DE POUSO ACESAS > 10.000 ft',
+          `Desligue as luzes de pouso  •  Alt ${Math.round(alt).toLocaleString('pt-BR')} ft`,
+          secsLeft, 60
+        );
+        if (llAbove10kSec === 60) {
+          addFoqaViolation('ll_above_10k', 'Luzes de pouso acesas acima de 10.000 ft por 60s', 5, 'Ov');
+        }
+      } else {
+        if (llAbove10kSec > 0) dismissAlert('ll_above_10k');
+        llAbove10kSec = 0;
       }
       // Speed brakes em alta velocidade (A320 only)
       if (lim && (spoilersPos || 0) > 2000 && spd > lim.maxSpdbrake) {
