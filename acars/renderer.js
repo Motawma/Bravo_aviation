@@ -128,6 +128,7 @@
   let prevEng2          = false;
   let overspeed10kSec   = 0;
   let llAbove10kSec     = 0;
+  let pendingFinalization = false;
 
   // ── Utilitários ───────────────────────────────────────────────────────────
   function $ (id) { return document.getElementById(id); }
@@ -573,8 +574,9 @@
     prevOnGrnd            = false;
     prevEng1          = lastSimData?.eng1 ?? false;
     prevEng2          = lastSimData?.eng2 ?? false;
-    overspeed10kSec   = 0;
-    llAbove10kSec     = 0;
+    overspeed10kSec      = 0;
+    llAbove10kSec        = 0;
+    pendingFinalization  = false;
     foqaViolations.length = 0;
     logPrevState = null;
     logLastPhase = null;
@@ -870,19 +872,10 @@
     prevOnGrnd = effectivelyOnGround;
 
     // ── Finalização de voo ───────────────────────────────────────────────────
-    // Freio de estacionamento OU motores desligados → finaliza imediatamente (spd < 5).
-    // Fallback: 120s completamente parado (spd < 2) sem nenhum dos dois sinais —
-    // evita finalização prematura em paradas na taxiway.
-    if (tookOff && hasLanded && effectivelyOnGround && spd < 5) {
-      if (d.parkingBrake || (!eng1 && !eng2)) {
-        onLanding();
-      } else if (spd < 2) {
-        postLandingStaticSec++;
-        if (postLandingStaticSec === 100) addLogEntry('ℹ️', 'Aguardando finalização — colocar freio de estacionamento ou desligar motores...');
-        if (postLandingStaticSec >= 120) onLanding();
-      }
-    } else if (!(tookOff && hasLanded && effectivelyOnGround)) {
-      postLandingStaticSec = 0;
+    // Motores desligados no gate → exibe botão manual "Finalizar e Enviar PIREP".
+    // Piloto confirma clicando — sem finalização automática por timer.
+    if (tookOff && hasLanded && effectivelyOnGround && spd < 5 && !eng1 && !eng2) {
+      triggerReadyToFinalize();
     }
   }
 
@@ -1056,6 +1049,22 @@
     resetFlight();
   };
 
+  function triggerReadyToFinalize() {
+    if (pendingFinalization) return;
+    pendingFinalization = true;
+    clearInterval(liveInterval);
+    addLogEntry('✅', 'Motores desligados — clique em FINALIZAR E ENVIAR PIREP para registrar o voo');
+    const rowBtns = document.getElementById('row-flight-btns');
+    const btnFin  = document.getElementById('btn-finalize');
+    if (rowBtns) rowBtns.style.display = 'none';
+    if (btnFin)  btnFin.style.display  = 'block';
+  }
+
+  window.finalizeFlight = () => {
+    if (!pendingFinalization) return;
+    onLanding();
+  };
+
   function resetFlight() {
     clearInterval(sessionInterval);
     sessionInterval = null;
@@ -1065,6 +1074,11 @@
     const scoreEl = $('foqa-score-live');
     if (scoreEl) { scoreEl.textContent = 'FOQA: 100/100'; scoreEl.className = 'foqa-live perfect'; }
     $('tele-timer').textContent = '00:00:00';
+    const rowBtns = document.getElementById('row-flight-btns');
+    const btnFin  = document.getElementById('btn-finalize');
+    if (rowBtns) rowBtns.style.display = '';
+    if (btnFin)  btnFin.style.display  = 'none';
+    pendingFinalization = false;
     updateStartBtn();
   }
 

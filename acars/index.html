@@ -179,6 +179,16 @@
   #btn-stop  { background: var(--red); color: #fff; }
   #btn-stop:disabled  { background: var(--border); color: var(--muted); cursor: not-allowed; }
   .action-row { display: flex; gap: 10px; }
+  #btn-finalize {
+    width: 100%; padding: 15px; font-size: 15px; font-weight: 700;
+    border: none; border-radius: 4px; cursor: pointer; letter-spacing: 0.06em;
+    background: var(--green); color: #fff; display: none;
+    animation: pulse-green 1.4s ease-in-out infinite;
+  }
+  @keyframes pulse-green {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(61,176,122,0.5); }
+    50%       { box-shadow: 0 0 0 8px rgba(61,176,122,0); }
+  }
 
   /* ── SUMMARY SCREEN ─────────────────── */
   #screen-summary { padding: 20px; overflow-y: auto; }
@@ -391,9 +401,12 @@
   </div><!-- /main -->
 
   <!-- Botões de ação — fixos no rodapé -->
-  <div class="action-row" style="padding:10px 14px;border-top:1px solid var(--border);background:var(--bg);flex-shrink:0;">
-    <button id="btn-start" disabled onclick="startFlight()">▶ INICIAR VOO</button>
-    <button id="btn-stop"  disabled onclick="stopFlight()">⏹ FINALIZAR VOO</button>
+  <div style="padding:10px 14px;border-top:1px solid var(--border);background:var(--bg);flex-shrink:0;">
+    <div class="action-row" id="row-flight-btns">
+      <button id="btn-start" disabled onclick="startFlight()">▶ INICIAR VOO</button>
+      <button id="btn-stop"  disabled onclick="stopFlight()">⏹ ENCERRAR</button>
+    </div>
+    <button id="btn-finalize" onclick="finalizeFlight()">✈ FINALIZAR E ENVIAR PIREP</button>
   </div>
 
 </div><!-- /screen-main -->
