@@ -870,17 +870,16 @@
     prevOnGrnd = effectivelyOnGround;
 
     // ── Finalização de voo ───────────────────────────────────────────────────
-    // Usa effectivelyOnGround (cobre addons com onGround inconsistente).
-    // spd < 5 kts para tolerar pequenas oscilações de dados parado no gate.
-    // Freio de estacionamento OU motores desligados → finaliza imediatamente.
-    // Fallback: 30s parado sem nenhum dos dois sinais.
+    // Freio de estacionamento OU motores desligados → finaliza imediatamente (spd < 5).
+    // Fallback: 120s completamente parado (spd < 2) sem nenhum dos dois sinais —
+    // evita finalização prematura em paradas na taxiway.
     if (tookOff && hasLanded && effectivelyOnGround && spd < 5) {
       if (d.parkingBrake || (!eng1 && !eng2)) {
         onLanding();
-      } else {
+      } else if (spd < 2) {
         postLandingStaticSec++;
-        if (postLandingStaticSec === 20) addLogEntry('ℹ️', 'Aguardando finalização — colocar freio de estacionamento ou desligar motores...');
-        if (postLandingStaticSec >= 30) onLanding();
+        if (postLandingStaticSec === 100) addLogEntry('ℹ️', 'Aguardando finalização — colocar freio de estacionamento ou desligar motores...');
+        if (postLandingStaticSec >= 120) onLanding();
       }
     } else if (!(tookOff && hasLanded && effectivelyOnGround)) {
       postLandingStaticSec = 0;
