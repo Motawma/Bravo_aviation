@@ -922,9 +922,10 @@ function parseTime(r){
 /* ── HELPERS ── */
 function guessWakeCat(ac) {
   const t = (ac || '').toLowerCase();
-  if (/a38[0-9]|b74[7-9]|b77[78]|a340|a35[0-9]|md-?11|md11/.test(t)) return 'H';
-  if (/a3[12][0-9]|b73[0-9]|e[12][679][0-9]|atr|crj|dash|q[34][0-9]|c[17][0-9]|cessna|pilatus|tbm|baron|citation|caravan|pc-?[12][0-9]/.test(t)) return 'M';
-  return 'L';
+  if (/a38[0-9]|a225/.test(t))                                                                                                                          return 'J';
+  if (/b74[7-9]|b77[78]|b76[7-9]|b787|a340|a330|a35[0-9]|md-?11|md11|b74[0-6]/.test(t))                                                               return 'H';
+  if (/a3[12][0-9]|b73[0-9]|b72[0-9]|e[12][679][0-9]|atr|crj|dash|q[34][0-9]|c[17][0-9]|cessna|pilatus|tbm|baron|citation|caravan|pc-?[12][0-9]/.test(t)) return 'M';
+  return null;
 }
 
 function buildIvaoUrl(dep, arr, fl, fn, ac, route, eet, pf) {
@@ -947,7 +948,7 @@ function buildIvaoUrl(dep, arr, fl, fn, ac, route, eet, pf) {
     flightRules:              'I',
     flightType:               'S',
     aircraftId:               toICAOType(ac),
-    wakeCategory:             pf?.wakecat || guessWakeCat(ac),
+    wakeCategory:             guessWakeCat(ac) || pf?.wakecat || 'L',
     aircraftEquipments:       equipArr,
     aircraftTransponderTypes: transpArr,
     departureId:              dep || '',
