@@ -518,8 +518,9 @@ function renderSBCard(data) {
   const sbArr   = data.destination?.icao_code || '';
   const route   = data.general?.route         || '';
   const fl      = data.general?.initial_altitude ? Math.round(parseInt(data.general.initial_altitude) / 100) : null;
-  const fuelLbs = data.fuel?.plan_ramp         || null;
-  const fuelKg  = fuelLbs ? Math.round(Number(fuelLbs) * 0.453592) : null;
+  const _fuelUnits  = (data.params?.units || data.general?.units || 'LBS').toUpperCase();
+  const _fuelRaw    = Number(data.fuel?.plan_block || data.fuel?.plan_ramp || 0) || null;
+  const fuelKg      = _fuelRaw ? (_fuelUnits === 'KGS' ? Math.round(_fuelRaw) : Math.round(_fuelRaw * 0.453592)) : null;
   const sbDist  = parseInt(data.general?.route_distance || data.general?.air_distance || 0) || null;
   const staticId= typeof data.params?.static_id === 'string' ? data.params.static_id
                 : (data.general?.static_id     || '');
@@ -548,7 +549,7 @@ function renderSBCard(data) {
     <table class="summary-table" style="margin-bottom:10px">
       <tr><td class="k">Rota</td><td class="v" style="font-size:11px;word-break:break-all;text-align:right">${route || 'DCT'}</td></tr>
       ${fl   ? `<tr><td class="k">Flight Level</td><td class="v">FL${fl}</td></tr>` : ''}
-      ${fuelKg  ? `<tr><td class="k">Combustível (ramp)</td><td class="v">${fuelKg.toLocaleString('pt-BR')} kg</td></tr>` : ''}
+      ${fuelKg  ? `<tr><td class="k">Block Fuel</td><td class="v">${fuelKg.toLocaleString('pt-BR')} kg</td></tr>` : ''}
       ${sbDist  ? `<tr><td class="k">Distância</td><td class="v">${sbDist.toLocaleString('pt-BR')} NM</td></tr>` : ''}
       ${eetStr  ? `<tr><td class="k">EET</td><td class="v">${eetStr}</td></tr>` : ''}
     </table>
