@@ -381,6 +381,12 @@ tr:hover td { background: rgba(255,255,255,0.02); }
     <a class="nav-item" id="nav-ranking" onclick="goTo('ranking',this)">
       <span class="nav-icon">🏆</span> Ranking
     </a>
+    <a class="nav-item" href="pilots.html">
+      <span class="nav-icon">👥</span> Pilotos
+    </a>
+    <a class="nav-item" href="stats.html">
+      <span class="nav-icon">📊</span> Estatísticas
+    </a>
     <a class="nav-item" id="nav-downloads" onclick="goTo('downloads',this)">
       <span class="nav-icon">📦</span> Downloads
     </a>
@@ -737,7 +743,10 @@ tr:hover td { background: rgba(255,255,255,0.02); }
             </div>
             <div class="form-group">
               <label>Nº Voo</label>
-              <input id="ff-fn" type="text" maxlength="10" placeholder="BRV0001" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()" />
+              <div style="display:flex;align-items:stretch;border:1px solid var(--border);border-radius:4px;overflow:hidden">
+                <span style="background:var(--surface2);padding:0 14px;font-weight:700;color:var(--gold);font-size:15px;letter-spacing:0.05em;display:flex;align-items:center;border-right:1px solid var(--border)">BRV</span>
+                <input id="ff-fn" type="text" maxlength="6" placeholder="1234" style="border:none;background:transparent;color:var(--text);padding:11px 12px;font-size:15px;font-weight:700;font-family:'Inter',sans-serif;width:100%;outline:none" oninput="this.value=this.value.replace(/\D/g,'')" />
+              </div>
             </div>
           </div>
           <div id="ff-err" style="display:none;color:var(--danger);font-size:12px;margin-top:-8px;margin-bottom:12px"></div>
@@ -1485,7 +1494,7 @@ async function initFreeFlight() {
   if (fnEl) {
     const cs = user?.callsign || '';
     const valid = cs && /^BRV\d{4}$/.test(cs);
-    if (valid) fnEl.value = cs;
+    if (valid) fnEl.value = cs.replace(/^BRV/i, '');
   }
   const errEl = document.getElementById('ff-err');
   if (errEl) errEl.style.display = 'none';
@@ -1498,7 +1507,7 @@ async function submitFreeFlight() {
   const arr   = (document.getElementById('ff-arr').value || '').trim().toUpperCase();
   const ac    = (document.getElementById('ff-ac').value  || '').trim();
   const fl    = (document.getElementById('ff-fl').value  || '').trim();
-  const fn    = (document.getElementById('ff-fn').value  || '').trim().toUpperCase();
+  const fn    = 'BRV' + (document.getElementById('ff-fn').value || '').trim();
   const errEl = document.getElementById('ff-err');
   errEl.style.display = 'none';
   if (dep.length < 3 || arr.length < 3) {

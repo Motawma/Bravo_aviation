@@ -519,6 +519,8 @@ function renderSBCard(data) {
   const route   = data.general?.route         || '';
   const fl      = data.general?.initial_altitude ? Math.round(parseInt(data.general.initial_altitude) / 100) : null;
   const fuelLbs = data.fuel?.plan_ramp         || null;
+  const fuelKg  = fuelLbs ? Math.round(Number(fuelLbs) * 0.453592) : null;
+  const sbDist  = parseInt(data.general?.route_distance || data.general?.air_distance || 0) || null;
   const staticId= typeof data.params?.static_id === 'string' ? data.params.static_id
                 : (data.general?.static_id     || '');
   const eetSec  = parseInt(data.times?.est_time_enroute || 0);
@@ -546,7 +548,8 @@ function renderSBCard(data) {
     <table class="summary-table" style="margin-bottom:10px">
       <tr><td class="k">Rota</td><td class="v" style="font-size:11px;word-break:break-all;text-align:right">${route || 'DCT'}</td></tr>
       ${fl   ? `<tr><td class="k">Flight Level</td><td class="v">FL${fl}</td></tr>` : ''}
-      ${fuelLbs ? `<tr><td class="k">Combustível (ramp)</td><td class="v">${Number(fuelLbs).toLocaleString('pt-BR')} lbs</td></tr>` : ''}
+      ${fuelKg  ? `<tr><td class="k">Combustível (ramp)</td><td class="v">${fuelKg.toLocaleString('pt-BR')} kg</td></tr>` : ''}
+      ${sbDist  ? `<tr><td class="k">Distância</td><td class="v">${sbDist.toLocaleString('pt-BR')} NM</td></tr>` : ''}
       ${eetStr  ? `<tr><td class="k">EET</td><td class="v">${eetStr}</td></tr>` : ''}
     </table>
     <div style="display:flex;gap:8px">
@@ -641,6 +644,8 @@ function applySimBrief() {
     if (equipment)    _pf.equipment    = equipment;
     if (transponder)  _pf.transponder  = transponder;
     if (wakecat)      _pf.wakecat      = wakecat;
+    const sbDist2 = parseInt(_sbData.general?.route_distance || _sbData.general?.air_distance || 0);
+    if (sbDist2)  { _pf.distance = sbDist2; const el = document.getElementById('brief-nm-val'); if (el) el.textContent = sbDist2.toLocaleString('pt-BR') + ' NM'; }
     if (cruiseSpdRaw) _pf.cruiseSpeed  = cruiseSpdRaw;
     if (depTime)      _pf.departureTime = depTime;
     if (altn)         _pf.altn          = altn;
