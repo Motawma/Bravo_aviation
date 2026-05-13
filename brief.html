@@ -948,7 +948,7 @@ function buildIvaoUrl(dep, arr, fl, fn, ac, route, eet, pf) {
     flightRules:              'I',
     flightType:               'S',
     aircraftId:               toICAOType(ac),
-    wakeCategory:             guessWakeCat(ac) || pf?.wakecat || 'L',
+    wakeTurbulence:           guessWakeCat(ac) || pf?.wakecat || 'L',
     aircraftEquipments:       equipArr,
     aircraftTransponderTypes: transpArr,
     departureId:              dep || '',
