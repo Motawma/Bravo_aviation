@@ -583,7 +583,8 @@ function applySimBrief() {
   // SimBrief separa: equip_navigation (campo 10a) e equip_transponder (campo 10b)
   const equipment   = _sbData.aircraft?.equip_navigation  || '';
   const transponder = _sbData.aircraft?.equip_transponder || '';
-  const wakecat     = _sbData.aircraft?.equip_category    || _sbData.aircraft?.wakecat || '';
+  const _sbWake     = (_sbData.aircraft?.wakecat || '').toUpperCase();
+  const wakecat     = /^[LMHJ]$/.test(_sbWake) ? _sbWake : '';
   const cruiseSpdRaw = parseInt(_sbData.general?.cruise_speed || 0);
 
   // Horário de partida: sched_out pode ser Unix timestamp (>1M) ou tempo relativo (não usar)
