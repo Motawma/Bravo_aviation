@@ -925,7 +925,8 @@ auth.onAuthStateChanged(async (fbUser) => {
       role:             data.role             || 'pilot',
       permissions:      data.permissions      || {},
       opPoints:         data.opPoints         || 0,
-      simbriefUsername: data.simbriefUsername || ''
+      simbriefUsername: data.simbriefUsername || '',
+      callsign:         data.callsign         || ''
     };
 
     if (user.role === 'admin') {
