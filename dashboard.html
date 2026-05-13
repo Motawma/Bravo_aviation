@@ -573,6 +573,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
             <div class="profile-name-lg" id="pf-name">—</div>
             <div class="profile-rank-badge" id="pf-rank">—</div>
             <div class="profile-stats">
+              <div class="profile-stat-row"><span class="k">Callsign</span><span class="v" id="pf-callsign" style="font-weight:700;color:var(--gold);">—</span></div>
               <div class="profile-stat-row"><span class="k">VID IVAO</span><span class="v" id="pf-vid">—</span></div>
               <div class="profile-stat-row"><span class="k">E-mail</span><span class="v" id="pf-email">—</span></div>
               <div class="profile-stat-row"><span class="k">Aeronave principal</span><span class="v" id="pf-aircraft">—</span></div>
@@ -590,6 +591,14 @@ tr:hover td { background: rgba(255,255,255,0.02); }
             <div class="form-grid-2">
               <div class="form-group"><label>Nome</label><input type="text" id="edit-name" /></div>
               <div class="form-group"><label>E-mail</label><input type="email" id="edit-email" /></div>
+            </div>
+            <div class="form-group">
+              <label>Callsign</label>
+              <div style="display:flex;align-items:stretch;border:1px solid var(--border);border-radius:4px;overflow:hidden;max-width:220px">
+                <span style="background:var(--surface2);padding:0 14px;font-weight:700;color:var(--gold);font-size:15px;letter-spacing:0.05em;display:flex;align-items:center;border-right:1px solid var(--border)">BRV</span>
+                <input id="edit-callsign" type="text" maxlength="6" placeholder="1234" style="border:none;background:transparent;color:var(--text);padding:11px 12px;font-size:15px;font-weight:700;font-family:'Inter',sans-serif;width:100%;outline:none" oninput="this.value=this.value.replace(/\D/g,'')" />
+              </div>
+              <div id="edit-callsign-err" style="display:none;color:var(--danger);font-size:12px;margin-top:6px"></div>
             </div>
             <div class="form-grid-2">
               <div class="form-group"><label>VID IVAO</label><input type="text" id="edit-vid" readonly style="opacity:0.5;cursor:not-allowed;" /></div>
@@ -1206,6 +1215,7 @@ function initUserUI() {
   document.getElementById('pf-avatar').textContent = user.avatar || user.name.split(' ').map(w=>w[0]).join('').slice(0,2);
   document.getElementById('pf-name').textContent = user.name;
   document.getElementById('pf-rank').textContent = rank.name;
+  document.getElementById('pf-callsign').textContent = user.callsign || '—';
   document.getElementById('pf-vid').textContent = user.vid;
   document.getElementById('pf-email').textContent = user.email;
   document.getElementById('pf-aircraft').textContent = user.aircraft;
@@ -1219,6 +1229,7 @@ function initUserUI() {
   document.getElementById('edit-vid').value = user.vid;
   document.getElementById('edit-aircraft').value = user.aircraft;
   document.getElementById('edit-simbrief').value = user.simbriefUsername || '';
+  document.getElementById('edit-callsign').value = (user.callsign || '').replace(/^BRV/i, '');
 
   // Full flights table
   const ftbody = document.getElementById('flights-table');
@@ -1387,6 +1398,10 @@ async function saveProfile(e) {
   user.simbriefUsername = document.getElementById('edit-simbrief').value.trim();
   const newPwd     = document.getElementById('edit-password').value;
   const confirmPwd = document.getElementById('edit-password-confirm').value;
+  const csNum      = document.getElementById('edit-callsign').value.trim();
+  const newCallsign = csNum ? 'BRV' + csNum : (user.callsign || '');
+  const csErrEl    = document.getElementById('edit-callsign-err');
+  csErrEl.style.display = 'none';
 
   if (newPwd.length > 0 && newPwd.length < 6) {
     alert('A senha deve ter pelo menos 6 caracteres.');
@@ -1396,6 +1411,20 @@ async function saveProfile(e) {
     alert('As senhas não coincidem.');
     return;
   }
+  if (csNum && !/^\d{4}$/.test(csNum)) {
+    csErrEl.textContent = 'O callsign deve ter exatamente 4 dígitos.';
+    csErrEl.style.display = '';
+    return;
+  }
+  // Verifica unicidade apenas se callsign mudou
+  if (newCallsign && newCallsign !== user.callsign) {
+    const taken = await db.collection('users').where('callsign', '==', newCallsign).get();
+    if (!taken.empty) {
+      csErrEl.textContent = 'Este callsign já está em uso. Escolha outro número.';
+      csErrEl.style.display = '';
+      return;
+    }
+  }
 
   // Salva dados do perfil no Firestore
   try {
@@ -1403,8 +1432,10 @@ async function saveProfile(e) {
       name: user.name,
       email: user.email,
       aircraft: user.aircraft,
-      simbriefUsername: user.simbriefUsername
+      simbriefUsername: user.simbriefUsername,
+      callsign: newCallsign
     });
+    user.callsign = newCallsign;
   } catch(err) {
     alert('Erro ao salvar perfil: ' + err.message);
     return;
@@ -1430,6 +1461,7 @@ async function saveProfile(e) {
   document.getElementById('pf-email').textContent    = user.email;
   document.getElementById('pf-aircraft').textContent = user.aircraft;
   document.getElementById('pf-simbrief').textContent = user.simbriefUsername || '—';
+  document.getElementById('pf-callsign').textContent = user.callsign || '—';
   document.getElementById('sidebar-name').textContent = user.name;
   setTimeout(() => document.getElementById('profile-success').classList.remove('show'), 4000);
 }
