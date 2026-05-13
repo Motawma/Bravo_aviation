@@ -1416,10 +1416,11 @@ async function saveProfile(e) {
     csErrEl.style.display = '';
     return;
   }
-  // Verifica unicidade apenas se callsign mudou
-  if (newCallsign && newCallsign !== user.callsign) {
+  // Verifica unicidade excluindo o próprio usuário
+  if (newCallsign) {
     const taken = await db.collection('users').where('callsign', '==', newCallsign).get();
-    if (!taken.empty) {
+    const takenByOther = taken.docs.filter(d => d.id !== user.uid);
+    if (takenByOther.length > 0) {
       csErrEl.textContent = 'Este callsign já está em uso. Escolha outro número.';
       csErrEl.style.display = '';
       return;
