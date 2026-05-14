@@ -221,6 +221,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 .downloads-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
 .dl-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px; transition: border-color 0.3s; }
 .dl-card:hover { border-color: var(--gold-dim); }
+.dl-card-thumb { width: 100%; height: 110px; object-fit: cover; border-radius: 3px; margin-bottom: 12px; border: 1px solid var(--border); display: block; }
 .dl-type { font-size: 9px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); margin-bottom: 8px; }
 .dl-name { font-family: 'Barlow Condensed', sans-serif; font-size: 18px; font-weight: 700; margin-bottom: 6px; line-height: 1.2; }
 .dl-desc { font-size: 12px; color: var(--text-sec); line-height: 1.6; margin-bottom: 14px; }
@@ -1096,15 +1097,36 @@ const ROUTES = [
   { dep:'SBCF', arr:'SBBE', city1:'Belo Horizonte', city2:'Belém',          dur:'2h45', dist:'2300km', freq:'Semanal', ac:'B737-800', fn:'BRV8008', fl:'360', route:'UBADU UZ1 UPALA' },
 ];
 
-const DOWNLOADS = [
-  { type:'ACARS — Windows', name:'Bravo ACARS v1.2.48', desc:'App oficial da Bravo Aviation para registrar voos automaticamente. Conecta ao MSFS 2020/2024 e X-Plane 11/12. Registra PIREPs com telemetria completa.', ver:'v1.2.48', size:'88 MB', date:'Mai 2026', url:'https://drive.google.com/file/d/1UD4C6xZoK4YQ2-3jVq_uVvzR_SufuYAo/view?usp=sharing' },
-  { type:'Livery — MSFS 2024', name:'BRV Boeing 737-800', desc:'Livery oficial Bravo Aviation para Boeing 737-800 no MSFS 2024.', ver:'v1.2', size:'28 MB', date:'Abr 2025' },
-  { type:'Livery — MSFS 2024', name:'BRV Airbus A320', desc:'Livery oficial Bravo Aviation para Airbus A320 no MSFS 2024.', ver:'v1.1', size:'22 MB', date:'Mar 2025', url:'https://drive.google.com/drive/folders/1pMAZMqdtNB5YZE10xDj45mBRc5Kkx8tK?usp=drive_link' },
-  { type:'Livery — X-Plane 12', name:'BRV Boeing 737-800 XP12', desc:'Livery oficial para o Boeing 737-800 Zibo no X-Plane 12.', ver:'v1.0', size:'18 MB', date:'Mar 2025' },
-  { type:'Manual', name:'Manual de Operações BRV', desc:'Procedimentos operacionais padrão, políticas de voo e regras da VA.', ver:'v2.0', size:'3.2 MB', date:'Jan 2025' },
-  { type:'Manual', name:'SOP — Boeing 737-800', desc:'Standard Operating Procedures para a frota Boeing 737-800.', ver:'v1.5', size:'5.1 MB', date:'Fev 2025' },
-  { type:'Manual', name:'SOP — Airbus A320', desc:'Standard Operating Procedures para a frota Airbus A320.', ver:'v1.3', size:'4.8 MB', date:'Fev 2025' },
-];
+async function loadDownloadsSection() {
+  const grid = document.getElementById('downloads-grid');
+  if (!grid) return;
+  try {
+    const snap = await db.collection('downloads').orderBy('order').get();
+    const items = snap.docs.map(d => d.data());
+    if (!items.length) {
+      grid.innerHTML = '<div style="color:var(--text-dim);font-size:13px;grid-column:1/-1;text-align:center;padding:32px">Nenhum item disponível.</div>';
+      return;
+    }
+    grid.innerHTML = items.map(d => `
+      <div class="dl-card">
+        ${d.thumb ? `<img class="dl-card-thumb" src="${d.thumb}" alt="${d.name}" onerror="this.style.display='none'">` : ''}
+        <div class="dl-type">${d.type || ''}</div>
+        <div class="dl-name">${d.name || ''}</div>
+        <div class="dl-desc">${d.desc || ''}</div>
+        <div class="dl-meta">
+          ${d.ver  ? `<span>${d.ver}</span>`  : ''}
+          ${d.size ? `<span>${d.size}</span>` : ''}
+          ${d.date ? `<span>${d.date}</span>` : ''}
+        </div>
+        ${d.url
+          ? `<a class="btn-dl" href="${d.url}" target="_blank" rel="noopener"><span>⬇</span> Download</a>`
+          : `<button class="btn-dl" onclick="fakeDownload(this, '${(d.name||'').replace(/'/g,"\\'")}')"><span>⬇</span> Download</button>`
+        }
+      </div>`).join('');
+  } catch(e) {
+    grid.innerHTML = '<div style="color:var(--text-dim);font-size:13px;grid-column:1/-1;text-align:center;padding:32px">Erro ao carregar downloads.</div>';
+  }
+}
 
 let NOTIFS = [
   { id:1, title:'Bem-vindo à área de membros!', text:'Sua conta BRV está ativa. Explore o dashboard e registre seus primeiros voos.', date:'25 Abr 2025', read:false },
@@ -1134,6 +1156,7 @@ function goTo(id, el) {
   document.getElementById('topbar-title').textContent = PAGE_TITLES[id] || '';
   if (id === 'notifs')       renderNotifs();
   if (id === 'free-flight')  initFreeFlight();
+  if (id === 'downloads')    loadDownloadsSection();
 }
 
 function checkDeepLink() {
@@ -1277,22 +1300,8 @@ function initUserUI() {
     if (pirepAc) pirepAc.value = user.aircraft;
   }
 
-  // Downloads
-  document.getElementById('downloads-grid').innerHTML = DOWNLOADS.map(d => `
-    <div class="dl-card">
-      <div class="dl-type">${d.type}</div>
-      <div class="dl-name">${d.name}</div>
-      <div class="dl-desc">${d.desc}</div>
-      <div class="dl-meta">
-        <span>${d.ver}</span>
-        <span>${d.size}</span>
-        <span>${d.date}</span>
-      </div>
-      ${d.url
-        ? `<a class="btn-dl" href="${d.url}" target="_blank" rel="noopener" style="display:flex;align-items:center;justify-content:center;gap:6px;text-decoration:none;"><span>⬇</span> Download</a>`
-        : `<button class="btn-dl" onclick="fakeDownload(this, '${d.name}')"><span>⬇</span> Download</button>`
-      }
-    </div>`).join('');
+  // Downloads — carregado do Firestore via loadDownloadsSection()
+  loadDownloadsSection();
 
   // Notification badge
   updateNotifBadge();

@@ -165,9 +165,24 @@ tr:hover td{background:rgba(255,255,255,.02);}
 .btn-edit:hover{background:rgba(58,127,212,.1);}
 .toggle-active{background:none;border:1px solid rgba(61,176,122,.3);color:var(--success);padding:5px 12px;border-radius:var(--radius);font-size:11px;font-weight:600;cursor:pointer;transition:all .2s;font-family:'Inter',sans-serif;}
 .toggle-active.off{border-color:rgba(224,85,85,.3);color:var(--danger);}
+/* DOWNLOADS ADMIN */
+.dl-form-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;align-items:end;}
+.dl-form-grid .form-group{margin-bottom:0;}
+.dl-form-wide{grid-column:span 3;}
+.dl-thumb-preview{width:100%;height:80px;object-fit:cover;border-radius:var(--radius);border:1px solid var(--border);display:block;margin-top:6px;background:var(--surface2);}
+.dl-admin-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;display:flex;align-items:center;gap:14px;margin-bottom:10px;}
+.dl-admin-thumb{width:72px;height:48px;object-fit:cover;border-radius:3px;border:1px solid var(--border);flex-shrink:0;background:var(--surface2);}
+.dl-admin-thumb-placeholder{width:72px;height:48px;border-radius:3px;border:1px solid var(--border);flex-shrink:0;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--text-dim);}
+.dl-admin-info{flex:1;min-width:0;}
+.dl-admin-type{font-size:9px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--gold-dim);margin-bottom:3px;}
+.dl-admin-name{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.dl-admin-meta{font-size:11px;color:var(--text-dim);margin-top:2px;}
+.dl-admin-actions{display:flex;gap:8px;flex-shrink:0;}
 @media(max-width:900px){
   :root{--sidebar:200px;}
   .cards-row{grid-template-columns:repeat(2,1fr);}
+  .dl-form-grid{grid-template-columns:1fr 1fr;}
+  .dl-form-wide{grid-column:span 2;}
   .two-col{grid-template-columns:1fr;}
   .route-form-grid{grid-template-columns:repeat(2,1fr);}
 }
@@ -209,6 +224,9 @@ tr:hover td{background:rgba(255,255,255,.02);}
     </a>
     <a class="nav-item" onclick="goTo('fleet-admin',this)">
       <span class="nav-icon">✈️</span> Aeronaves
+    </a>
+    <a class="nav-item" onclick="goTo('downloads',this)">
+      <span class="nav-icon">⬇️</span> Downloads
     </a>
     <a class="nav-item" id="nav-staff-config" onclick="goTo('staff-config',this)">
       <span class="nav-icon">🛡️</span> Permissões Staff
@@ -627,6 +645,73 @@ tr:hover td{background:rgba(255,255,255,.02);}
           <tbody id="fleet-admin-tbody"><tr><td colspan="8" class="empty-row">Carregando...</td></tr></tbody>
         </table>
       </div>
+    </div>
+
+    <!-- ── DOWNLOADS ─────────────────────────────────────────────────────── -->
+    <div class="page" id="page-downloads">
+      <div class="sec-header gap-b">
+        <div class="sec-title">Downloads</div>
+        <span style="font-size:12px;color:var(--text-dim);">Liveries, manuais e arquivos disponíveis no dashboard</span>
+      </div>
+
+      <!-- Formulário de adição -->
+      <div class="route-form-card">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--text-dim);margin-bottom:16px;">Adicionar item</div>
+        <div class="dl-form-grid">
+          <div class="form-group">
+            <label>Categoria</label>
+            <select id="dl-type">
+              <option value="ACARS — Windows">ACARS — Windows</option>
+              <option value="Livery — MSFS 2024">Livery — MSFS 2024</option>
+              <option value="Livery — MSFS 2020">Livery — MSFS 2020</option>
+              <option value="Livery — X-Plane 12">Livery — X-Plane 12</option>
+              <option value="Livery — X-Plane 11">Livery — X-Plane 11</option>
+              <option value="Manual">Manual</option>
+              <option value="Ferramenta">Ferramenta</option>
+              <option value="Outro">Outro</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Nome</label>
+            <input type="text" id="dl-name" placeholder="Ex: BRV Boeing 737-800" />
+          </div>
+          <div class="form-group">
+            <label>Versão</label>
+            <input type="text" id="dl-ver" placeholder="v1.0" />
+          </div>
+          <div class="form-group">
+            <label>Tamanho</label>
+            <input type="text" id="dl-size" placeholder="28 MB" />
+          </div>
+          <div class="form-group">
+            <label>Data</label>
+            <input type="text" id="dl-date" placeholder="Mai 2026" />
+          </div>
+          <div class="form-group">
+            <label>Link de download</label>
+            <input type="url" id="dl-url" placeholder="https://drive.google.com/..." />
+          </div>
+          <div class="form-group dl-form-wide">
+            <label>Descrição</label>
+            <input type="text" id="dl-desc" placeholder="Breve descrição do arquivo" />
+          </div>
+          <div class="form-group dl-form-wide">
+            <label>URL da miniatura (opcional — para liveries)</label>
+            <input type="url" id="dl-thumb" placeholder="https://..." oninput="previewThumb(this.value)" />
+            <img id="dl-thumb-preview" class="dl-thumb-preview" src="" alt="Preview" style="display:none;" />
+          </div>
+          <div class="form-group" style="align-self:end;">
+            <button class="btn-gold" onclick="saveDownloadItem()" style="width:100%;">+ Adicionar</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Lista de itens -->
+      <div class="sec-header" style="margin-bottom:12px;">
+        <div class="sec-title" style="font-size:15px;">Itens cadastrados</div>
+        <span id="dl-count" style="font-size:12px;color:var(--text-dim);"></span>
+      </div>
+      <div id="dl-list"><div class="empty-state"><div class="big">⬇️</div>Carregando…</div></div>
     </div>
 
   </div>
@@ -2599,7 +2684,7 @@ async function deleteAircraft(id, name) {
 }
 
 /* ── NAV ── */
-const PAGE_TITLES = { overview:'Visão Geral', applications:'Candidaturas', pilots:'Pilotos', pireps:'PIREPs', routes:'Rotas', site:'Configurações do Site', 'fleet-admin':'Frota de Aeronaves', 'staff-config':'Permissões Staff' };
+const PAGE_TITLES = { overview:'Visão Geral', applications:'Candidaturas', pilots:'Pilotos', pireps:'PIREPs', routes:'Rotas', site:'Configurações do Site', 'fleet-admin':'Frota de Aeronaves', 'staff-config':'Permissões Staff', downloads:'Downloads' };
 function goTo(id, el) {
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-'+id).classList.add('active');
@@ -2614,6 +2699,7 @@ function goTo(id, el) {
   if (id === 'fleet-admin')  loadFleet();
   if (id === 'staff-config') loadStaffConfig();
   if (id === 'pireps')       loadAbandonedSessions();
+  if (id === 'downloads')    loadDownloadItems();
 }
 
 /* ── STAFF PERMISSIONS ── */
@@ -2839,6 +2925,125 @@ async function saveSiteStaff() {
 }
 
 document.getElementById('topbar-date').textContent = new Date().toLocaleDateString('pt-BR',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+
+/* ── DOWNLOADS ADMIN ── */
+let allDownloadItems = [];
+
+async function loadDownloadItems() {
+  const list = document.getElementById('dl-list');
+  const count = document.getElementById('dl-count');
+  list.innerHTML = '<div class="empty-state"><div class="big">⬇️</div>Carregando…</div>';
+  try {
+    const snap = await db.collection('downloads').orderBy('order').get();
+    allDownloadItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderDownloadItems();
+  } catch(e) {
+    list.innerHTML = '<div class="empty-state"><div class="big">⚠️</div>Erro ao carregar: ' + e.message + '</div>';
+  }
+}
+
+function renderDownloadItems() {
+  const list  = document.getElementById('dl-list');
+  const count = document.getElementById('dl-count');
+  count.textContent = allDownloadItems.length + ' item(s)';
+  if (!allDownloadItems.length) {
+    list.innerHTML = '<div class="empty-state"><div class="big">⬇️</div>Nenhum item cadastrado ainda.</div>';
+    return;
+  }
+  list.innerHTML = allDownloadItems.map(d => `
+    <div class="dl-admin-card">
+      ${d.thumb
+        ? `<img class="dl-admin-thumb" src="${d.thumb}" alt="" onerror="this.style.display='none';this.nextSibling.style.display='flex'"><div class="dl-admin-thumb-placeholder" style="display:none">🖼️</div>`
+        : `<div class="dl-admin-thumb-placeholder">🖼️</div>`
+      }
+      <div class="dl-admin-info">
+        <div class="dl-admin-type">${d.type || ''}</div>
+        <div class="dl-admin-name">${d.name || ''}</div>
+        <div class="dl-admin-meta">${[d.ver, d.size, d.date].filter(Boolean).join(' · ')}${d.url ? ` · <a href="${d.url}" target="_blank" style="color:var(--info);text-decoration:none;">Link ↗</a>` : ' · sem link'}</div>
+      </div>
+      <div class="dl-admin-actions">
+        <button class="btn-edit" onclick="editDownloadItem('${d.id}')">Editar</button>
+        <button class="btn-danger" onclick="deleteDownloadItem('${d.id}', '${(d.name||'').replace(/'/g,"\\'")}')">Excluir</button>
+      </div>
+    </div>`).join('');
+}
+
+async function saveDownloadItem() {
+  const val = id => (document.getElementById(id)?.value || '').trim();
+  const name = val('dl-name');
+  if (!name) { toast('Informe o nome do item.', 'err'); return; }
+
+  const item = {
+    type:  val('dl-type'),
+    name,
+    desc:  val('dl-desc'),
+    ver:   val('dl-ver'),
+    size:  val('dl-size'),
+    date:  val('dl-date'),
+    url:   val('dl-url'),
+    thumb: val('dl-thumb'),
+    order: allDownloadItems.length,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  };
+
+  try {
+    await db.collection('downloads').add(item);
+    toast('Item adicionado!', 'ok');
+    ['dl-name','dl-desc','dl-ver','dl-size','dl-date','dl-url','dl-thumb'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.value = '';
+    });
+    const prev = document.getElementById('dl-thumb-preview');
+    if (prev) prev.style.display = 'none';
+    await loadDownloadItems();
+  } catch(e) { toast('Erro: ' + e.message, 'err'); }
+}
+
+function editDownloadItem(id) {
+  const d = allDownloadItems.find(x => x.id === id);
+  if (!d) return;
+  const set = (elId, val) => { const el = document.getElementById(elId); if (el) el.value = val || ''; };
+  set('dl-type', d.type); set('dl-name', d.name); set('dl-desc', d.desc);
+  set('dl-ver', d.ver);   set('dl-size', d.size); set('dl-date', d.date);
+  set('dl-url', d.url);   set('dl-thumb', d.thumb);
+  previewThumb(d.thumb || '');
+
+  // Substitui botão Adicionar por Salvar edição
+  const btn = document.querySelector('#page-downloads .btn-gold');
+  if (btn) {
+    btn.textContent = '💾 Salvar edição';
+    btn.onclick = async () => {
+      const val = elId => (document.getElementById(elId)?.value || '').trim();
+      try {
+        await db.collection('downloads').doc(id).update({
+          type: val('dl-type'), name: val('dl-name'), desc: val('dl-desc'),
+          ver:  val('dl-ver'),  size: val('dl-size'), date: val('dl-date'),
+          url:  val('dl-url'),  thumb: val('dl-thumb')
+        });
+        toast('Item atualizado!', 'ok');
+        btn.textContent = '+ Adicionar';
+        btn.onclick = saveDownloadItem;
+        await loadDownloadItems();
+      } catch(e) { toast('Erro: ' + e.message, 'err'); }
+    };
+  }
+  document.getElementById('dl-name').focus();
+}
+
+async function deleteDownloadItem(id, name) {
+  if (!confirm(`Excluir "${name}"? Esta ação não pode ser desfeita.`)) return;
+  try {
+    await db.collection('downloads').doc(id).delete();
+    toast('Item excluído.', 'ok');
+    await loadDownloadItems();
+  } catch(e) { toast('Erro: ' + e.message, 'err'); }
+}
+
+function previewThumb(url) {
+  const prev = document.getElementById('dl-thumb-preview');
+  if (!prev) return;
+  if (url) { prev.src = url; prev.style.display = 'block'; }
+  else { prev.style.display = 'none'; }
+}
 </script>
 </body>
 </html>
