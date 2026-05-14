@@ -874,7 +874,7 @@
     // ── Finalização de voo ───────────────────────────────────────────────────
     // Motores desligados no gate → exibe botão manual "Finalizar e Enviar PIREP".
     // Piloto confirma clicando — sem finalização automática por timer.
-    if (tookOff && hasLanded && effectivelyOnGround && spd < 5 && !eng1 && !eng2) {
+    if (tookOff && hasLanded && effectivelyOnGround && !eng1 && !eng2) {
       triggerReadyToFinalize();
     }
   }
