@@ -354,9 +354,28 @@ tr:hover td { background: rgba(255,255,255,0.02); }
   .pilot-stats-bar { padding: 12px; }
   .content { padding: 16px 12px; }
 }
+.ptr-bar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  height: 0; overflow: hidden;
+  background: var(--surface2); border-bottom: 1px solid var(--border);
+  transition: height 0.15s; font-size: 12px; color: var(--text-sec);
+  font-weight: 600; letter-spacing: 0.05em;
+}
+.ptr-bar.pulling { height: 48px; }
+.ptr-bar.refreshing { height: 48px; }
+.ptr-spinner { width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: var(--gold); border-radius: 50%; }
+.ptr-spinner.spin { animation: ptr-spin 0.6s linear infinite; }
+@keyframes ptr-spin { to { transform: rotate(360deg); } }
 </style>
 </head>
 <body>
+
+<!-- PULL TO REFRESH -->
+<div id="ptr-bar" class="ptr-bar">
+  <div class="ptr-spinner" id="ptr-spinner"></div>
+  <span id="ptr-label">Solte para atualizar</span>
+</div>
 
 <!-- SIDEBAR -->
 <div id="sidebar-overlay" class="sidebar-overlay"></div>
@@ -1906,6 +1925,47 @@ if (_sbOverlay) _sbOverlay.addEventListener('click', () => {
   document.getElementById('sidebar').classList.remove('open');
   _sbOverlay.style.display = 'none';
 });
+
+// Pull to refresh
+(function() {
+  if (!('ontouchstart' in window)) return;
+  const THRESHOLD = 65;
+  const content = document.querySelector('.content');
+  const bar = document.getElementById('ptr-bar');
+  const spinner = document.getElementById('ptr-spinner');
+  const label = document.getElementById('ptr-label');
+  let startY = 0, active = false;
+
+  content.addEventListener('touchstart', e => {
+    if (content.scrollTop === 0) {
+      startY = e.touches[0].clientY;
+      active = true;
+    }
+  }, { passive: true });
+
+  content.addEventListener('touchmove', e => {
+    if (!active) return;
+    const diff = e.touches[0].clientY - startY;
+    if (diff > 10) {
+      bar.classList.add('pulling');
+      label.textContent = diff >= THRESHOLD ? 'Solte para atualizar' : 'Puxe para atualizar';
+    }
+  }, { passive: true });
+
+  content.addEventListener('touchend', e => {
+    if (!active) return;
+    active = false;
+    const diff = e.changedTouches[0].clientY - startY;
+    if (diff >= THRESHOLD) {
+      label.textContent = 'Atualizando...';
+      bar.classList.add('refreshing');
+      spinner.classList.add('spin');
+      setTimeout(() => location.reload(), 400);
+    } else {
+      bar.classList.remove('pulling');
+    }
+  });
+})();
 </script>
 </body>
 </html>
