@@ -207,6 +207,11 @@ tr:hover td{background:rgba(255,255,255,.02);}
   .dl-form-grid{grid-template-columns:1fr;}
   .dl-form-wide{grid-column:span 1;}
 }
+.ptr-bar{position:fixed;top:0;left:0;right:0;z-index:9999;display:flex;align-items:center;justify-content:center;gap:10px;height:0;overflow:hidden;background:var(--surface2);border-bottom:1px solid var(--border);transition:height .15s;font-size:12px;color:var(--text-sec);font-weight:600;letter-spacing:.05em;}
+.ptr-bar.pulling,.ptr-bar.refreshing{height:48px;}
+.ptr-spinner{width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--gold);border-radius:50%;}
+.ptr-spinner.spin{animation:ptr-spin .6s linear infinite;}
+@keyframes ptr-spin{to{transform:rotate(360deg);}}
 /* KEBAB MENU */
 .km{position:relative;display:inline-block;}
 .km-btn{background:none;border:1px solid var(--border);color:var(--text-sec);width:30px;height:30px;border-radius:var(--radius);cursor:pointer;font-size:18px;display:inline-flex;align-items:center;justify-content:center;transition:all .2s;line-height:1;}
@@ -234,7 +239,7 @@ tr:hover td{background:rgba(255,255,255,.02);}
 </style>
 </head>
 <body>
-
+<div id="ptr-bar" class="ptr-bar"><div class="ptr-spinner" id="ptr-spinner"></div><span id="ptr-label">Solte para atualizar</span></div>
 <div id="admin-sidebar-overlay" class="sidebar-overlay" onclick="closeSidebarAdmin()"></div>
 <aside id="sidebar">
   <div class="sidebar-logo">
@@ -2983,6 +2988,8 @@ function kmToggle(id, e) {
 }
 document.addEventListener('click', ()=>{ if (_kmOpen){ _kmOpen.classList.remove('open'); _kmOpen=null; } });
 
+// Pull to refresh (content-scroll)
+(function(){if(!('ontouchstart' in window))return;const T=65,bar=document.getElementById('ptr-bar'),sp=document.getElementById('ptr-spinner'),lbl=document.getElementById('ptr-label'),ct=document.querySelector('.content');if(!ct||!bar)return;let sY=0,active=false;ct.addEventListener('touchstart',e=>{if(ct.scrollTop===0){sY=e.touches[0].clientY;active=true;}},{passive:true});ct.addEventListener('touchmove',e=>{if(!active)return;const d=e.touches[0].clientY-sY;if(d>10){bar.classList.add('pulling');lbl.textContent=d>=T?'Solte para atualizar':'Puxe para atualizar';}},{passive:true});ct.addEventListener('touchend',e=>{if(!active)return;active=false;const d=e.changedTouches[0].clientY-sY;if(d>=T){lbl.textContent='Atualizando...';bar.classList.add('refreshing');sp.classList.add('spin');setTimeout(()=>location.reload(),400);}else bar.classList.remove('pulling');});})();
 function toggleSidebarAdmin() {
   const sb = document.getElementById('sidebar');
   const ov = document.getElementById('admin-sidebar-overlay');
