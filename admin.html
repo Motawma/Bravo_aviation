@@ -79,7 +79,8 @@ main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
 .sec-title{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;}
 
 /* TABLE */
-.table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:24px;}
+.table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow-x:auto;margin-bottom:24px;}
+.table-wrap table{min-width:560px;}
 table{width:100%;border-collapse:collapse;}
 th{font-size:10px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;color:var(--text-dim);padding:12px 16px;text-align:left;background:var(--surface2);border-bottom:1px solid var(--border);}
 td{padding:12px 16px;font-size:13px;border-bottom:1px solid rgba(30,35,64,.5);color:var(--text-sec);}
@@ -178,6 +179,8 @@ tr:hover td{background:rgba(255,255,255,.02);}
 .dl-admin-name{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .dl-admin-meta{font-size:11px;color:var(--text-dim);margin-top:2px;}
 .dl-admin-actions{display:flex;gap:8px;flex-shrink:0;}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:199;}
+.menu-btn-admin{display:none;background:none;border:none;cursor:pointer;color:var(--text);font-size:22px;padding:4px 8px;line-height:1;margin-right:4px;}
 @media(max-width:900px){
   :root{--sidebar:200px;}
   .cards-row{grid-template-columns:repeat(2,1fr);}
@@ -186,10 +189,29 @@ tr:hover td{background:rgba(255,255,255,.02);}
   .two-col{grid-template-columns:1fr;}
   .route-form-grid{grid-template-columns:repeat(2,1fr);}
 }
+@media(max-width:768px){
+  aside{position:fixed;left:-240px;transition:left 0.3s;z-index:200;width:240px;min-height:100vh;}
+  aside.open{left:0;}
+  .menu-btn-admin{display:inline-block;}
+  .topbar{padding:0 12px;}
+  .content{padding:16px 12px;}
+  main{width:100%;}
+}
+@media(max-width:600px){
+  .cards-row{grid-template-columns:1fr;}
+  .route-form-grid{grid-template-columns:1fr 1fr;}
+  .topbar-date{display:none;}
+}
+@media(max-width:480px){
+  .route-form-grid{grid-template-columns:1fr;}
+  .dl-form-grid{grid-template-columns:1fr;}
+  .dl-form-wide{grid-column:span 1;}
+}
 </style>
 </head>
 <body>
 
+<div id="admin-sidebar-overlay" class="sidebar-overlay" onclick="closeSidebarAdmin()"></div>
 <aside id="sidebar">
   <div class="sidebar-logo">
     <img src="assets/logo.png" alt="BRV" />
@@ -244,7 +266,10 @@ tr:hover td{background:rgba(255,255,255,.02);}
 
 <main>
   <div class="topbar">
-    <div class="topbar-title" id="topbar-title">Visão Geral</div>
+    <div style="display:flex;align-items:center;">
+      <button class="menu-btn-admin" id="admin-menu-btn" onclick="toggleSidebarAdmin()">☰</button>
+      <div class="topbar-title" id="topbar-title">Visão Geral</div>
+    </div>
     <div class="topbar-right">
       <div class="topbar-date" id="topbar-date"></div>
       <a href="dashboard.html" style="font-size:12px;color:var(--text-dim);text-decoration:none;">← Dashboard</a>
@@ -2925,6 +2950,26 @@ async function saveSiteStaff() {
 }
 
 document.getElementById('topbar-date').textContent = new Date().toLocaleDateString('pt-BR',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+
+/* ── MOBILE SIDEBAR ADMIN ── */
+function toggleSidebarAdmin() {
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('admin-sidebar-overlay');
+  sb.classList.toggle('open');
+  if (ov) ov.style.display = sb.classList.contains('open') ? 'block' : 'none';
+}
+function closeSidebarAdmin() {
+  document.getElementById('sidebar').classList.remove('open');
+  const ov = document.getElementById('admin-sidebar-overlay');
+  if (ov) ov.style.display = 'none';
+}
+// Fechar sidebar ao navegar em mobile
+const _origGoTo = goTo;
+// Fecha sidebar ao mudar de seção em mobile
+document.querySelectorAll('.nav-item[onclick]').forEach(el => {
+  const orig = el.getAttribute('onclick');
+  el.setAttribute('onclick', orig.replace('goTo(', 'closeSidebarAdmin();goTo('));
+});
 
 /* ── DOWNLOADS ADMIN ── */
 let allDownloadItems = [];

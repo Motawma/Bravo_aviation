@@ -51,6 +51,25 @@ h1 { font-family: 'Barlow Condensed', sans-serif; font-size: 42px; font-weight: 
 #loading { padding: 48px; text-align: center; color: var(--text-dim); }
 
 footer { text-align: center; padding: 32px; font-size: 12px; color: var(--text-dim); border-top: 1px solid var(--border); margin-top: 40px; }
+
+@media (max-width: 768px) {
+  nav { padding: 0 20px; }
+  .content { padding: 40px 20px 60px; }
+  .table-wrap { overflow-x: auto; }
+}
+@media (max-width: 600px) {
+  h1 { font-size: 32px; }
+  .stats-bar { flex-wrap: wrap; gap: 16px; margin-bottom: 28px; }
+  .sub { margin-bottom: 24px; }
+}
+@media (max-width: 480px) {
+  nav { padding: 0 16px; }
+  .content { padding: 28px 16px 48px; }
+  .table-head { grid-template-columns: 1fr 1fr; min-width: 0; }
+  .table-head span:last-child { display: none; }
+  .table-row { grid-template-columns: 1fr 1fr; }
+  .table-row > *:last-child { display: none; }
+}
 </style>
 </head>
 <body>

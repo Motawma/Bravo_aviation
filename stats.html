@@ -66,7 +66,20 @@ h1 { font-family: 'Barlow Condensed', sans-serif; font-size: 42px; font-weight: 
 
 footer { text-align: center; padding: 32px; font-size: 12px; color: var(--text-dim); border-top: 1px solid var(--border); margin-top: 40px; }
 
-@media (max-width: 700px) { .kpi-grid { grid-template-columns: repeat(2,1fr); } }
+@media (max-width: 700px) {
+  .kpi-grid { grid-template-columns: repeat(2,1fr); }
+  nav { padding: 0 20px; }
+  .content { padding: 40px 20px 60px; }
+  .table-wrap { overflow-x: auto; }
+  .table-head, .table-row { min-width: 460px; }
+}
+@media (max-width: 500px) {
+  .kpi-grid { grid-template-columns: 1fr 1fr; }
+  h1 { font-size: 32px; }
+  nav { padding: 0 16px; }
+  .content { padding: 28px 16px 48px; }
+  .sub { margin-bottom: 28px; }
+}
 </style>
 </head>
 <body>

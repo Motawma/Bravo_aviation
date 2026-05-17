@@ -91,6 +91,7 @@ aside {
 .user-rank { font-size: 10px; color: var(--gold); font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; }
 .logout-btn { background: none; border: none; cursor: pointer; color: var(--text-dim); font-size: 16px; transition: color 0.2s; flex-shrink: 0; }
 .logout-btn:hover { color: var(--danger); }
+.sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 199; }
 
 /* ── MAIN ── */
 main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
@@ -134,7 +135,7 @@ main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 .sec-action:hover { color: var(--gold-light); }
 
 /* ── TABLE ── */
-.table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; }
 th { font-size: 10px; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-dim); padding: 12px 16px; text-align: left; background: var(--surface2); border-bottom: 1px solid var(--border); }
 td { padding: 13px 16px; font-size: 13px; border-bottom: 1px solid rgba(30,24,64,0.5); color: var(--text-sec); }
@@ -333,6 +334,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 @media (max-width: 768px) {
   aside { position: fixed; left: -240px; transition: left 0.3s; z-index: 200; width: 240px; }
   aside.open { left: 0; }
+  .sidebar-overlay { display: block; }
   .topbar { padding: 0 16px; }
   .content { padding: 20px 16px; }
   .routes-grid, .downloads-grid { grid-template-columns: 1fr; }
@@ -341,12 +343,23 @@ tr:hover td { background: rgba(255,255,255,0.02); }
   .info-grid-3 { grid-template-columns: 1fr; }
   .pilot-stats-bar { flex-wrap:wrap;gap:12px; }
   .pilot-stat-item { border-right:none;padding:0; }
+  table { min-width: 480px; }
+}
+@media (max-width: 480px) {
+  :root { --sidebar: 240px; }
+  .cards-row { grid-template-columns: 1fr; }
+  .topbar-date { display: none; }
+  .stat-card-value { font-size: 26px; }
+  .rank-tiers { overflow-x: auto; }
+  .pilot-stats-bar { padding: 12px; }
+  .content { padding: 16px 12px; }
 }
 </style>
 </head>
 <body>
 
 <!-- SIDEBAR -->
+<div id="sidebar-overlay" class="sidebar-overlay"></div>
 <aside id="sidebar">
   <div class="sidebar-logo">
     <img src="assets/logo.png?v=1777246397516" alt="BRV" />
@@ -417,7 +430,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 <main>
   <div class="topbar">
     <div style="display:flex;align-items:center;gap:16px;">
-      <button onclick="document.getElementById('sidebar').classList.toggle('open')" style="display:none;background:none;border:none;cursor:pointer;color:var(--text);font-size:20px;" id="menu-toggle">☰</button>
+      <button onclick="toggleSidebar()" style="display:none;background:none;border:none;cursor:pointer;color:var(--text);font-size:22px;padding:4px 8px;line-height:1;" id="menu-toggle">☰</button>
       <div class="topbar-title" id="topbar-title">Visão Geral</div>
     </div>
     <div class="topbar-right">
@@ -1870,12 +1883,22 @@ const pad = n => String(n).padStart(2,'0');
 document.getElementById('pirep-date').value = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:00`;
 
 /* ── MOBILE ── */
-if (window.innerWidth <= 768) document.getElementById('menu-toggle').style.display = 'block';
-window.addEventListener('click', e => {
+function isMobile() { return window.innerWidth <= 768; }
+function toggleSidebar() {
   const sidebar = document.getElementById('sidebar');
-  if (window.innerWidth <= 768 && sidebar.classList.contains('open') && !sidebar.contains(e.target) && e.target.id !== 'menu-toggle') {
-    sidebar.classList.remove('open');
-  }
+  const overlay = document.getElementById('sidebar-overlay');
+  sidebar.classList.toggle('open');
+  if (overlay) overlay.style.display = sidebar.classList.contains('open') ? 'block' : 'none';
+}
+if (isMobile()) document.getElementById('menu-toggle').style.display = 'block';
+window.addEventListener('resize', () => {
+  const t = document.getElementById('menu-toggle');
+  if (t) t.style.display = isMobile() ? 'block' : 'none';
+});
+const _sbOverlay = document.getElementById('sidebar-overlay');
+if (_sbOverlay) _sbOverlay.addEventListener('click', () => {
+  document.getElementById('sidebar').classList.remove('open');
+  _sbOverlay.style.display = 'none';
 });
 </script>
 </body>
