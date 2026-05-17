@@ -7,7 +7,7 @@
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
 <script>
-  const PAGE_VERSION = '6';
+  const PAGE_VERSION = '7';
   const key = 'brv_v_admin';
   if (sessionStorage.getItem(key) !== PAGE_VERSION) {
     sessionStorage.setItem(key, PAGE_VERSION);
@@ -693,7 +693,7 @@ tr:hover td{background:rgba(255,255,255,.02);}
         <div class="sec-title">Frota de Aeronaves</div>
         <button class="btn-primary" onclick="openAircraftModal(null)">+ Adicionar aeronave</button>
       </div>
-      <div class="table-wrap">
+      <div class="table-wrap mob-cards">
         <table class="data-table">
           <thead><tr><th>Aeronave</th><th>Código</th><th>SimBrief</th><th>Pax</th><th>Alcance</th><th>Teto</th><th>Status</th><th>Ações</th></tr></thead>
           <tbody id="fleet-admin-tbody"><tr><td colspan="8" class="empty-row">Carregando...</td></tr></tbody>
@@ -2638,17 +2638,17 @@ function renderFleet() {
   }
   tbody.innerHTML = allFleet.map(a => `
     <tr>
-      <td class="td-main">${a.name || '—'}</td>
-      <td><code style="font-size:11px;color:var(--gold)">${a.code || '—'}</code></td>
-      <td style="font-size:12px;color:var(--text-sec)">${a.simbrief_type || '—'}</td>
-      <td>${a.pax || '—'}</td>
-      <td>${a.range_km ? Number(a.range_km).toLocaleString('pt-BR') + ' km' : '—'}</td>
-      <td>${a.ceiling_ft ? Number(a.ceiling_ft).toLocaleString('pt-BR') + ' ft' : '—'}</td>
-      <td><span class="badge ${a.active ? 'active' : 'inactive'}">${a.active ? 'Ativo' : 'Inativo'}</span></td>
-      <td style="display:flex;gap:6px;">
-        <button class="btn-sm" onclick="openAircraftModal('${a.id}')">Editar</button>
-        <button class="btn-sm" style="border-color:rgba(224,85,85,.3);color:var(--danger)" onclick="deleteAircraft('${a.id}','${(a.name||'').replace(/'/g,'\\\'')  }')">Excluir</button>
-      </td>
+      <td class="td-main" data-label="Aeronave">${a.name || '—'}</td>
+      <td data-label="Código"><code style="font-size:11px;color:var(--gold)">${a.code || '—'}</code></td>
+      <td data-label="SimBrief" style="font-size:12px;color:var(--text-sec)">${a.simbrief_type || '—'}</td>
+      <td data-label="Pax">${a.pax || '—'}</td>
+      <td data-label="Alcance">${a.range_km ? Number(a.range_km).toLocaleString('pt-BR') + ' km' : '—'}</td>
+      <td data-label="Teto">${a.ceiling_ft ? Number(a.ceiling_ft).toLocaleString('pt-BR') + ' ft' : '—'}</td>
+      <td data-label="Status"><span class="badge ${a.active ? 'active' : 'inactive'}">${a.active ? 'Ativo' : 'Inativo'}</span></td>
+      <td class="td-actions" data-label="">${km('fleet-'+a.id,[
+        {label:'✏️ Editar',cls:'km-info',fn:`openAircraftModal('${a.id}')`},
+        {label:'🗑️ Excluir',cls:'km-danger',fn:`deleteAircraft('${a.id}','${(a.name||'').replace(/'/g,"\\'")}' )`}
+      ])}</td>
     </tr>`).join('');
 }
 

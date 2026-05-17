@@ -367,6 +367,17 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 .ptr-spinner { width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: var(--gold); border-radius: 50%; }
 .ptr-spinner.spin { animation: ptr-spin 0.6s linear infinite; }
 @keyframes ptr-spin { to { transform: rotate(360deg); } }
+/* MOBILE CARD TABLES */
+@media(max-width:600px){
+  .mob-cards{overflow-x:visible;}
+  .mob-cards table{min-width:0;}
+  .mob-cards thead{display:none;}
+  .mob-cards tr{display:block;margin-bottom:10px;padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;}
+  .mob-cards tbody tr:last-child{margin-bottom:0;}
+  .mob-cards td{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border:none;font-size:12px;min-height:26px;gap:8px;}
+  .mob-cards td::before{content:attr(data-label);color:var(--text-dim);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;flex-shrink:0;white-space:nowrap;}
+  .mob-cards td[data-label='']::before{display:none;}
+}
 </style>
 </head>
 <body>
@@ -586,7 +597,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
         <div class="sec-header">
           <div class="sec-title"><span class="live-dot"></span>Pilotos voando agora</div>
         </div>
-        <div class="table-wrap">
+        <div class="table-wrap mob-cards">
           <table>
             <thead><tr><th>Piloto</th><th>Rota</th><th>Aeronave</th><th>Fase</th><th>ALT</th><th>IAS</th></tr></thead>
             <tbody id="ov-live-table">
@@ -737,7 +748,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
         <div class="sec-title">Meus voos</div>
         <button class="sec-action" onclick="goTo('pirep',null)">+ Registrar novo voo</button>
       </div>
-      <div class="table-wrap">
+      <div class="table-wrap mob-cards">
         <table>
           <thead><tr><th>#</th><th>Rota</th><th>Aeronave</th><th>Duração</th><th>FL</th><th>Data</th><th>Simulador</th><th>Status</th></tr></thead>
           <tbody id="flights-table"></tbody>
@@ -805,7 +816,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
         <div class="sec-title">Ranking de pilotos</div>
         <span style="font-size:12px;color:var(--text-dim);">Por horas de voo</span>
       </div>
-      <div class="table-wrap">
+      <div class="table-wrap mob-cards">
         <table>
           <thead><tr><th>#</th><th>Piloto</th><th>Patente</th><th>Voos</th><th>Horas</th><th>Aeronave</th></tr></thead>
           <tbody id="ranking-table"></tbody>
@@ -1300,14 +1311,14 @@ function initUserUI() {
   } else {
     ftbody.innerHTML = flights.map((f,i) => `
       <tr>
-        <td>${flights.length - i}</td>
-        <td class="td-main">${sanitize(f.dep)} → ${sanitize(f.arr)}</td>
-        <td>${sanitize(f.ac)}</td>
-        <td>${sanitize(f.dur)}</td>
-        <td>FL${sanitize(f.fl)}</td>
-        <td>${new Date(f.date).toLocaleDateString('pt-BR')}</td>
-        <td><span class="tag-sim">${sanitize(f.sim)}</span>${netBadge(f.network)}</td>
-        <td><span class="status-badge ${f.status}">${f.status==='approved'?'Aprovado':f.status==='pending'?'Pendente':'Recusado'}</span></td>
+        <td data-label="#">${flights.length - i}</td>
+        <td class="td-main" data-label="Rota">${sanitize(f.dep)} → ${sanitize(f.arr)}</td>
+        <td data-label="Aeronave">${sanitize(f.ac)}</td>
+        <td data-label="Duração">${sanitize(f.dur)}</td>
+        <td data-label="FL">FL${sanitize(f.fl)}</td>
+        <td data-label="Data">${new Date(f.date).toLocaleDateString('pt-BR')}</td>
+        <td data-label="Sim"><span class="tag-sim">${sanitize(f.sim)}</span>${netBadge(f.network)}</td>
+        <td data-label="Status"><span class="status-badge ${f.status}">${f.status==='approved'?'Aprovado':f.status==='pending'?'Pendente':'Recusado'}</span></td>
       </tr>`).join('');
   }
 
@@ -1537,12 +1548,12 @@ async function loadRanking() {
   if (!rtbody) return;
   rtbody.innerHTML = PILOTS.map((p,i) => `
     <tr class="${p.vid === user.vid ? 'rank-me' : ''}">
-      <td><span class="rank-position ${i===0?'top1':i===1?'top2':i===2?'top3':''}">${i===0?'🥇':i===1?'🥈':i===2?'🥉':'#'+(i+1)}</span></td>
-      <td class="td-main">${p.name}${p.vid===user.vid?' <span style="font-size:10px;color:var(--gold)">(você)</span>':''}</td>
-      <td>${p.rank}</td>
-      <td>${p.flights}</td>
-      <td><strong style="color:var(--gold)">${p.hours.toFixed(1)}h</strong></td>
-      <td>${p.aircraft}</td>
+      <td data-label="#"><span class="rank-position ${i===0?'top1':i===1?'top2':i===2?'top3':''}">${i===0?'🥇':i===1?'🥈':i===2?'🥉':'#'+(i+1)}</span></td>
+      <td class="td-main" data-label="Piloto">${p.name}${p.vid===user.vid?' <span style="font-size:10px;color:var(--gold)">(você)</span>':''}</td>
+      <td data-label="Patente">${p.rank}</td>
+      <td data-label="Voos">${p.flights}</td>
+      <td data-label="Horas"><strong style="color:var(--gold)">${p.hours.toFixed(1)}h</strong></td>
+      <td data-label="Aeronave">${p.aircraft}</td>
     </tr>`).join('');
   const pos = PILOTS.findIndex(p => p.vid === user.vid) + 1;
   if (pos > 0) document.getElementById('ov-rank-pos').textContent = '#' + pos;
@@ -1668,12 +1679,12 @@ function setupLiveFlights() {
       const d = doc.data();
       const phases = { taxi:'Solo', climb:'Subida', cruise:'Cruzeiro', descent:'Descida', approach:'Aproximação', SOLO:'Solo', SUBIDA:'Subida', CRUZEIRO:'Cruzeiro', DESCIDA:'Descida' };
       return `<tr>
-        <td class="td-main">${d.pilotName || '—'}</td>
-        <td>${d.dep || '?'} → ${d.arr || '?'}</td>
-        <td>${d.aircraft || '—'}</td>
-        <td>${phases[d.phase] || d.phase || '—'}</td>
-        <td>${d.alt ? Math.round(d.alt).toLocaleString('pt-BR') + ' ft' : '—'}</td>
-        <td>${d.spd ? Math.round(d.spd) + ' kts' : '—'}</td>
+        <td class="td-main" data-label="Piloto">${d.pilotName || '—'}</td>
+        <td data-label="Rota">${d.dep || '?'} → ${d.arr || '?'}</td>
+        <td data-label="Aeronave">${d.aircraft || '—'}</td>
+        <td data-label="Fase">${phases[d.phase] || d.phase || '—'}</td>
+        <td data-label="ALT">${d.alt ? Math.round(d.alt).toLocaleString('pt-BR') + ' ft' : '—'}</td>
+        <td data-label="IAS">${d.spd ? Math.round(d.spd) + ' kts' : '—'}</td>
       </tr>`;
     }).join('');
   });
