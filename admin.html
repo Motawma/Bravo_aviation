@@ -7,7 +7,7 @@
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
 <script>
-  const PAGE_VERSION = '5';
+  const PAGE_VERSION = '6';
   const key = 'brv_v_admin';
   if (sessionStorage.getItem(key) !== PAGE_VERSION) {
     sessionStorage.setItem(key, PAGE_VERSION);
@@ -190,7 +190,7 @@ tr:hover td{background:rgba(255,255,255,.02);}
   .route-form-grid{grid-template-columns:repeat(2,1fr);}
 }
 @media(max-width:768px){
-  aside{position:fixed;left:-240px;transition:left 0.3s;z-index:200;width:240px;min-height:100vh;}
+  aside{position:fixed;left:-240px;transition:left 0.3s;z-index:200;width:240px;height:100vh;overflow:hidden;}
   aside.open{left:0;}
   .menu-btn-admin{display:inline-block;}
   .topbar{padding:0 12px;}
@@ -206,6 +206,30 @@ tr:hover td{background:rgba(255,255,255,.02);}
   .route-form-grid{grid-template-columns:1fr;}
   .dl-form-grid{grid-template-columns:1fr;}
   .dl-form-wide{grid-column:span 1;}
+}
+/* KEBAB MENU */
+.km{position:relative;display:inline-block;}
+.km-btn{background:none;border:1px solid var(--border);color:var(--text-sec);width:30px;height:30px;border-radius:var(--radius);cursor:pointer;font-size:18px;display:inline-flex;align-items:center;justify-content:center;transition:all .2s;line-height:1;}
+.km-btn:hover{border-color:var(--gold-dim);color:var(--gold);}
+.km-drop{position:absolute;right:0;top:calc(100% + 4px);background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);min-width:152px;z-index:300;box-shadow:0 8px 24px rgba(0,0,0,.5);display:none;}
+.km-drop.open{display:block;}
+.km-drop button{display:block;width:100%;text-align:left;padding:9px 14px;font-size:12px;font-weight:600;cursor:pointer;background:none;border:none;color:var(--text-sec);font-family:'Inter',sans-serif;transition:background .15s;white-space:nowrap;}
+.km-drop button:hover{background:rgba(255,255,255,.05);color:var(--text);}
+.km-drop button.km-ok{color:var(--success);}
+.km-drop button.km-danger{color:var(--danger);}
+.km-drop button.km-info{color:var(--info);}
+.km-drop hr{border:none;border-top:1px solid var(--border);margin:3px 0;}
+/* MOBILE CARD TABLES */
+@media(max-width:600px){
+  .mob-cards{overflow-x:visible;}
+  .mob-cards table{min-width:0;}
+  .mob-cards thead{display:none;}
+  .mob-cards tr{display:block;margin-bottom:10px;padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;}
+  .mob-cards tbody tr:last-child{margin-bottom:0;}
+  .mob-cards td{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border:none;font-size:12px;min-height:26px;gap:8px;}
+  .mob-cards td::before{content:attr(data-label);color:var(--text-dim);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;flex-shrink:0;white-space:nowrap;}
+  .mob-cards td[data-label='']::before{display:none;}
+  .mob-cards td[data-label=''],.mob-cards .td-actions{justify-content:flex-end;border-top:1px solid var(--border);margin-top:4px;padding-top:8px;}
 }
 </style>
 </head>
@@ -356,7 +380,7 @@ tr:hover td{background:rgba(255,255,255,.02);}
         <div class="tab" onclick="filterApps('approved',this)">Aprovadas</div>
         <div class="tab" onclick="filterApps('rejected',this)">Rejeitadas</div>
       </div>
-      <div class="table-wrap">
+      <div class="table-wrap mob-cards">
         <table>
           <thead><tr><th>Nome</th><th>VID IVAO</th><th>Callsign</th><th>Fora da malha</th><th>E-mail</th><th>Aeronave</th><th>Data</th><th>Status</th><th>Ações</th></tr></thead>
           <tbody id="apps-table"></tbody>
@@ -374,7 +398,7 @@ tr:hover td{background:rgba(255,255,255,.02);}
           <button id="btn-add-pilot" class="btn-gold" onclick="openAddModal()" style="padding:8px 18px;font-size:11px;">+ Novo piloto</button>
         </div>
       </div>
-      <div class="table-wrap">
+      <div class="table-wrap mob-cards">
         <table>
           <thead><tr><th>Nome</th><th>VID</th><th>E-mail</th><th>Patente</th><th>Horas</th><th>Voos</th><th>Role</th><th>Ações</th></tr></thead>
           <tbody id="pilots-table"></tbody>
@@ -405,7 +429,7 @@ tr:hover td{background:rgba(255,255,255,.02);}
         </div>
       </div>
 
-      <div class="table-wrap">
+      <div class="table-wrap mob-cards">
         <table>
           <thead><tr><th>Piloto</th><th>Rota</th><th>Aeronave</th><th>Duração</th><th>FL</th><th>Data</th><th>Sim</th><th>FOQA</th><th>Status</th><th>Ações</th></tr></thead>
           <tbody id="pireps-table"></tbody>
@@ -488,7 +512,7 @@ tr:hover td{background:rgba(255,255,255,.02);}
       </div>
 
       <!-- ROUTES TABLE -->
-      <div class="table-wrap">
+      <div class="table-wrap mob-cards">
         <table>
           <thead>
             <tr>
@@ -1463,29 +1487,27 @@ function renderRoutes() {
   }
   tbody.innerHTML = allRoutes.map(r => `
     <tr>
-      <td class="td-main">${sanitize(r.flightNumber)}</td>
-      <td><span class="route-tag-ac">${sanitize(r.aircraft)}</span></td>
-      <td>
+      <td class="td-main" data-label="Voo">${sanitize(r.flightNumber)}</td>
+      <td data-label="Aeronave"><span class="route-tag-ac">${sanitize(r.aircraft)}</span></td>
+      <td data-label="Rota">
         ${sanitize(r.dep)} → ${sanitize(r.arr)}
         ${r.route
           ? `<div style="font-size:10px;color:var(--text-dim);font-family:monospace;margin-top:2px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${sanitize(r.route)}">${sanitize(r.route)}</div>`
           : '<div style="font-size:10px;color:var(--text-dim);margin-top:2px;">DCT</div>'}
       </td>
-      <td>FL${sanitize(r.plannedFL)}</td>
-      <td>${sanitize(r.eet)}</td>
-      <td>${r.distance ? sanitize(r.distance) + ' NM' : '—'}</td>
-      <td>
+      <td data-label="FL">FL${sanitize(r.plannedFL)}</td>
+      <td data-label="EET">${sanitize(r.eet)}</td>
+      <td data-label="NM">${r.distance ? sanitize(r.distance) + ' NM' : '—'}</td>
+      <td data-label="Status">
         <span class="badge ${r.active !== false ? 'approved' : 'rejected'}">
           ${r.active !== false ? 'Ativa' : 'Inativa'}
         </span>
       </td>
-      <td style="display:flex;gap:6px;flex-wrap:wrap;">
-        <button class="btn-edit" onclick="openRouteEdit('${r.id}')">Editar</button>
-        <button class="toggle-active ${r.active !== false ? '' : 'off'}" onclick="toggleRoute('${r.id}',${r.active !== false})">
-          ${r.active !== false ? 'Desativar' : 'Ativar'}
-        </button>
-        <button class="btn-danger" onclick="deleteRoute('${r.id}','${sanitize(r.flightNumber)}')">Excluir</button>
-      </td>
+      <td class="td-actions" data-label="">${km('route-'+r.id,[
+        {label:'✏️ Editar',cls:'km-info',fn:`openRouteEdit('${r.id}')`},
+        {label:r.active!==false?'⏸ Desativar':'▶ Ativar',fn:`toggleRoute('${r.id}',${r.active!==false})`},
+        {label:'🗑️ Excluir',cls:'km-danger',fn:`deleteRoute('${r.id}','${sanitize(r.flightNumber)}')`}
+      ])}</td>
     </tr>
     <tr id="route-edit-${r.id}" style="display:none;background:var(--surface2)">
       <td colspan="8" style="padding:14px 16px;border-top:1px solid var(--border)">
@@ -1706,10 +1728,7 @@ function renderOverview() {
         <td class="td-main">${sanitize(a.name)}</td>
         <td>${sanitize(a.vid)}</td>
         <td><span class="badge pending">Pendente</span></td>
-        <td style="display:flex;gap:6px;">
-          <button class="btn-sm approve" onclick="approveApp('${a.id}')">Aprovar</button>
-          <button class="btn-sm reject"  onclick="rejectApp('${a.id}')">Recusar</button>
-        </td>
+        <td style="display:flex;gap:6px;">${km('ov-app-'+a.id,[{label:'✅ Aprovar',cls:'km-ok',fn:`approveApp('${a.id}')`},{label:'✗ Recusar',cls:'km-danger',fn:`rejectApp('${a.id}')`}])}</td>
       </tr>`).join('');
   }
 
@@ -1725,10 +1744,7 @@ function renderOverview() {
         <td class="td-main">${sanitize(pilot?.name)}</td>
         <td>${sanitize(p.dep)}→${sanitize(p.arr)}</td>
         <td>${sanitize(p.dur)}</td>
-        <td style="display:flex;gap:6px;">
-          <button class="btn-sm approve" onclick="approvePirep('${p.id}','${p.userId}','${p.dur}')">Aprovar</button>
-          <button class="btn-sm reject"  onclick="rejectPirep('${p.id}')">Recusar</button>
-        </td>
+        <td style="display:flex;gap:6px;">${km('ov-pirep-'+p.id,[{label:'✅ Aprovar',cls:'km-ok',fn:`approvePirep('${p.id}','${p.userId}','${p.dur}')`},{label:'✗ Recusar',cls:'km-danger',fn:`rejectPirep('${p.id}')`}])}</td>
       </tr>`;}).join('');
   }
 }
@@ -1743,9 +1759,9 @@ function renderApps() {
   }
   tbody.innerHTML = list.map(a=>{
     const dt = a.createdAt?.toDate ? a.createdAt.toDate().toLocaleDateString('pt-BR') : '—';
-    const actions = a.status==='pending' && can('canApproveApplications')
-      ? `<button class="btn-sm approve" onclick="approveApp('${a.id}')">Aprovar</button>
-         <button class="btn-sm reject"  onclick="rejectApp('${a.id}')">Recusar</button>`
+    const canAct = a.status==='pending' && can('canApproveApplications');
+    const actions = canAct
+      ? km('app-'+a.id,[{label:'✅ Aprovar',cls:'km-ok',fn:`approveApp('${a.id}')`},{label:'✗ Recusar',cls:'km-danger',fn:`rejectApp('${a.id}')`}])
       : `<span style="color:var(--text-dim);font-size:12px;">${a.status==='pending'?'Aguardando':a.status==='approved'?'Aprovada':'Recusada'}</span>`;
     const csLabel = a.callsign || ('BRV' + (a.vid || ''));
     const fmLabel = a.foraMalha === 'executiva' ? 'Executiva / Charter'
@@ -1753,15 +1769,15 @@ function renderApps() {
                   : a.foraMalha === 'ambos'     ? 'Exec + Cargo'
                   : '—';
     return `<tr>
-      <td class="td-main">${sanitize(a.name)}</td>
-      <td>${sanitize(a.vid)}</td>
-      <td style="font-family:'Barlow Condensed',sans-serif;font-weight:700;color:var(--gold);">${sanitize(csLabel)}</td>
-      <td style="font-size:12px;">${sanitize(fmLabel)}</td>
-      <td>${sanitize(a.email)}</td>
-      <td>${sanitize(a.aircraft)}</td>
-      <td>${dt}</td>
-      <td><span class="badge ${a.status}">${a.status==='pending'?'Pendente':a.status==='approved'?'Aprovada':'Recusada'}</span></td>
-      <td style="display:flex;gap:6px;">${actions}</td>
+      <td class="td-main" data-label="Nome">${sanitize(a.name)}</td>
+      <td data-label="VID">${sanitize(a.vid)}</td>
+      <td data-label="Callsign" style="font-family:'Barlow Condensed',sans-serif;font-weight:700;color:var(--gold);">${sanitize(csLabel)}</td>
+      <td data-label="Fora malha" style="font-size:12px;">${sanitize(fmLabel)}</td>
+      <td data-label="E-mail">${sanitize(a.email)}</td>
+      <td data-label="Aeronave">${sanitize(a.aircraft)}</td>
+      <td data-label="Data">${dt}</td>
+      <td data-label="Status"><span class="badge ${a.status}">${a.status==='pending'?'Pendente':a.status==='approved'?'Aprovada':'Recusada'}</span></td>
+      <td class="td-actions" data-label="">${actions}</td>
     </tr>`;}).join('');
 }
 
@@ -1956,19 +1972,19 @@ function renderPilots() {
   tbody.innerHTML = allPilots.sort((a,b)=>(b.hours||0)-(a.hours||0)).map(p=>{
     const roleLabel = p.role==='admin'?'Admin':p.role==='staff'?'Staff':'Pilot';
     const roleBadge = p.role==='admin'?'admin':p.role==='staff'?'staff':'pilot';
+    const kmBtns = [];
+    if (can('canEditPilotData')) kmBtns.push({label:'✏️ Editar',cls:'km-info',fn:`openEditModal('${p.id}')`});
+    kmBtns.push({label:'📧 Reenviar acesso',fn:`resendAccessEmail('${p.id}')`});
+    if (can('canCreateDeletePilots')) kmBtns.push({label:'🗑️ Excluir',cls:'km-danger',fn:`deletePilot('${p.id}')`});
     return `<tr>
-      <td class="td-main">${sanitize(p.name)}</td>
-      <td>${sanitize(p.vid)}</td>
-      <td style="font-size:12px;">${sanitize(p.email)}</td>
-      <td>${sanitize(getRank(p.hours||0).name)}</td>
-      <td><strong style="color:var(--gold)">${(p.hours||0).toFixed(1)}h</strong></td>
-      <td>${p.flights||0}</td>
-      <td><span class="badge ${roleBadge}">${roleLabel}</span></td>
-      <td style="display:flex;gap:6px;">
-        ${can('canEditPilotData') ? `<button class="btn-sm" onclick="openEditModal('${p.id}')">Editar</button>` : ''}
-        <button class="btn-sm" onclick="resendAccessEmail('${p.id}')">Reenviar acesso</button>
-        ${can('canCreateDeletePilots') ? `<button class="btn-sm reject" onclick="deletePilot('${p.id}')">Excluir</button>` : ''}
-      </td>
+      <td class="td-main" data-label="Nome">${sanitize(p.name)}</td>
+      <td data-label="VID">${sanitize(p.vid)}</td>
+      <td data-label="E-mail" style="font-size:12px;">${sanitize(p.email)}</td>
+      <td data-label="Patente">${sanitize(getRank(p.hours||0).name)}</td>
+      <td data-label="Horas"><strong style="color:var(--gold)">${(p.hours||0).toFixed(1)}h</strong></td>
+      <td data-label="Voos">${p.flights||0}</td>
+      <td data-label="Role"><span class="badge ${roleBadge}">${roleLabel}</span></td>
+      <td class="td-actions" data-label="">${km('pilot-'+p.id,kmBtns)}</td>
     </tr>`;
   }).join('');
 }
@@ -2116,24 +2132,22 @@ function renderPireps() {
   tbody.innerHTML = list.map(p=>{
     const pilot = allPilots.find(u=>u.id===p.userId);
     const dt = p.date ? new Date(p.date).toLocaleDateString('pt-BR') : '—';
-    const actions = p.status==='pending'
-      ? `<button class="btn-sm approve" onclick="approvePirep('${p.id}','${p.userId}','${p.dur}')">Aprovar</button>
-         <button class="btn-sm reject"  onclick="rejectPirep('${p.id}')">Recusar</button>`
-      : `<span style="font-size:12px;color:var(--text-dim);">${p.status==='approved'?'Aprovado':'Recusado'}</span>`;
+    const kmBtns = [{label:'📋 Ver log',fn:`openPirepLog('${p.id}')`}];
+    if (p.status==='pending') {
+      kmBtns.push({label:'✅ Aprovar',cls:'km-ok',fn:`approvePirep('${p.id}','${p.userId}','${p.dur}')`});
+      kmBtns.push({label:'✗ Recusar',cls:'km-danger',fn:`rejectPirep('${p.id}')`});
+    }
     return `<tr>
-      <td class="td-main">${sanitize(pilot?.name)}</td>
-      <td>${sanitize(p.dep)}→${sanitize(p.arr)}</td>
-      <td>${sanitize(p.ac)}</td>
-      <td>${sanitize(p.dur)}</td>
-      <td>FL${sanitize(p.fl)}</td>
-      <td>${dt}</td>
-      <td style="font-size:11px;">${sanitize(p.sim)}${netBadge(p.network)}</td>
-      <td style="font-size:11px;font-weight:700;color:${p.foqaScore===100?'#4ade80':p.foqaScore>=75?'#f59e0b':'#ff4d4d'}">${p.foqaScore != null ? p.foqaScore+'%' : (p.source==='manual'?'—':p.source==='acars'?'—':'N/A')}</td>
-      <td><span class="badge ${p.status}">${p.status==='pending'?'Pendente':p.status==='approved'?'Aprovado':'Recusado'}</span></td>
-      <td style="display:flex;gap:6px;">
-        <button class="btn-sm" onclick="openPirepLog('${p.id}')" title="Ver log do voo">📋</button>
-        ${actions}
-      </td>
+      <td class="td-main" data-label="Piloto">${sanitize(pilot?.name)}</td>
+      <td data-label="Rota">${sanitize(p.dep)}→${sanitize(p.arr)}</td>
+      <td data-label="Aeronave">${sanitize(p.ac)}</td>
+      <td data-label="Duração">${sanitize(p.dur)}</td>
+      <td data-label="FL">FL${sanitize(p.fl)}</td>
+      <td data-label="Data">${dt}</td>
+      <td data-label="Sim" style="font-size:11px;">${sanitize(p.sim)}${netBadge(p.network)}</td>
+      <td data-label="FOQA" style="font-size:11px;font-weight:700;color:${p.foqaScore===100?'#4ade80':p.foqaScore>=75?'#f59e0b':'#ff4d4d'}">${p.foqaScore != null ? p.foqaScore+'%' : (p.source==='manual'?'—':p.source==='acars'?'—':'N/A')}</td>
+      <td data-label="Status"><span class="badge ${p.status}">${p.status==='pending'?'Pendente':p.status==='approved'?'Aprovado':'Recusado'}</span></td>
+      <td class="td-actions" data-label="">${km('pirep-'+p.id,kmBtns)}</td>
     </tr>`;}).join('');
 }
 
@@ -2952,6 +2966,23 @@ async function saveSiteStaff() {
 document.getElementById('topbar-date').textContent = new Date().toLocaleDateString('pt-BR',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
 
 /* ── MOBILE SIDEBAR ADMIN ── */
+/* ── KEBAB MENU ── */
+let _kmOpen = null;
+function km(id, btns) {
+  const opts = btns.map(b=>`<button class="${b.cls||''}" onclick="${b.fn}">${b.label}</button>`).join('');
+  return `<div class="km" onclick="event.stopPropagation()"><button class="km-btn" onclick="kmToggle('${id}',event)">⋮</button><div class="km-drop" id="km-${id}">${opts}</div></div>`;
+}
+function kmToggle(id, e) {
+  e.stopPropagation();
+  const el = document.getElementById('km-'+id);
+  if (!el) return;
+  const wasOpen = el.classList.contains('open');
+  if (_kmOpen) { _kmOpen.classList.remove('open'); }
+  _kmOpen = wasOpen ? null : el;
+  if (!wasOpen) el.classList.add('open');
+}
+document.addEventListener('click', ()=>{ if (_kmOpen){ _kmOpen.classList.remove('open'); _kmOpen=null; } });
+
 function toggleSidebarAdmin() {
   const sb = document.getElementById('sidebar');
   const ov = document.getElementById('admin-sidebar-overlay');
