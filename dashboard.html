@@ -1170,6 +1170,12 @@ function goTo(id, el) {
   if (id === 'notifs')       renderNotifs();
   if (id === 'free-flight')  initFreeFlight();
   if (id === 'downloads')    loadDownloadsSection();
+  const sidebar = document.getElementById('sidebar');
+  if (sidebar && sidebar.classList.contains('open')) {
+    sidebar.classList.remove('open');
+    const ov = document.getElementById('sidebar-overlay');
+    if (ov) ov.style.display = 'none';
+  }
 }
 
 function checkDeepLink() {
